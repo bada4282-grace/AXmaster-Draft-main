@@ -31,8 +31,8 @@ export default function CountryDetailPage() {
   const [subTab, setSubTab] = useState<"품목별" | "시계열 추이">("품목별");
   const [chatOpen, setChatOpen] = useState(true);
 
-  // 연도별 국가 데이터 (연도 바뀌면 순위도 달라질 수 있음)
-  const country = getCountryByName(name) ?? {
+  // 연도·수출입 모드에 따라 순위·비중이 달라짐
+  const country = getCountryByName(name, year, tradeType) ?? {
     name, iso: "??", region: "기타", rank: 1,
     export: "0", import: "0", region2: "기타",
     topProducts: [], nameEn: name, share: 0,
@@ -82,7 +82,7 @@ export default function CountryDetailPage() {
         {/* Main tabs */}
         <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
           <button className="main-tab-active">국가별</button>
-          <button className="main-tab-inactive" onClick={() => router.push("/")}>품목별</button>
+          <button className="main-tab-inactive" onClick={() => router.push("/?tab=product")}>품목별</button>
         </div>
 
         {/* Dashboard card */}
@@ -97,13 +97,14 @@ export default function CountryDetailPage() {
 
           {kpi ? (
             <KPIBar
+              tradeType={tradeType}
               exportVal={kpi.export}
               importVal={kpi.import}
               balance={kpi.balance}
               balancePositive={kpi.positive}
             />
           ) : (
-            <KPIBar year={year} />
+            <KPIBar year={year} tradeType={tradeType} />
           )}
 
           <div style={{ display: "flex", height: 380 }}>
@@ -132,6 +133,16 @@ export default function CountryDetailPage() {
 
             {/* Main viz */}
             <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+              {/* Breadcrumb */}
+              <div style={{ fontSize: 11, color: "#94a3b8", padding: "4px 8px 0" }}>
+                <span
+                  style={{ cursor: "pointer", textDecoration: "underline" }}
+                  onClick={() => router.push("/?tab=country")}
+                >전체</span>
+                <span style={{ margin: "0 4px" }}>›</span>
+                <span style={{ color: "#475569", fontWeight: 600 }}>{country.name}</span>
+              </div>
+
               {/* Sub tabs */}
               <div className="subtab-bar">
                 {(["품목별", "시계열 추이"] as const).map((tab) => (
@@ -142,17 +153,24 @@ export default function CountryDetailPage() {
                   >{tab}</button>
                 ))}
                 {subTab === "시계열 추이" && (
-                  <select
-                    className="filter-select"
-                    style={{ marginLeft: "auto", minWidth: 72 }}
-                    value={year}
-                    onChange={(e) => setYear(e.target.value)}
-                  >
-                    <option value="2026">2026</option>
-                    <option value="2025">2025</option>
-                    <option value="2024">2024</option>
-                    <option value="2023">2023</option>
-                  </select>
+                  <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6 }}>
+                    {year === "2026" && (
+                      <span style={{ fontSize: 10, color: "#f59e0b", fontWeight: 600 }}>
+                        ⚠ 불완전 연도 (1~2월)
+                      </span>
+                    )}
+                    <select
+                      className="filter-select"
+                      style={{ minWidth: 72 }}
+                      value={year}
+                      onChange={(e) => setYear(e.target.value)}
+                    >
+                      <option value="2026">2026</option>
+                      <option value="2025">2025</option>
+                      <option value="2024">2024</option>
+                      <option value="2023">2023</option>
+                    </select>
+                  </div>
                 )}
               </div>
 
@@ -187,7 +205,7 @@ export default function CountryDetailPage() {
                         strokeWidth={2} dot={{ r: 3 }} name="수출"
                         isAnimationActive={lineAnimActive}
                         animationDuration={700} animationEasing="ease-out" />
-                      <Line yAxisId="left" type="monotone" dataKey="import" stroke="#E02020"
+                      <Line yAxisId="left" type="monotone" dataKey="import" stroke="#F97316"
                         strokeWidth={2} strokeDasharray="5 3" dot={{ r: 3 }} name="수입"
                         isAnimationActive={lineAnimActive}
                         animationDuration={700} animationEasing="ease-out" />
@@ -211,7 +229,11 @@ export default function CountryDetailPage() {
               <ChatBot
                 open={true}
                 onToggle={() => setChatOpen(false)}
-                initialMessage={`${country.name}과의 교역 현황입니다. 특정 품목에 대해 질문해주세요.`}
+                initialMessage={
+                  tradeType === "수입"
+                    ? `${country.name}으로부터의 수입 현황입니다. 특정 품목에 대해 질문해주세요.`
+                    : `${country.name}과의 수출 현황입니다. 특정 품목에 대해 질문해주세요.`
+                }
               />
             )}
           </div>

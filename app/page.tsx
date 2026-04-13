@@ -1,7 +1,7 @@
 "use client";
 import { useState, Suspense } from "react";
 import dynamic from "next/dynamic";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import Header from "@/components/Header";
 import HeroBanner from "@/components/HeroBanner";
 import FilterBar from "@/components/FilterBar";
@@ -21,8 +21,14 @@ const MACRO_DATA = [
 
 function HomeContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const initialTab = searchParams.get("tab") === "product" ? "품목별" : "국가별";
   const [mainTab, setMainTab] = useState<"국가별" | "품목별">(initialTab);
+
+  const handleTabChange = (tab: "국가별" | "품목별") => {
+    setMainTab(tab);
+    router.replace(`/?tab=${tab === "국가별" ? "country" : "product"}`);
+  };
   const [chatOpen, setChatOpen] = useState(true);
   const [year, setYear] = useState(DEFAULT_YEAR);
   const [tradeType, setTradeType] = useState<TradeType>("수출");
@@ -38,7 +44,7 @@ function HomeContent() {
           {(["국가별", "품목별"] as const).map((tab) => (
             <button
               key={tab}
-              onClick={() => setMainTab(tab)}
+              onClick={() => handleTabChange(tab)}
               className={mainTab === tab ? "main-tab-active" : "main-tab-inactive"}
             >{tab}</button>
           ))}
@@ -53,7 +59,7 @@ function HomeContent() {
             onTradeTypeChange={setTradeType}
           />
 
-          <KPIBar year={year} />
+          <KPIBar year={year} tradeType={tradeType} />
 
           {/* Split panel */}
           <div className="split-panel">

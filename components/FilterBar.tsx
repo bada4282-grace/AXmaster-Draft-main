@@ -79,10 +79,10 @@ export default function FilterBar({
             ))}
           </select>
 
-          <select className="filter-select" style={{ width: 96 }}>
-            <option>금액조회</option>
-            <option>연간누계</option>
-            <option>해당월만</option>
+          <select className="filter-select" style={{ width: 96 }} defaultValue="annual">
+            <option value="annual">연간</option>
+            <option value="cumulative">누적</option>
+            <option value="monthly">해당월</option>
           </select>
         </div>
       </div>
