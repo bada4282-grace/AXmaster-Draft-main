@@ -50,17 +50,16 @@ export default function WorldMap({ year = DEFAULT_YEAR, tradeType = "수출" }: 
 
   return (
     <div className="relative w-full h-full bg-[#D3D1C7]" style={{ minHeight: 340 }}>
-      {/* Zoom controls */}
-      <div className="absolute top-2 right-2 z-10 flex flex-col gap-1">
+      {/* Zoom controls — 우측 하단 고정 */}
+      <div className="absolute bottom-10 right-2 z-10 flex flex-col gap-1">
         {[
-          { label: "+ZOOM", fn: () => setZoom((z) => Math.min(z + 0.5, 6)) },
-          { label: "-ZOOM", fn: () => setZoom((z) => Math.max(z - 0.5, 1)) },
-          { label: "RESET", fn: () => { setZoom(1); setCenter([20, 10]); } },
+          { label: "+", fn: () => setZoom((z) => Math.min(z + 0.5, 6)) },
+          { label: "−", fn: () => setZoom((z) => Math.max(z - 0.5, 1)) },
         ].map(({ label, fn }) => (
           <button
             key={label}
             onClick={fn}
-            className="bg-white border border-gray-300 text-[10px] px-2 py-0.5 hover:bg-gray-50 font-mono"
+            className="bg-white border border-gray-300 text-base w-7 h-7 flex items-center justify-center rounded shadow hover:bg-gray-50 font-medium"
           >
             {label}
           </button>
@@ -95,7 +94,7 @@ export default function WorldMap({ year = DEFAULT_YEAR, tradeType = "수출" }: 
                     stroke="#fff"
                     strokeWidth={0.5}
                     style={{
-                      default: { outline: "none", cursor: alpha2 ? "pointer" : "default" },
+                      default: { outline: "none", cursor: (cData && cData.rank <= 30) ? "pointer" : "default" },
                       hover: { outline: "none", fill: "#FFD700", opacity: 0.9 },
                       pressed: { outline: "none" },
                     }}
@@ -117,7 +116,10 @@ export default function WorldMap({ year = DEFAULT_YEAR, tradeType = "수출" }: 
                     }}
                     onMouseLeave={() => setTooltip(null)}
                     onClick={() => {
-                      if (cData) router.push(`/country/${encodeURIComponent(cData.name)}`);
+                      if (cData && cData.rank <= 30) {
+                        const mode = tradeType === "수입" ? "import" : "export";
+                        router.push(`/country/${encodeURIComponent(cData.name)}?mode=${mode}`);
+                      }
                     }}
                   />
                 );
@@ -136,7 +138,7 @@ export default function WorldMap({ year = DEFAULT_YEAR, tradeType = "수출" }: 
           { color: "#185FA5", label: "10~15위" },
           { color: "#378ADD", label: "16~21위" },
           { color: "#85B7EB", label: "22~30위" },
-          { color: "#B5D4F4", label: "기타" },
+          { color: "#B5D4F4", label: "TOP30 외" },
         ].map(({ color, label }) => (
           <div key={label} className="flex items-center gap-0.5">
             <div className="w-5 h-3 rounded-sm" style={{ background: color }} />

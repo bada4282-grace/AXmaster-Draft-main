@@ -1,6 +1,6 @@
 "use client";
-import { useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import Header from "@/components/Header";
 import HeroBanner from "@/components/HeroBanner";
@@ -21,18 +21,21 @@ import { RechartsPayloadTooltip, rechartsTooltipSurfaceProps } from "@/component
 
 const TreemapChart = dynamic(() => import("@/components/TreemapChart"), { ssr: false });
 
-export default function CountryDetailPage() {
+function CountryDetailContent() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const name = decodeURIComponent(params.name as string);
 
+  const initialTradeType: TradeType = searchParams.get("mode") === "import" ? "수입" : "수출";
   const [year, setYear] = useState(DEFAULT_YEAR);
-  const [tradeType, setTradeType] = useState<TradeType>("수출");
+  const [month, setMonth] = useState("");
+  const [tradeType, setTradeType] = useState<TradeType>(initialTradeType);
   const [subTab, setSubTab] = useState<"품목별" | "시계열 추이">("품목별");
   const [chatOpen, setChatOpen] = useState(true);
 
-  // 연도별 국가 데이터 (연도 바뀌면 순위도 달라질 수 있음)
-  const country = getCountryByName(name) ?? {
+  // 연도·수출입 모드에 따라 순위·비중이 달라짐
+  const country = getCountryByName(name, year, tradeType) ?? {
     name, iso: "??", region: "기타", rank: 1,
     export: "0", import: "0", region2: "기타",
     topProducts: [], nameEn: name, share: 0,
@@ -42,13 +45,58 @@ export default function CountryDetailPage() {
   const kpi = getCountryKpi(year, name);
   const timeseries = getCountryTimeseries(year, name);
 
-  // 시계열 Y축 범위 계산
+  // Y축 깔끔한 눈금 계산 (50, 100, 150… 같은 round number)
+  function niceScale(rawMin: number, rawMax: number, targetTicks = 5) {
+    const range = rawMax - rawMin || 1;
+    const rawStep = range / (targetTicks - 1);
+    const mag = Math.pow(10, Math.floor(Math.log10(rawStep)));
+    const step = ([1, 2, 5, 10].map((f) => f * mag).find((s) => s >= rawStep) ?? mag * 10);
+    const min = Math.floor(rawMin / step) * step;
+    const max = Math.ceil(rawMax / step) * step;
+    const ticks: number[] = [];
+    for (let v = min; v <= max + step * 0.01; v = Math.round((v + step) * 1e9) / 1e9) ticks.push(v);
+    return { min, max, step, ticks };
+  }
+
   const allValues = timeseries.flatMap((d) => [d.export, d.import]);
-  const minVal = allValues.length ? Math.floor(Math.min(...allValues) * 0.9) : 0;
-  const maxVal = allValues.length ? Math.ceil(Math.max(...allValues) * 1.1) : 100;
+  const rawMin = allValues.length ? Math.min(...allValues) : 0;
+  const rawMax = allValues.length ? Math.max(...allValues) : 100;
+  const leftScale = niceScale(rawMin * 0.9, rawMax * 1.1);
+  const minVal = leftScale.min;
+  const maxVal = leftScale.max;
+
   const balances = timeseries.map((d) => d.balance);
-  const minBal = balances.length ? Math.floor(Math.min(...balances) * 1.1) : -50;
-  const maxBal = balances.length ? Math.ceil(Math.max(...balances) * 1.1) : 50;
+  const rawMinBal = balances.length ? Math.min(...balances) : -50;
+  const rawMaxBal = balances.length ? Math.max(...balances) : 50;
+  const balScale = niceScale(
+    rawMinBal < 0 ? rawMinBal * 1.1 : rawMinBal * 0.9,
+    rawMaxBal > 0 ? rawMaxBal * 1.1 : rawMaxBal * 0.9,
+  );
+  const minBal = balScale.min;
+  const maxBal = balScale.max;
+
+  const flatData = timeseries.map((d) => ({
+    ...d,
+    export: minVal,
+    import: minVal,
+    balance: minBal,
+  }));
+
+  const [displayData, setDisplayData] = useState(flatData);
+  const [lineAnimActive, setLineAnimActive] = useState(false);
+
+  useEffect(() => {
+    setLineAnimActive(false);
+    setDisplayData(flatData);
+
+    const timeout = setTimeout(() => {
+      setLineAnimActive(true);
+      setDisplayData(timeseries);
+    }, 50);
+
+    return () => clearTimeout(timeout);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [year, subTab]);
 
   return (
     <div style={{ minHeight: "100vh", background: "#f8f8f8" }}>
@@ -59,7 +107,7 @@ export default function CountryDetailPage() {
         {/* Main tabs */}
         <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
           <button className="main-tab-active">국가별</button>
-          <button className="main-tab-inactive" onClick={() => router.push("/")}>품목별</button>
+          <button className="main-tab-inactive" onClick={() => router.push("/?tab=product")}>품목별</button>
         </div>
 
         {/* Dashboard card */}
@@ -69,29 +117,29 @@ export default function CountryDetailPage() {
             showCountrySelect={country.name}
             defaultYear={DEFAULT_YEAR}
             onYearChange={setYear}
+            onMonthChange={setMonth}
             onTradeTypeChange={setTradeType}
           />
 
           {kpi ? (
             <KPIBar
+              tradeType={tradeType}
               exportVal={kpi.export}
               importVal={kpi.import}
               balance={kpi.balance}
               balancePositive={kpi.positive}
             />
           ) : (
-            <KPIBar year={year} />
+            <KPIBar year={year} tradeType={tradeType} />
           )}
 
-          <div style={{ display: "flex", height: 380 }}>
+          <div style={{ display: "flex", height: 500 }}>
             {/* Left info cards */}
             <div className="left-cards">
-              <button className="back-btn" onClick={() => router.push("/")}>← 돌아가기</button>
-
               <div className="left-cards-stack">
                 <div className="info-card">
-                  <div className="info-card-label">{country.region}</div>
-                  <div style={{ fontSize: 11, color: "#888", marginBottom: 2 }}>{country.iso}</div>
+                  <div className="info-card-label">선택 국가</div>
+                  <div style={{ fontSize: 11, color: "#888", marginBottom: 2 }}>{country.region} · {country.iso}</div>
                   <div style={{ fontSize: 18, fontWeight: 900 }}>{country.name}</div>
                 </div>
 
@@ -109,6 +157,16 @@ export default function CountryDetailPage() {
 
             {/* Main viz */}
             <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+              {/* Breadcrumb */}
+              <div style={{ fontSize: 11, color: "#94a3b8", padding: "4px 8px 0" }}>
+                <span
+                  style={{ cursor: "pointer", textDecoration: "underline" }}
+                  onClick={() => router.push("/?tab=country")}
+                >전체</span>
+                <span style={{ margin: "0 4px" }}>›</span>
+                <span style={{ color: "#475569", fontWeight: 600 }}>{country.name}</span>
+              </div>
+
               {/* Sub tabs */}
               <div className="subtab-bar">
                 {(["품목별", "시계열 추이"] as const).map((tab) => (
@@ -118,40 +176,55 @@ export default function CountryDetailPage() {
                     className={subTab === tab ? "subtab-active" : "subtab-inactive"}
                   >{tab}</button>
                 ))}
-                {subTab === "시계열 추이" && (
-                  <select
-                    className="filter-select"
-                    style={{ marginLeft: "auto", minWidth: 72 }}
-                    value={year}
-                    onChange={(e) => setYear(e.target.value)}
-                  >
-                    <option value="2026">2026</option>
-                    <option value="2025">2025</option>
-                    <option value="2024">2024</option>
-                    <option value="2023">2023</option>
-                  </select>
-                )}
+                <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6 }}>
+                  {subTab === "시계열 추이" && (
+                    <>
+                      {year === "2026" && (
+                        <span style={{ fontSize: 10, color: "#f59e0b", fontWeight: 600 }}>
+                          ⚠ 불완전 연도 (1~2월)
+                        </span>
+                      )}
+                      <select
+                        className="filter-select"
+                        style={{ minWidth: 72 }}
+                        value={year}
+                        onChange={(e) => setYear(e.target.value)}
+                      >
+                        <option value="2026">2026</option>
+                        <option value="2025">2025</option>
+                        <option value="2024">2024</option>
+                        <option value="2023">2023</option>
+                      </select>
+                    </>
+                  )}
+                  <button className="back-btn" onClick={() => router.push("/")}>← 돌아가기</button>
+                </div>
               </div>
 
               <div style={{ flex: 1, padding: 8, overflow: "hidden" }}>
                 {subTab === "품목별" ? (
-                  <TreemapChart forCountry countryName={country.name} year={year} tradeType={tradeType} />
+                  <TreemapChart forCountry countryName={country.name} year={year} month={month} tradeType={tradeType} />
                 ) : timeseries.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={timeseries} margin={{ top: 8, right: 44, left: 8, bottom: 4 }}>
+                    <LineChart data={displayData} margin={{ top: 8, right: 44, left: 8, bottom: 4 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                       <XAxis dataKey="month" tick={{ fontSize: 10 }} />
                       <YAxis
                         yAxisId="left"
                         domain={[minVal, maxVal]}
+                        ticks={leftScale.ticks}
                         tick={{ fontSize: 10 }}
-                        tickFormatter={(v) => `$${v}`}
+                        tickFormatter={(v) => `$${v}억`}
+                        width={52}
                       />
                       <YAxis
                         yAxisId="right"
                         orientation="right"
                         domain={[minBal, maxBal]}
+                        ticks={balScale.ticks}
                         tick={{ fontSize: 10 }}
+                        tickFormatter={(v) => `${v}억`}
+                        width={44}
                       />
                       <Tooltip
                         content={(props) => (
@@ -161,11 +234,17 @@ export default function CountryDetailPage() {
                       />
                       <Legend wrapperStyle={{ fontSize: 11 }} />
                       <Line yAxisId="left" type="monotone" dataKey="export" stroke="#185FA5"
-                        strokeWidth={2} dot={{ r: 3 }} name="수출" />
-                      <Line yAxisId="left" type="monotone" dataKey="import" stroke="#E02020"
-                        strokeWidth={2} strokeDasharray="5 3" dot={{ r: 3 }} name="수입" />
+                        strokeWidth={2} dot={{ r: 3 }} name="수출"
+                        isAnimationActive={lineAnimActive}
+                        animationDuration={700} animationEasing="ease-out" />
+                      <Line yAxisId="left" type="monotone" dataKey="import" stroke="#F97316"
+                        strokeWidth={2} strokeDasharray="5 3" dot={{ r: 3 }} name="수입"
+                        isAnimationActive={lineAnimActive}
+                        animationDuration={700} animationEasing="ease-out" />
                       <Line yAxisId="right" type="monotone" dataKey="balance" stroke="#22C55E"
-                        strokeWidth={2} dot={{ r: 3 }} name="무역수지" />
+                        strokeWidth={2} dot={{ r: 3 }} name="무역수지"
+                        isAnimationActive={lineAnimActive}
+                        animationDuration={700} animationEasing="ease-out" />
                     </LineChart>
                   </ResponsiveContainer>
                 ) : (
@@ -182,7 +261,11 @@ export default function CountryDetailPage() {
               <ChatBot
                 open={true}
                 onToggle={() => setChatOpen(false)}
-                initialMessage={`${country.name}과의 교역 현황입니다. 특정 품목에 대해 질문해주세요.`}
+                initialMessage={
+                  tradeType === "수입"
+                    ? `${country.name}으로부터의 수입 현황입니다. 특정 품목에 대해 질문해주세요.`
+                    : `${country.name}과의 수출 현황입니다. 특정 품목에 대해 질문해주세요.`
+                }
               />
             )}
           </div>
@@ -197,5 +280,13 @@ export default function CountryDetailPage() {
         <button className="chatbot-open-btn" onClick={() => setChatOpen(true)}>↑</button>
       )}
     </div>
+  );
+}
+
+export default function CountryDetailPage() {
+  return (
+    <Suspense fallback={null}>
+      <CountryDetailContent />
+    </Suspense>
   );
 }

@@ -5,6 +5,7 @@ const KPI: Record<string, KpiEntry> = KPI_BY_YEAR as unknown as Record<string, K
 
 interface KPIBarProps {
   year?: string;
+  tradeType?: "수출" | "수입";
   /** 국가/품목 상세 페이지에서 직접 값 주입 시 */
   exportVal?: string;
   exportChange?: number;
@@ -18,6 +19,7 @@ interface KPIBarProps {
 
 export default function KPIBar({
   year,
+  tradeType = "수출",
   exportVal,
   exportChange,
   exportUp,
@@ -38,28 +40,40 @@ export default function KPIBar({
   const bv = balance ?? kpi.balance.value;
   const bp = balancePositive ?? kpi.balance.positive;
 
+  const exportCard = (
+    <div className="kpi-item">
+      <div className="kpi-label">수출</div>
+      <div className="kpi-value">$ {ev} 억</div>
+      <div className={eu ? "kpi-change-up" : "kpi-change-down"}>
+        {eu ? "▲" : "▼"} {ec}%
+      </div>
+    </div>
+  );
+
+  const importCard = (
+    <div className="kpi-item">
+      <div className="kpi-label">수입</div>
+      <div className="kpi-value">$ {iv} 억</div>
+      <div className={iu ? "kpi-change-up" : "kpi-change-down"}>
+        {iu ? "▲" : "▼"} {ic}%
+      </div>
+    </div>
+  );
+
+  const balanceCard = (
+    <div className="kpi-item">
+      <div className="kpi-label">무역수지</div>
+      <div className="kpi-value" style={{ color: bp ? "#185FA5" : "#E02020" }}>
+        {bp ? "+" : "-"}$ {bv} 억
+      </div>
+    </div>
+  );
+
   return (
     <div className="kpi-bar">
-      <div className="kpi-item">
-        <div className="kpi-label">수출</div>
-        <div className="kpi-value">$ {ev} 억</div>
-        <div className={eu ? "kpi-change-up" : "kpi-change-down"}>
-          {eu ? "▲" : "▼"} {ec}%
-        </div>
-      </div>
-      <div className="kpi-item">
-        <div className="kpi-label">수입</div>
-        <div className="kpi-value">$ {iv} 억</div>
-        <div className={iu ? "kpi-change-up" : "kpi-change-down"}>
-          {iu ? "▲" : "▼"} {ic}%
-        </div>
-      </div>
-      <div className="kpi-item">
-        <div className="kpi-label">무역수지</div>
-        <div className="kpi-value" style={{ color: bp ? "#185FA5" : "#E02020" }}>
-          {bp ? "+" : "-"}$ {bv} 억
-        </div>
-      </div>
+      {tradeType === "수입" ? importCard : exportCard}
+      {tradeType === "수입" ? exportCard : importCard}
+      {balanceCard}
     </div>
   );
 }
