@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import Header from "@/components/Header";
@@ -49,6 +49,29 @@ export default function CountryDetailPage() {
   const balances = timeseries.map((d) => d.balance);
   const minBal = balances.length ? Math.floor(Math.min(...balances) * 1.1) : -50;
   const maxBal = balances.length ? Math.ceil(Math.max(...balances) * 1.1) : 50;
+
+  const flatData = timeseries.map((d) => ({
+    ...d,
+    export: minVal,
+    import: minVal,
+    balance: minBal,
+  }));
+
+  const [displayData, setDisplayData] = useState(flatData);
+  const [lineAnimActive, setLineAnimActive] = useState(false);
+
+  useEffect(() => {
+    setLineAnimActive(false);
+    setDisplayData(flatData);
+
+    const timeout = setTimeout(() => {
+      setLineAnimActive(true);
+      setDisplayData(timeseries);
+    }, 50);
+
+    return () => clearTimeout(timeout);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [year, subTab]);
 
   return (
     <div style={{ minHeight: "100vh", background: "#f8f8f8" }}>
@@ -138,7 +161,7 @@ export default function CountryDetailPage() {
                   <TreemapChart forCountry countryName={country.name} year={year} tradeType={tradeType} />
                 ) : timeseries.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={timeseries} margin={{ top: 8, right: 44, left: 8, bottom: 4 }}>
+                    <LineChart data={displayData} margin={{ top: 8, right: 44, left: 8, bottom: 4 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                       <XAxis dataKey="month" tick={{ fontSize: 10 }} />
                       <YAxis
@@ -161,11 +184,17 @@ export default function CountryDetailPage() {
                       />
                       <Legend wrapperStyle={{ fontSize: 11 }} />
                       <Line yAxisId="left" type="monotone" dataKey="export" stroke="#185FA5"
-                        strokeWidth={2} dot={{ r: 3 }} name="수출" />
+                        strokeWidth={2} dot={{ r: 3 }} name="수출"
+                        isAnimationActive={lineAnimActive}
+                        animationDuration={700} animationEasing="ease-out" />
                       <Line yAxisId="left" type="monotone" dataKey="import" stroke="#E02020"
-                        strokeWidth={2} strokeDasharray="5 3" dot={{ r: 3 }} name="수입" />
+                        strokeWidth={2} strokeDasharray="5 3" dot={{ r: 3 }} name="수입"
+                        isAnimationActive={lineAnimActive}
+                        animationDuration={700} animationEasing="ease-out" />
                       <Line yAxisId="right" type="monotone" dataKey="balance" stroke="#22C55E"
-                        strokeWidth={2} dot={{ r: 3 }} name="무역수지" />
+                        strokeWidth={2} dot={{ r: 3 }} name="무역수지"
+                        isAnimationActive={lineAnimActive}
+                        animationDuration={700} animationEasing="ease-out" />
                     </LineChart>
                   </ResponsiveContainer>
                 ) : (
