@@ -181,23 +181,38 @@ body {
 /* KPI bar */
 .kpi-bar {
   display: flex;
+  gap: 12px;
+  padding: 10px 12px 12px;
   border-bottom: 1px solid #f0f0f0;
 }
 .kpi-item {
   flex: 1;
-  padding: 12px 20px;
-  border-right: 1px solid #f0f0f0;
+  background: #fafafa;
+  border: 1px solid #f0f0f0;
+  border-radius: 6px;
+  padding: 12px;
 }
-.kpi-item:last-child { border-right: none; }
-.kpi-label { font-size: 13px; color: #666; margin-bottom: 2px; }
-.kpi-value { font-size: 24px; font-weight: 700; color: #1a1a1a; }
-.kpi-change-up { font-size: 12px; color: #E02020; margin-top: 2px; }
-.kpi-change-neutral { font-size: 24px; font-weight: 700; color: #1a1a1a; }
+.kpi-item:last-child { border-right: 1px solid #f0f0f0; }
+.kpi-label { font-size: 11px; color: #888; margin-bottom: 0; }
+.kpi-value { font-size: 18px; font-weight: 700; color: #1a1a1a; line-height: 1.2; margin-top: 4px; }
+.kpi-change-up,
+.kpi-change-down {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  margin-top: 2px;
+  line-height: 1.1;
+}
+.kpi-change-up { color: #E02020; }
+.kpi-change-down { color: #185FA5; }
+.kpi-change-icon { font-size: 10px; color: currentColor; }
+.kpi-change-neutral { font-size: 18px; font-weight: 700; color: #1a1a1a; }
 
 /* Split panel: 지도 영역이 flex에서 줄어들 수 있게 해 챗봇 고정 폭이 잘리지 않게 함 */
 .split-panel {
   display: flex;
-  height: 500px;
+  height: 540px;
   min-width: 0;
   width: 100%;
   max-width: 100%;
