@@ -69,7 +69,7 @@ function HomeContent() {
           <div className="split-panel">
             <div className="dashboard-area">
               {mainTab === "국가별" ? (
-                <WorldMap year={year} tradeType={tradeType} />
+                <WorldMap year={year} month={month} tradeType={tradeType} />
               ) : (
                 <div style={{ width: "100%", height: "100%", padding: 8 }}>
                   <TreemapChart year={year} month={month} tradeType={tradeType} />

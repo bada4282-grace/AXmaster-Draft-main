@@ -1,9 +1,10 @@
 "use client";
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { getCountryData, getMapColor, DEFAULT_YEAR, type TradeType } from "@/lib/data";
+import { getMonthlyCountryMapData, type MonthlyCountryMapItem } from "@/lib/supabase";
 
 // @ts-ignore
 import { ComposableMap, Geographies, Geography, ZoomableGroup } from "react-simple-maps";
@@ -29,12 +30,45 @@ interface Tooltip {
 
 interface WorldMapProps {
   year?: string;
+  month?: string;
   tradeType?: TradeType;
 }
 
-export default function WorldMap({ year = DEFAULT_YEAR, tradeType = "수출" }: WorldMapProps) {
+export default function WorldMap({ year = DEFAULT_YEAR, month = "", tradeType = "수출" }: WorldMapProps) {
   const router = useRouter();
-  const countryData = getCountryData(year, tradeType);
+  const annualData = getCountryData(year, tradeType);
+
+  // 월별 데이터: ctr_name → { rank, total_amt }
+  const [monthlyMap, setMonthlyMap] = useState<Map<string, MonthlyCountryMapItem>>(new Map());
+
+  useEffect(() => {
+    if (!month) {
+      setMonthlyMap(new Map());
+      return;
+    }
+    getMonthlyCountryMapData(year, month, tradeType)
+      .then((rows) => {
+        console.log("[WorldMap] monthly rows:", rows.length, "sample:", rows[0]);
+        const m = new Map<string, MonthlyCountryMapItem>();
+        rows.forEach((r) => m.set(r.ctr_name, r));
+        console.log("[WorldMap] annualData names sample:", annualData.slice(0, 5).map(d => d.name));
+        setMonthlyMap(m);
+      })
+      .catch((e) => { console.error("[WorldMap] fetch error:", e); setMonthlyMap(new Map()); });
+  }, [year, month, tradeType]);
+
+  const isMonthly = month !== "" && monthlyMap.size > 0;
+
+  // iso 코드 → 표시용 국가 정보 반환 (월별 우선, 없으면 연간)
+  const resolveCountry = (alpha2: string) => {
+    const annual = annualData.find((d) => d.iso === alpha2);
+    if (!annual) return null;
+    if (isMonthly) {
+      const m = monthlyMap.get(annual.name);
+      if (m) return { ...annual, rank: Number(m.rank), export: String(Math.round(m.total_amt / 1e8)) };
+    }
+    return annual;
+  };
 
   const [zoom, setZoom] = useState(1);
   const [center, setCenter] = useState<[number, number]>([20, 10]);
@@ -43,14 +77,16 @@ export default function WorldMap({ year = DEFAULT_YEAR, tradeType = "수출" }: 
   const getCountryColor = (isoNum: string) => {
     const alpha2 = ISO_NUM_TO_ALPHA2[isoNum];
     if (!alpha2) return "#CDE8DA";
-    const c = countryData.find((d) => d.iso === alpha2);
+    const c = resolveCountry(alpha2);
     if (!c) return "#CDE8DA";
+    // 월별 모드: TOP30에 없으면 연간 기본색
+    if (isMonthly && !monthlyMap.get(c.name)) return "#CDE8DA";
     return getMapColor(c.rank);
   };
 
   return (
     <div className="relative w-full h-full bg-[#F2FBFF]" style={{ minHeight: 340 }}>
-      {/* Zoom controls — 우측 하단 고정 */}
+      {/* Zoom controls */}
       <div className="absolute bottom-10 right-2 z-10 flex flex-col gap-1">
         {[
           { label: "+", fn: () => setZoom((z) => Math.min(z + 0.5, 6)) },
@@ -84,7 +120,8 @@ export default function WorldMap({ year = DEFAULT_YEAR, tradeType = "수출" }: 
               geographies.map((geo: any) => {
                 const isoNum = String(geo.id ?? "").padStart(3, "0");
                 const alpha2 = ISO_NUM_TO_ALPHA2[isoNum];
-                const cData = alpha2 ? countryData.find((d) => d.iso === alpha2) : null;
+                const cData = alpha2 ? resolveCountry(alpha2) : null;
+                const isClickable = !!cData && cData.rank <= 30;
 
                 return (
                   <Geography
@@ -94,7 +131,7 @@ export default function WorldMap({ year = DEFAULT_YEAR, tradeType = "수출" }: 
                     stroke="#fff"
                     strokeWidth={0.5}
                     style={{
-                      default: { outline: "none", cursor: (cData && cData.rank <= 30) ? "pointer" : "default" },
+                      default: { outline: "none", cursor: isClickable ? "pointer" : "default" },
                       hover: { outline: "none", fill: "#FFD700", opacity: 0.9 },
                       pressed: { outline: "none" },
                     }}
@@ -105,8 +142,8 @@ export default function WorldMap({ year = DEFAULT_YEAR, tradeType = "수출" }: 
                         country: cData?.name ?? geo.properties?.name ?? "알 수 없음",
                         rank: cData?.rank,
                         export: cData?.export,
-                        topProducts: cData?.topProducts,
-                        isTop30: !!cData && cData.rank <= 30,
+                        topProducts: isMonthly ? undefined : cData?.topProducts,
+                        isTop30: isClickable,
                       });
                     }}
                     onMouseMove={(evt: React.MouseEvent<SVGPathElement>) => {
@@ -116,9 +153,12 @@ export default function WorldMap({ year = DEFAULT_YEAR, tradeType = "수출" }: 
                     }}
                     onMouseLeave={() => setTooltip(null)}
                     onClick={() => {
-                      if (cData && cData.rank <= 30) {
-                        const mode = tradeType === "수입" ? "import" : "export";
-                        router.push(`/country/${encodeURIComponent(cData.name)}?mode=${mode}`);
+                      if (isClickable) {
+                        const annual = annualData.find((d) => d.iso === alpha2);
+                        if (annual) {
+                          const mode = tradeType === "수입" ? "import" : "export";
+                          router.push(`/country/${encodeURIComponent(annual.name)}?mode=${mode}`);
+                        }
                       }
                     }}
                   />
@@ -168,14 +208,18 @@ export default function WorldMap({ year = DEFAULT_YEAR, tradeType = "수출" }: 
                 <p className="tooltip-shell-line">
                   {tradeType === "수입" ? "수입액" : "수출액"}: <strong>${tooltip.export}억</strong>
                 </p>
-                <p className="tooltip-shell-line" style={{ marginTop: 10, fontWeight: 600, color: "#64748b" }}>
-                  상위 품목:
-                </p>
-                <ul className="tooltip-shell-list">
-                  {tooltip.topProducts?.map((p) => (
-                    <li key={p}>• {p}</li>
-                  ))}
-                </ul>
+                {tooltip.topProducts && tooltip.topProducts.length > 0 && (
+                  <>
+                    <p className="tooltip-shell-line" style={{ marginTop: 10, fontWeight: 600, color: "#64748b" }}>
+                      상위 품목:
+                    </p>
+                    <ul className="tooltip-shell-list">
+                      {tooltip.topProducts.map((p) => (
+                        <li key={p}>• {p}</li>
+                      ))}
+                    </ul>
+                  </>
+                )}
                 <p className="tooltip-shell-hint">클릭 → 상세페이지</p>
               </>
             ) : (
