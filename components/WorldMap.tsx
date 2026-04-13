@@ -1,0 +1,189 @@
+"use client";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { useState } from "react";
+import { createPortal } from "react-dom";
+import { useRouter } from "next/navigation";
+import { getCountryData, getMapColor, DEFAULT_YEAR, type TradeType } from "@/lib/data";
+
+// @ts-ignore
+import { ComposableMap, Geographies, Geography, ZoomableGroup } from "react-simple-maps";
+
+const GEO_URL = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
+
+const ISO_NUM_TO_ALPHA2: Record<string, string> = {
+  "156": "CN", "840": "US", "704": "VN", "392": "JP", "344": "HK",
+  "036": "AU", "356": "IN", "702": "SG", "158": "TW", "276": "DE",
+  "484": "MX", "458": "MY", "608": "PH", "826": "GB", "528": "NL",
+  "764": "TH", "616": "PL", "360": "ID", "124": "CA", "682": "SA",
+  "792": "TR", "380": "IT", "250": "FR", "724": "ES", "076": "BR",
+};
+
+interface Tooltip {
+  x: number; y: number;
+  country: string;
+  rank?: number;
+  export?: string;
+  topProducts?: string[];
+  isTop30: boolean;
+}
+
+interface WorldMapProps {
+  year?: string;
+  tradeType?: TradeType;
+}
+
+export default function WorldMap({ year = DEFAULT_YEAR, tradeType = "수출" }: WorldMapProps) {
+  const router = useRouter();
+  const countryData = getCountryData(year, tradeType);
+
+  const [zoom, setZoom] = useState(1);
+  const [center, setCenter] = useState<[number, number]>([20, 10]);
+  const [tooltip, setTooltip] = useState<Tooltip | null>(null);
+
+  const getCountryColor = (isoNum: string) => {
+    const alpha2 = ISO_NUM_TO_ALPHA2[isoNum];
+    if (!alpha2) return "#B5D4F4";
+    const c = countryData.find((d) => d.iso === alpha2);
+    if (!c) return "#B5D4F4";
+    return getMapColor(c.rank);
+  };
+
+  return (
+    <div className="relative w-full h-full bg-[#D3D1C7]" style={{ minHeight: 340 }}>
+      {/* Zoom controls */}
+      <div className="absolute top-2 right-2 z-10 flex flex-col gap-1">
+        {[
+          { label: "+ZOOM", fn: () => setZoom((z) => Math.min(z + 0.5, 6)) },
+          { label: "-ZOOM", fn: () => setZoom((z) => Math.max(z - 0.5, 1)) },
+          { label: "RESET", fn: () => { setZoom(1); setCenter([20, 10]); } },
+        ].map(({ label, fn }) => (
+          <button
+            key={label}
+            onClick={fn}
+            className="bg-white border border-gray-300 text-[10px] px-2 py-0.5 hover:bg-gray-50 font-mono"
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      <ComposableMap
+        projection="geoMercator"
+        projectionConfig={{ scale: 140, center: [20, 15] }}
+        style={{ width: "100%", height: "100%" }}
+      >
+        <ZoomableGroup
+          zoom={zoom}
+          center={center}
+          onMoveEnd={({ coordinates, zoom: z }: { coordinates: [number, number]; zoom: number }) => {
+            setCenter(coordinates);
+            setZoom(z);
+          }}
+        >
+          <Geographies geography={GEO_URL}>
+            {({ geographies }: { geographies: any[] }) =>
+              geographies.map((geo: any) => {
+                const isoNum = String(geo.id ?? "").padStart(3, "0");
+                const alpha2 = ISO_NUM_TO_ALPHA2[isoNum];
+                const cData = alpha2 ? countryData.find((d) => d.iso === alpha2) : null;
+
+                return (
+                  <Geography
+                    key={geo.rsmKey}
+                    geography={geo}
+                    fill={getCountryColor(isoNum)}
+                    stroke="#fff"
+                    strokeWidth={0.5}
+                    style={{
+                      default: { outline: "none", cursor: alpha2 ? "pointer" : "default" },
+                      hover: { outline: "none", fill: "#FFD700", opacity: 0.9 },
+                      pressed: { outline: "none" },
+                    }}
+                    onMouseEnter={(evt: React.MouseEvent<SVGPathElement>) => {
+                      setTooltip({
+                        x: evt.clientX,
+                        y: evt.clientY,
+                        country: cData?.name ?? geo.properties?.name ?? "알 수 없음",
+                        rank: cData?.rank,
+                        export: cData?.export,
+                        topProducts: cData?.topProducts,
+                        isTop30: !!cData && cData.rank <= 30,
+                      });
+                    }}
+                    onMouseMove={(evt: React.MouseEvent<SVGPathElement>) => {
+                      setTooltip((prev) =>
+                        prev ? { ...prev, x: evt.clientX, y: evt.clientY } : null
+                      );
+                    }}
+                    onMouseLeave={() => setTooltip(null)}
+                    onClick={() => {
+                      if (cData) router.push(`/country/${encodeURIComponent(cData.name)}`);
+                    }}
+                  />
+                );
+              })
+            }
+          </Geographies>
+        </ZoomableGroup>
+      </ComposableMap>
+
+      {/* Legend */}
+      <div className="absolute bottom-2 left-2 flex items-center gap-2 flex-wrap text-[9px]">
+        <span className="text-gray-600 mr-1 font-medium">{tradeType === "수입" ? "수입액" : "수출액"} 순위</span>
+        {[
+          { color: "#042C53", label: "1~3위" },
+          { color: "#0C447C", label: "4~9위" },
+          { color: "#185FA5", label: "10~15위" },
+          { color: "#378ADD", label: "16~21위" },
+          { color: "#85B7EB", label: "22~30위" },
+          { color: "#B5D4F4", label: "기타" },
+        ].map(({ color, label }) => (
+          <div key={label} className="flex items-center gap-0.5">
+            <div className="w-5 h-3 rounded-sm" style={{ background: color }} />
+            <span className="text-gray-600">{label}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Tooltip */}
+      {tooltip &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            className="tooltip-shell tooltip-shell--fixed"
+            style={{
+              left: tooltip.x,
+              top: tooltip.y,
+              transform: "translate(-50%, calc(-100% - 12px))",
+            }}
+          >
+            <p className="tooltip-shell-title">{tooltip.country}</p>
+            {tooltip.isTop30 ? (
+              <>
+                <p className="tooltip-shell-line">
+                  {tradeType === "수입" ? "수입" : "수출"} 순위: <strong>{tooltip.rank}위</strong>
+                </p>
+                <p className="tooltip-shell-line">
+                  {tradeType === "수입" ? "수입액" : "수출액"}: <strong>${tooltip.export}억</strong>
+                </p>
+                <p className="tooltip-shell-line" style={{ marginTop: 10, fontWeight: 600, color: "#64748b" }}>
+                  상위 품목:
+                </p>
+                <ul className="tooltip-shell-list">
+                  {tooltip.topProducts?.map((p) => (
+                    <li key={p}>• {p}</li>
+                  ))}
+                </ul>
+                <p className="tooltip-shell-hint">클릭 → 상세페이지</p>
+              </>
+            ) : (
+              <p className="tooltip-shell-sub" style={{ margin: 0, color: "#94a3b8" }}>
+                상세 데이터 제한
+              </p>
+            )}
+          </div>,
+          document.body
+        )}
+    </div>
+  );
+}
