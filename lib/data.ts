@@ -67,12 +67,12 @@ export function getCountryByName(name: string, year = DEFAULT_YEAR, tradeType: T
 }
 
 export function getMapColor(rank: number): string {
-  if (rank <= 3) return "#042C53";
-  if (rank <= 9) return "#0C447C";
-  if (rank <= 15) return "#185FA5";
-  if (rank <= 21) return "#378ADD";
-  if (rank <= 30) return "#85B7EB";
-  return "#B5D4F4";
+  if (rank <= 3) return "#0F4C5C";
+  if (rank <= 9) return "#1D6F78";
+  if (rank <= 15) return "#3E8F92";
+  if (rank <= 21) return "#66AFA9";
+  if (rank <= 30) return "#95CBC0";
+  return "#CDE8DA";
 }
 
 // ─── MTI 색상 / 명칭 ─────────────────────────────────────────────────────
