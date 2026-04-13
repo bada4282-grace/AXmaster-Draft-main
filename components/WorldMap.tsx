@@ -42,14 +42,14 @@ export default function WorldMap({ year = DEFAULT_YEAR, tradeType = "수출" }: 
 
   const getCountryColor = (isoNum: string) => {
     const alpha2 = ISO_NUM_TO_ALPHA2[isoNum];
-    if (!alpha2) return "#B5D4F4";
+    if (!alpha2) return "#CDE8DA";
     const c = countryData.find((d) => d.iso === alpha2);
-    if (!c) return "#B5D4F4";
+    if (!c) return "#CDE8DA";
     return getMapColor(c.rank);
   };
 
   return (
-    <div className="relative w-full h-full bg-[#D3D1C7]" style={{ minHeight: 340 }}>
+    <div className="relative w-full h-full bg-[#F2FBFF]" style={{ minHeight: 340 }}>
       {/* Zoom controls — 우측 하단 고정 */}
       <div className="absolute bottom-10 right-2 z-10 flex flex-col gap-1">
         {[
@@ -133,12 +133,12 @@ export default function WorldMap({ year = DEFAULT_YEAR, tradeType = "수출" }: 
       <div className="absolute bottom-2 left-2 flex items-center gap-2 flex-wrap text-[9px]">
         <span className="text-gray-600 mr-1 font-medium">{tradeType === "수입" ? "수입액" : "수출액"} 순위</span>
         {[
-          { color: "#042C53", label: "1~3위" },
-          { color: "#0C447C", label: "4~9위" },
-          { color: "#185FA5", label: "10~15위" },
-          { color: "#378ADD", label: "16~21위" },
-          { color: "#85B7EB", label: "22~30위" },
-          { color: "#B5D4F4", label: "TOP30 외" },
+          { color: "#0F4C5C", label: "1~3위" },
+          { color: "#1D6F78", label: "4~9위" },
+          { color: "#3E8F92", label: "10~15위" },
+          { color: "#66AFA9", label: "16~21위" },
+          { color: "#95CBC0", label: "22~30위" },
+          { color: "#CDE8DA", label: "TOP30 외" },
         ].map(({ color, label }) => (
           <div key={label} className="flex items-center gap-0.5">
             <div className="w-5 h-3 rounded-sm" style={{ background: color }} />
