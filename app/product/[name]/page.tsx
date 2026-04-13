@@ -1,11 +1,12 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Header from "@/components/Header";
 import HeroBanner from "@/components/HeroBanner";
 import FilterBar from "@/components/FilterBar";
 import KPIBar from "@/components/KPIBar";
 import ChatBot from "@/components/ChatBot";
+import MacroSection from "@/components/MacroSection";
 import {
   getTreemapData,
   getProductTrend,
@@ -32,6 +33,22 @@ export default function ProductDetailPage() {
   const [tradeType, setTradeType] = useState<TradeType>("수출");
   const [subTab, setSubTab] = useState<"금액 추이" | "상위 국가">("금액 추이");
   const [chatOpen, setChatOpen] = useState(true);
+  const [chatWidth, setChatWidth] = useState(220);
+  const splitPanelRef = useRef<HTMLDivElement>(null);
+  const [splitPanelWidth, setSplitPanelWidth] = useState(0);
+
+  useEffect(() => {
+    const el = splitPanelRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(entries => {
+      const w = entries[0]?.contentRect.width ?? 0;
+      setSplitPanelWidth(w);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const maxChatWidth = splitPanelWidth > 0 ? Math.floor(splitPanelWidth / 2) : 550;
 
   // 해당 품목 정보 찾기 (기본 연도 + 현재 tradeType 기준)
   const treemapData = getTreemapData(DEFAULT_YEAR, tradeType);
@@ -54,6 +71,7 @@ export default function ProductDetailPage() {
   const currentVal = currentYearData?.value ?? 0;
   const prevVal = prevYearData?.value ?? 0;
   const changeRate = prevVal ? ((currentVal - prevVal) / prevVal * 100).toFixed(1) : null;
+  const isChangeUp = changeRate !== null ? parseFloat(changeRate) >= 0 : null;
   const tradeLabel = tradeType === "수입" ? "수입" : "수출";
 
   return (
@@ -63,8 +81,8 @@ export default function ProductDetailPage() {
 
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: "20px 24px" }}>
         {/* Main tabs */}
-        <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-          <button className="main-tab-inactive" onClick={() => router.push("/")}>국가별</button>
+        <div style={{ display: "flex", gap: 8, marginBottom: 2 }}>
+          <button className="main-tab-inactive" style={{ transform: "translateX(6px)" }} onClick={() => router.push("/")}>국가별</button>
           <button className="main-tab-active">품목별</button>
         </div>
 
@@ -73,12 +91,12 @@ export default function ProductDetailPage() {
           <FilterBar mode="product" defaultYear={DEFAULT_YEAR} onYearChange={setYear} onTradeTypeChange={setTradeType} />
           <KPIBar year={year} />
 
-          <div style={{ display: "flex", height: 380 }}>
+          <div style={{ display: "flex", height: 500 }} ref={splitPanelRef}>
             {/* Left info cards */}
             <div className="left-cards">
               <button className="back-btn" onClick={() => router.push("/?tab=product")}>← 돌아가기</button>
 
-              <div className="left-cards-stack">
+              <div className="left-cards-stack left-cards-stack--compact">
                 <div className="info-card">
                   <div className="info-card-label">품목명</div>
                   <div style={{ fontSize: 18, fontWeight: 900 }}>{name}</div>
@@ -91,19 +109,26 @@ export default function ProductDetailPage() {
 
                 <div className="info-card">
                   <div className="info-card-label">{year}년 {tradeLabel}액</div>
-                  <div style={{ fontSize: 16, fontWeight: 700 }}>
-                    $ {currentVal.toLocaleString()}억
+                  <div style={{ fontSize: 18, fontWeight: 900 }}>
+                    {currentVal.toLocaleString()}억
+                  </div>
+                  <div style={{ fontSize: 10, color: "#888", marginTop: 2 }}>
+                    달러
                   </div>
                 </div>
 
                 {changeRate !== null && (
                   <div className="info-card">
                     <div className="info-card-label">전년 대비</div>
+                    <div style={{ fontSize: 18, fontWeight: 900, color: isChangeUp ? "#E02020" : "#185FA5" }}>
+                      {Math.abs(parseFloat(changeRate))}%
+                    </div>
                     <div style={{
-                      fontSize: 18, fontWeight: 900,
-                      color: parseFloat(changeRate) >= 0 ? "#E02020" : "#185FA5",
+                      fontSize: 10,
+                      marginTop: 2,
+                      color: isChangeUp ? "#E02020" : "#185FA5",
                     }}>
-                      {parseFloat(changeRate) >= 0 ? "▲" : "▼"} {Math.abs(parseFloat(changeRate))}%
+                      {isChangeUp ? "상승" : "하락"}
                     </div>
                   </div>
                 )}
@@ -191,19 +216,22 @@ export default function ProductDetailPage() {
               <ChatBot
                 open={true}
                 onToggle={() => setChatOpen(false)}
+                width={Math.min(chatWidth, maxChatWidth)}
+                onWidthChange={w => setChatWidth(Math.min(w, maxChatWidth))}
+                maxWidth={maxChatWidth}
+                product={name}
+                year={year}
                 initialMessage={`${name} 수출 현황입니다. 궁금한 점을 질문해주세요.`}
               />
             )}
           </div>
         </div>
 
-        <div className="macro-section">
-          <div className="macro-title">거시경제 지표</div>
-        </div>
+        <MacroSection />
       </div>
 
       {!chatOpen && (
-        <button className="chatbot-open-btn" onClick={() => setChatOpen(true)}>↑</button>
+        <button className="chatbot-open-btn" onClick={() => setChatOpen(true)}>🤖</button>
       )}
     </div>
   );

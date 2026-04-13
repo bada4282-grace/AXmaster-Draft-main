@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import Header from "@/components/Header";
@@ -7,6 +7,7 @@ import HeroBanner from "@/components/HeroBanner";
 import FilterBar from "@/components/FilterBar";
 import KPIBar from "@/components/KPIBar";
 import ChatBot from "@/components/ChatBot";
+import MacroSection from "@/components/MacroSection";
 import {
   getCountryByName,
   getCountryTimeseries,
@@ -33,6 +34,22 @@ function CountryDetailContent() {
   const [tradeType, setTradeType] = useState<TradeType>(initialTradeType);
   const [subTab, setSubTab] = useState<"품목별" | "시계열 추이">("품목별");
   const [chatOpen, setChatOpen] = useState(true);
+  const [chatWidth, setChatWidth] = useState(220);
+  const splitPanelRef = useRef<HTMLDivElement>(null);
+  const [splitPanelWidth, setSplitPanelWidth] = useState(0);
+
+  useEffect(() => {
+    const el = splitPanelRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(entries => {
+      const w = entries[0]?.contentRect.width ?? 0;
+      setSplitPanelWidth(w);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const maxChatWidth = splitPanelWidth > 0 ? Math.floor(splitPanelWidth / 2) : 550;
 
   // 연도·수출입 모드에 따라 순위·비중이 달라짐
   const country = getCountryByName(name, year, tradeType) ?? {
@@ -105,8 +122,8 @@ function CountryDetailContent() {
 
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: "20px 24px" }}>
         {/* Main tabs */}
-        <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-          <button className="main-tab-active">국가별</button>
+        <div style={{ display: "flex", gap: 8, marginBottom: 2 }}>
+          <button className="main-tab-active" style={{ transform: "translateX(6px)" }}>국가별</button>
           <button className="main-tab-inactive" onClick={() => router.push("/?tab=product")}>품목별</button>
         </div>
 
@@ -133,13 +150,14 @@ function CountryDetailContent() {
             <KPIBar year={year} tradeType={tradeType} />
           )}
 
-          <div style={{ display: "flex", height: 500 }}>
+          <div style={{ display: "flex", height: 500 }} ref={splitPanelRef}>
             {/* Left info cards */}
             <div className="left-cards">
-              <div className="left-cards-stack">
+              <button className="back-btn" onClick={() => router.push("/?tab=country")}>← 돌아가기</button>
+
+              <div className="left-cards-stack left-cards-stack--compact">
                 <div className="info-card">
-                  <div className="info-card-label">선택 국가</div>
-                  <div style={{ fontSize: 11, color: "#888", marginBottom: 2 }}>{country.region} · {country.iso}</div>
+                  <div className="info-card-label" style={{ marginBottom: 2 }}>{country.region} · {country.iso}</div>
                   <div style={{ fontSize: 18, fontWeight: 900 }}>{country.name}</div>
                 </div>
 
@@ -157,16 +175,6 @@ function CountryDetailContent() {
 
             {/* Main viz */}
             <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-              {/* Breadcrumb */}
-              <div style={{ fontSize: 11, color: "#94a3b8", padding: "4px 8px 0" }}>
-                <span
-                  style={{ cursor: "pointer", textDecoration: "underline" }}
-                  onClick={() => router.push("/?tab=country")}
-                >전체</span>
-                <span style={{ margin: "0 4px" }}>›</span>
-                <span style={{ color: "#475569", fontWeight: 600 }}>{country.name}</span>
-              </div>
-
               {/* Sub tabs */}
               <div className="subtab-bar">
                 {(["품목별", "시계열 추이"] as const).map((tab) => (
@@ -197,7 +205,6 @@ function CountryDetailContent() {
                       </select>
                     </>
                   )}
-                  <button className="back-btn" onClick={() => router.push("/")}>← 돌아가기</button>
                 </div>
               </div>
 
@@ -261,6 +268,11 @@ function CountryDetailContent() {
               <ChatBot
                 open={true}
                 onToggle={() => setChatOpen(false)}
+                width={Math.min(chatWidth, maxChatWidth)}
+                onWidthChange={w => setChatWidth(Math.min(w, maxChatWidth))}
+                maxWidth={maxChatWidth}
+                country={country.name}
+                year={year}
                 initialMessage={
                   tradeType === "수입"
                     ? `${country.name}으로부터의 수입 현황입니다. 특정 품목에 대해 질문해주세요.`
@@ -271,13 +283,11 @@ function CountryDetailContent() {
           </div>
         </div>
 
-        <div className="macro-section">
-          <div className="macro-title">거시경제 지표</div>
-        </div>
+        <MacroSection />
       </div>
 
       {!chatOpen && (
-        <button className="chatbot-open-btn" onClick={() => setChatOpen(true)}>↑</button>
+        <button className="chatbot-open-btn" onClick={() => setChatOpen(true)}>🤖</button>
       )}
     </div>
   );

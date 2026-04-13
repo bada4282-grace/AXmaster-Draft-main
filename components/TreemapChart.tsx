@@ -1,6 +1,6 @@
 "use client";
-import { useState, useEffect } from "react";
-import { Treemap, ResponsiveContainer, Tooltip } from "recharts";
+import { useState, useEffect, useRef } from "react";
+import { Treemap, Tooltip } from "recharts";
 import { getTreemapData, getCountryTreemapData, MTI_COLORS, MTI_NAMES, ProductNode, DEFAULT_YEAR, type TradeType } from "@/lib/data";
 import { getMonthlyTreemapData, getCountryMonthlyTreemapData } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
@@ -118,6 +118,8 @@ export default function TreemapChart({
   tradeType = "수출",
 }: TreemapChartProps) {
   const router = useRouter();
+  const chartContainerRef = useRef<HTMLDivElement | null>(null);
+  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
 
   const annualData = forCountry && countryName
     ? getCountryTreemapData(year, countryName, tradeType)
@@ -170,6 +172,25 @@ export default function TreemapChart({
     children: displayData.filter((d) => d.value > 0).map((d) => ({ name: d.name, size: d.value })),
   }];
 
+  useEffect(() => {
+    const target = chartContainerRef.current;
+    if (!target) return;
+
+    const syncSize = () => {
+      const width = target.clientWidth;
+      const height = target.clientHeight;
+      setContainerSize((prev) => {
+        if (prev.width === width && prev.height === height) return prev;
+        return { width, height };
+      });
+    };
+
+    syncSize();
+    const observer = new ResizeObserver(syncSize);
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, []);
+
   const handleClick = (data: any) => {
     if (!data?.name) return;
     const item = treemapData.find((d) => d.name === data.name);
@@ -187,7 +208,7 @@ export default function TreemapChart({
         }
       `}</style>
 
-      <div className="flex-1 min-h-0">
+      <div ref={chartContainerRef} className="flex-1 min-h-0">
         {noData ? (
           <div style={{
             display: "flex", alignItems: "center", justifyContent: "center",
@@ -196,22 +217,23 @@ export default function TreemapChart({
           }}>
             데이터가 없습니다.
           </div>
+        ) : containerSize.width < 10 || containerSize.height < 10 ? (
+          <div style={{ width: "100%", height: "100%" }} />
         ) : (
-          <ResponsiveContainer width="100%" height="100%">
-            <Treemap
-              data={chartData}
-              dataKey="size"
-              aspectRatio={4 / 3}
-              isAnimationActive={false}
-              onClick={handleClick}
-              content={<CustomContent data={treemapData} animKey={animKey} />}
-            >
-              <Tooltip
-                content={<CustomTooltip data={treemapData} tradeType={tradeType} />}
-                {...rechartsTooltipSurfaceProps}
-              />
-            </Treemap>
-          </ResponsiveContainer>
+          <Treemap
+            width={containerSize.width}
+            height={containerSize.height}
+            data={chartData}
+            dataKey="size"
+            isAnimationActive={false}
+            onClick={handleClick}
+            content={<CustomContent data={treemapData} animKey={animKey} />}
+          >
+            <Tooltip
+              content={<CustomTooltip data={treemapData} tradeType={tradeType} />}
+              {...rechartsTooltipSurfaceProps}
+            />
+          </Treemap>
         )}
       </div>
 

@@ -65,7 +65,7 @@ export default function KPIBar({
   const balanceCard = (
     <div className="kpi-item">
       <div className="kpi-label">무역수지</div>
-      <div className="kpi-value" style={{ color: bp ? "#185FA5" : "#E02020" }}>
+      <div className="kpi-value" style={{ color: bp ? "#E02020" : "#185FA5" }}>
         {bp ? "+" : "-"}$ {bv} 억
       </div>
     </div>

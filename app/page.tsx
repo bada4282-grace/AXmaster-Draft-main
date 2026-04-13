@@ -1,5 +1,5 @@
 "use client";
-import { useState, Suspense } from "react";
+import { useState, useRef, useEffect, Suspense } from "react";
 import dynamic from "next/dynamic";
 import { useSearchParams, useRouter } from "next/navigation";
 import Header from "@/components/Header";
@@ -8,16 +8,11 @@ import FilterBar from "@/components/FilterBar";
 import KPIBar from "@/components/KPIBar";
 import ChatBot from "@/components/ChatBot";
 import { DEFAULT_YEAR, type TradeType } from "@/lib/data";
+import MacroSection from "@/components/MacroSection";
 
 const WorldMap = dynamic(() => import("@/components/WorldMap"), { ssr: false });
 const TreemapChart = dynamic(() => import("@/components/TreemapChart"), { ssr: false });
 
-const MACRO_DATA = [
-  { label: "USD/KRW", value: "1,372.5", change: "+0.3%", up: true },
-  { label: "BDI (발틱지수)", value: "1,842", change: "-1.2%", up: false },
-  { label: "두바이유 ($/bbl)", value: "82.4", change: "+0.8%", up: true },
-  { label: "WTI ($/bbl)", value: "78.9", change: "+0.5%", up: true },
-];
 
 function HomeContent() {
   const searchParams = useSearchParams();
@@ -30,6 +25,24 @@ function HomeContent() {
     router.replace(`/?tab=${tab === "국가별" ? "country" : "product"}`);
   };
   const [chatOpen, setChatOpen] = useState(true);
+  const [chatWidth, setChatWidth] = useState(220);
+  const splitPanelRef = useRef<HTMLDivElement>(null);
+  const [splitPanelWidth, setSplitPanelWidth] = useState(0);
+
+  /* split-panel 너비를 감시해 최대 챗봇 너비(절반)를 계산 */
+  useEffect(() => {
+    const el = splitPanelRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(entries => {
+      const w = entries[0]?.contentRect.width ?? 0;
+      setSplitPanelWidth(w);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const maxChatWidth = splitPanelWidth > 0 ? Math.floor(splitPanelWidth / 2) : 550;
+
   const [year, setYear] = useState(DEFAULT_YEAR);
   const [tradeType, setTradeType] = useState<TradeType>("수출");
   const [month, setMonth] = useState("");
@@ -42,12 +55,13 @@ function HomeContent() {
 
       <div style={{ maxWidth: 1100, width: "100%", margin: "0 auto", padding: "20px 24px" }}>
         {/* Main tabs */}
-        <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+        <div style={{ display: "flex", gap: 8, marginBottom: 2 }}>
           {(["국가별", "품목별"] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => handleTabChange(tab)}
               className={mainTab === tab ? "main-tab-active" : "main-tab-inactive"}
+              style={tab === "국가별" ? { transform: "translateX(6px)" } : undefined}
             >{tab}</button>
           ))}
         </div>
@@ -66,7 +80,7 @@ function HomeContent() {
           <KPIBar year={year} tradeType={tradeType} />
 
           {/* Split panel */}
-          <div className="split-panel">
+          <div className="split-panel" ref={splitPanelRef}>
             <div className="dashboard-area">
               {mainTab === "국가별" ? (
                 <WorldMap year={year} month={month} tradeType={tradeType} />
@@ -81,6 +95,10 @@ function HomeContent() {
               <ChatBot
                 open={true}
                 onToggle={() => setChatOpen(false)}
+                width={Math.min(chatWidth, maxChatWidth)}
+                onWidthChange={w => setChatWidth(Math.min(w, maxChatWidth))}
+                maxWidth={maxChatWidth}
+                year={year}
                 initialMessage={
                   mainTab === "국가별"
                     ? "글로벌 무역통계 대시보드입니다. 특정 국가나 품목에 대해 질문해주세요."
@@ -91,28 +109,11 @@ function HomeContent() {
           </div>
         </div>
 
-        {/* Macro section */}
-        <div className="macro-section">
-          <div className="macro-title">거시경제 지표</div>
-          <div className="macro-grid">
-            {MACRO_DATA.map((item) => (
-              <div key={item.label} className="macro-card">
-                <div className="macro-card-label">{item.label}</div>
-                <div className="macro-card-value">{item.value}</div>
-                <div
-                  className="macro-card-change"
-                  style={{ color: item.up ? "#E02020" : "#185FA5" }}
-                >
-                  {item.change}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+        <MacroSection />
       </div>
 
       {!chatOpen && (
-        <button className="chatbot-open-btn" onClick={() => setChatOpen(true)}>↑</button>
+        <button className="chatbot-open-btn" onClick={() => setChatOpen(true)}>🤖</button>
       )}
     </div>
   );
