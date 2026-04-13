@@ -32,6 +32,8 @@ function HomeContent() {
   const [chatOpen, setChatOpen] = useState(true);
   const [year, setYear] = useState(DEFAULT_YEAR);
   const [tradeType, setTradeType] = useState<TradeType>("수출");
+  const [month, setMonth] = useState("");
+  const [, setPeriod] = useState("annual");
 
   return (
     <div style={{ minHeight: "100vh", background: "#f8f8f8" }}>
@@ -56,6 +58,8 @@ function HomeContent() {
             mode={mainTab === "품목별" ? "product" : "country"}
             defaultYear={DEFAULT_YEAR}
             onYearChange={setYear}
+            onMonthChange={setMonth}
+            onPeriodChange={setPeriod}
             onTradeTypeChange={setTradeType}
           />
 
@@ -68,7 +72,7 @@ function HomeContent() {
                 <WorldMap year={year} tradeType={tradeType} />
               ) : (
                 <div style={{ width: "100%", height: "100%", padding: 8 }}>
-                  <TreemapChart year={year} tradeType={tradeType} />
+                  <TreemapChart year={year} month={month} tradeType={tradeType} />
                 </div>
               )}
             </div>

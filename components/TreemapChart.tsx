@@ -1,24 +1,47 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Treemap, ResponsiveContainer, Tooltip } from "recharts";
 import { getTreemapData, getCountryTreemapData, MTI_COLORS, MTI_NAMES, ProductNode, DEFAULT_YEAR, type TradeType } from "@/lib/data";
+import { getMonthlyTreemapData, getCountryMonthlyTreemapData } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import { rechartsTooltipSurfaceProps } from "@/components/RechartsTooltip";
+
+// 금액을 적절한 단위로 포맷 (value는 억 단위 기준)
+// 예: 986.3 → "$986.3억" / 0.00634 → "$63.4만" / 82 → "$82억"
+function formatAmount(v: number): string {
+  if (v >= 1) {
+    const rounded = Math.floor(v * 10) / 10;
+    return `$${rounded % 1 === 0 ? rounded : rounded.toFixed(1)}억`;
+  }
+  const man = Math.floor(v * 10000 * 10) / 10; // 만 단위, 소수 1자리
+  if (man >= 0.1) return `$${man}만`;
+  return `$${Math.round(v * 1e8).toLocaleString()}`;
+}
 
 interface CustomContentProps {
   x?: number; y?: number; width?: number; height?: number;
   name?: string; value?: number;
   data: ProductNode[];
+  animKey?: number;
 }
 
-function CustomContent({ x = 0, y = 0, width = 0, height = 0, name, value, data }: CustomContentProps) {
+function CustomContent({ x = 0, y = 0, width = 0, height = 0, name, value = 0, data, animKey = 0 }: CustomContentProps) {
   if (width < 10 || height < 10) return null;
+  if (!name || name === "root") return null;
+
   const item = data.find((d) => d.name === name);
   const color = item?.color ?? "#3B82F6";
   const fontSize = width > 120 ? 14 : width > 60 ? 11 : 9;
+  const cx = x + width / 2;
+  const cy = y + height / 2;
 
   return (
-    <g>
+    <g
+      style={{
+        transformOrigin: `${cx}px ${cy}px`,
+        animation: `tcell-${animKey} 0.5s cubic-bezier(0.22, 1, 0.36, 1) both`,
+      }}
+    >
       <rect x={x} y={y} width={width} height={height} fill={color} stroke="#fff" strokeWidth={1} />
       {width > 40 && height > 25 && (
         <>
@@ -35,7 +58,7 @@ function CustomContent({ x = 0, y = 0, width = 0, height = 0, name, value, data 
               textAnchor="middle" fill="rgba(255,255,255,0.85)" fontSize={Math.max(fontSize - 2, 8)}
               style={{ pointerEvents: "none" }}
             >
-              ${value}억
+              {formatAmount(value)}
             </text>
           )}
         </>
@@ -58,7 +81,7 @@ function CustomTooltip({
     <div className="tooltip-shell">
       <p className="tooltip-shell-title">{item.name}</p>
       <p className="tooltip-shell-line">
-        {label}: <strong>${item.value}억</strong>
+        {label}: <strong>{formatAmount(item.value)}</strong>
       </p>
       {item.topCountries && item.topCountries.length > 0 && (
         <>
@@ -81,8 +104,9 @@ function CustomTooltip({
 
 interface TreemapChartProps {
   forCountry?: boolean;
-  countryName?: string;    // forCountry=true 일 때 해당 국가명
+  countryName?: string;
   year?: string;
+  month?: string;
   tradeType?: TradeType;
 }
 
@@ -90,15 +114,52 @@ export default function TreemapChart({
   forCountry = false,
   countryName,
   year = DEFAULT_YEAR,
+  month = "",
   tradeType = "수출",
 }: TreemapChartProps) {
   const router = useRouter();
-  // 국가 상세 페이지: 해당 국가와의 교역 품목 데이터
-  // 메인 대시보드: 전체 글로벌 데이터
-  const treemapData = forCountry && countryName
+
+  const annualData = forCountry && countryName
     ? getCountryTreemapData(year, countryName, tradeType)
     : getTreemapData(year, tradeType);
+
+  const [treemapData, setTreemapData] = useState<ProductNode[]>(annualData);
+  const [noData, setNoData] = useState(false);
   const [zoomedMti, setZoomedMti] = useState<number | null>(null);
+  const [animKey, setAnimKey] = useState(0);
+
+  useEffect(() => {
+    if (!month) {
+      setNoData(false);
+      setTreemapData(annualData);
+      setAnimKey((k) => k + 1);
+      return;
+    }
+    const fetch = forCountry && countryName
+      ? getCountryMonthlyTreemapData(year, month, countryName, tradeType)
+      : getMonthlyTreemapData(year, month, tradeType);
+
+    fetch
+      .then((data) => {
+        if (data.length === 0) {
+          setNoData(true);
+          setTreemapData([]);
+        } else {
+          setNoData(false);
+          setTreemapData(data);
+        }
+      })
+      .catch(() => {
+        setNoData(false);
+        setTreemapData(annualData);
+      })
+      .finally(() => setAnimKey((k) => k + 1));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [year, month, tradeType, countryName, forCountry]);
+
+  useEffect(() => {
+    if (!month) setAnimKey((k) => k + 1);
+  }, [zoomedMti]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const displayData = zoomedMti !== null
     ? treemapData.filter((d) => d.mti === zoomedMti)
@@ -106,7 +167,7 @@ export default function TreemapChart({
 
   const chartData = [{
     name: "root",
-    children: displayData.map((d) => ({ name: d.name, size: d.value })),
+    children: displayData.filter((d) => d.value > 0).map((d) => ({ name: d.name, size: d.value })),
   }];
 
   const handleClick = (data: any) => {
@@ -118,22 +179,40 @@ export default function TreemapChart({
   };
 
   return (
-    <div className="w-full h-full flex flex-col">
+    <div className="w-full h-full flex flex-col relative">
+      <style>{`
+        @keyframes tcell-${animKey} {
+          from { opacity: 0; transform: scale(0.97); }
+          to   { opacity: 1; transform: scale(1); }
+        }
+      `}</style>
+
       <div className="flex-1 min-h-0">
-        <ResponsiveContainer width="100%" height="100%">
-          <Treemap
-            data={chartData}
-            dataKey="size"
-            aspectRatio={4 / 3}
-            onClick={handleClick}
-            content={<CustomContent data={treemapData} />}
-          >
-            <Tooltip
-              content={<CustomTooltip data={treemapData} tradeType={tradeType} />}
-              {...rechartsTooltipSurfaceProps}
-            />
-          </Treemap>
-        </ResponsiveContainer>
+        {noData ? (
+          <div style={{
+            display: "flex", alignItems: "center", justifyContent: "center",
+            height: "100%", color: "#94a3b8", fontSize: 13,
+            border: "1px solid #e2e8f0", borderRadius: 8, background: "#f8fafc",
+          }}>
+            데이터가 없습니다.
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height="100%">
+            <Treemap
+              data={chartData}
+              dataKey="size"
+              aspectRatio={4 / 3}
+              isAnimationActive={false}
+              onClick={handleClick}
+              content={<CustomContent data={treemapData} animKey={animKey} />}
+            >
+              <Tooltip
+                content={<CustomTooltip data={treemapData} tradeType={tradeType} />}
+                {...rechartsTooltipSurfaceProps}
+              />
+            </Treemap>
+          </ResponsiveContainer>
+        )}
       </div>
 
       {/* MTI 카테고리 필터 */}

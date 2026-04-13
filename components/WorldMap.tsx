@@ -116,7 +116,10 @@ export default function WorldMap({ year = DEFAULT_YEAR, tradeType = "수출" }: 
                     }}
                     onMouseLeave={() => setTooltip(null)}
                     onClick={() => {
-                      if (cData && cData.rank <= 30) router.push(`/country/${encodeURIComponent(cData.name)}`);
+                      if (cData && cData.rank <= 30) {
+                        const mode = tradeType === "수입" ? "import" : "export";
+                        router.push(`/country/${encodeURIComponent(cData.name)}?mode=${mode}`);
+                      }
                     }}
                   />
                 );

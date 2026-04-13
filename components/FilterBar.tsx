@@ -7,6 +7,7 @@ interface FilterBarProps {
   showCountrySelect?: string;
   onYearChange?: (year: string) => void;
   onMonthChange?: (month: string) => void;
+  onPeriodChange?: (period: string) => void;
   onTradeTypeChange?: (type: "수출" | "수입") => void;
   defaultYear?: string;
 }
@@ -16,11 +17,14 @@ export default function FilterBar({
   showCountrySelect,
   onYearChange,
   onMonthChange,
+  onPeriodChange,
   onTradeTypeChange,
   defaultYear = "2026",
 }: FilterBarProps) {
   const [tradeType, setTradeType] = useState<"수출" | "수입">("수출");
   const [year, setYear] = useState(defaultYear);
+  const [month, setMonth] = useState("");
+  const [period, setPeriod] = useState("annual");
 
   const handleTradeType = (t: "수출" | "수입") => {
     setTradeType(t);
@@ -67,8 +71,8 @@ export default function FilterBar({
 
           <select
             className="filter-select"
-            defaultValue=""
-            onChange={(e) => onMonthChange?.(e.target.value)}
+            value={month}
+            onChange={(e) => { setMonth(e.target.value); onMonthChange?.(e.target.value); }}
             style={{ width: 96 }}
           >
             <option value="">월 (전체)</option>
@@ -79,7 +83,12 @@ export default function FilterBar({
             ))}
           </select>
 
-          <select className="filter-select" style={{ width: 96 }} defaultValue="annual">
+          <select
+            className="filter-select"
+            style={{ width: 96 }}
+            value={period}
+            onChange={(e) => { setPeriod(e.target.value); onPeriodChange?.(e.target.value); }}
+          >
             <option value="annual">연간</option>
             <option value="cumulative">누적</option>
             <option value="monthly">해당월</option>
