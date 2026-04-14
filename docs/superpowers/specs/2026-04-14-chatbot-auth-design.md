@@ -26,7 +26,7 @@ K-STAT에 이메일/비밀번호 기반 회원가입·로그인 기능을 추가
 | content | text | 메시지 내용 |
 | created_at | timestamptz | 생성 시각, default now() |
 
-**RLS 정책:** 로그인 사용자는 본인의 chat_logs만 SELECT/INSERT 가능
+**RLS 정책:** 로그인 사용자는 본인의 chat_logs만 읽고 저장할 수 있다. 다른 사용자의 로그에는 접근 불가. (Supabase가 자동으로 차단)
 
 ---
 
