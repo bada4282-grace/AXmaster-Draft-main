@@ -45,7 +45,8 @@ export default function KPIBar({
       <div className="kpi-label">수출</div>
       <div className="kpi-value">$ {ev} 억</div>
       <div className={eu ? "kpi-change-up" : "kpi-change-down"}>
-        {eu ? "▲" : "▼"} {ec}%
+        <span className="kpi-change-icon">{eu ? "▲" : "▼"}</span>
+        <span>{ec}%</span>
       </div>
     </div>
   );
@@ -55,7 +56,8 @@ export default function KPIBar({
       <div className="kpi-label">수입</div>
       <div className="kpi-value">$ {iv} 억</div>
       <div className={iu ? "kpi-change-up" : "kpi-change-down"}>
-        {iu ? "▲" : "▼"} {ic}%
+        <span className="kpi-change-icon">{iu ? "▲" : "▼"}</span>
+        <span>{ic}%</span>
       </div>
     </div>
   );
