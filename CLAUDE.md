@@ -83,3 +83,16 @@ Before proposing changes to skill design, workflow philosophy, or architecture, 
 - One problem per PR
 - Test on at least one harness and report results in the environment table
 - Describe the problem you solved, not just what you changed
+
+---
+
+## K-STAT 프로젝트 목표 (향후 구현 예정)
+
+### 거시경제 지표 연계 챗봇
+사용자가 "2025년에 XX 제품의 수출액이 증가한 이유가 뭐야?" 같은 분석 질문을 하면,
+LLM이 무역 통계 데이터와 거시경제 지표의 상관관계를 도출하여 상세한 분석 답변을 제공한다.
+
+**거시경제 지표 데이터 소스 (미구현, 추후 적용):**
+- B안: Supabase에 거시경제 지표 테이블 생성 (GDP, 금리, CPI, 환율, 유가, BDI 등 시계열)
+- C안: 외부 API 실시간 연동 (EXCHANGE_RATE_API_KEY 등 활용)
+- B + C 병행 사용 예정
