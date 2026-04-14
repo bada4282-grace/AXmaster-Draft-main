@@ -1,15 +1,29 @@
 import { supabase } from "@/lib/supabase";
 
-// 회원가입
-export async function signUp(email: string, password: string) {
-  const { data, error } = await supabase.auth.signUp({ email, password });
+// 내부 이메일 변환 (아이디 → Supabase용 이메일)
+function toEmail(username: string) {
+  return `${username}@kstat.local`;
+}
+
+// 회원가입 (이름, 아이디, 비밀번호)
+export async function signUp(name: string, username: string, password: string) {
+  const { data, error } = await supabase.auth.signUp({
+    email: toEmail(username),
+    password,
+    options: {
+      data: { name, username },
+    },
+  });
   if (error) throw error;
   return data;
 }
 
-// 로그인
-export async function signIn(email: string, password: string) {
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+// 로그인 (아이디, 비밀번호)
+export async function signIn(username: string, password: string) {
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: toEmail(username),
+    password,
+  });
   if (error) throw error;
   return data;
 }
