@@ -38,7 +38,7 @@ export function RechartsPayloadTooltip({
   );
 }
 
-/** Recharts Tooltip에 넘길 스타일(기본 박스 제거) */
+/** Recharts Tooltip에 넘길 스타일(기본 박스 제거 + 애니메이션 비활성화) */
 export const rechartsTooltipSurfaceProps = {
   contentStyle: {
     background: "transparent",
@@ -48,6 +48,7 @@ export const rechartsTooltipSurfaceProps = {
     boxShadow: "none",
   } as const,
   wrapperStyle: { outline: "none", zIndex: 100 } as const,
+  isAnimationActive: false,
 };
 
 interface BarPayloadRow {

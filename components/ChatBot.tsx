@@ -5,11 +5,17 @@ interface ChatMessage { role: "bot" | "user"; text: string; }
 
 interface ChatBotProps {
   open: boolean;
-  onToggle: () => void;
+  onToggle?: () => void;
   initialMessage: string;
+  showInternalToggle?: boolean;
 }
 
-export default function ChatBot({ open, onToggle, initialMessage }: ChatBotProps) {
+export default function ChatBot({
+  open,
+  onToggle,
+  initialMessage,
+  showInternalToggle = true,
+}: ChatBotProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([
     { role: "bot", text: initialMessage },
   ]);
@@ -83,9 +89,11 @@ export default function ChatBot({ open, onToggle, initialMessage }: ChatBotProps
       </div>
 
       {/* Close button */}
-      <button className="chatbot-close-btn" onClick={onToggle} title="챗봇 접기">
-        ↓
-      </button>
+      {showInternalToggle && onToggle && (
+        <button className="chatbot-close-btn" onClick={onToggle} title="챗봇 접기">
+          ↓
+        </button>
+      )}
     </div>
   );
 }

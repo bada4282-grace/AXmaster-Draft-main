@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Treemap, ResponsiveContainer, Tooltip } from "recharts";
 import { getTreemapData, getCountryTreemapData, MTI_COLORS, MTI_NAMES, ProductNode, DEFAULT_YEAR, type TradeType } from "@/lib/data";
 import { getMonthlyTreemapData, getCountryMonthlyTreemapData } from "@/lib/supabase";
@@ -127,12 +127,25 @@ export default function TreemapChart({
   const [noData, setNoData] = useState(false);
   const [zoomedMti, setZoomedMti] = useState<number | null>(null);
   const [animKey, setAnimKey] = useState(0);
+  const [animating, setAnimating] = useState(false);
+  const animTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const startTreemapAnimation = () => {
+    if (animTimeoutRef.current) {
+      clearTimeout(animTimeoutRef.current);
+    }
+    setAnimKey((k) => k + 1);
+    setAnimating(true);
+    animTimeoutRef.current = setTimeout(() => {
+      setAnimating(false);
+    }, 520);
+  };
 
   useEffect(() => {
     if (!month) {
       setNoData(false);
       setTreemapData(annualData);
-      setAnimKey((k) => k + 1);
+      startTreemapAnimation();
       return;
     }
     const fetch = forCountry && countryName
@@ -153,13 +166,17 @@ export default function TreemapChart({
         setNoData(false);
         setTreemapData(annualData);
       })
-      .finally(() => setAnimKey((k) => k + 1));
+      .finally(() => startTreemapAnimation());
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [year, month, tradeType, countryName, forCountry]);
 
   useEffect(() => {
-    if (!month) setAnimKey((k) => k + 1);
-  }, [zoomedMti]); // eslint-disable-line react-hooks/exhaustive-deps
+    return () => {
+      if (animTimeoutRef.current) {
+        clearTimeout(animTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const displayData = zoomedMti !== null
     ? treemapData.filter((d) => d.mti === zoomedMti)
@@ -204,7 +221,7 @@ export default function TreemapChart({
               aspectRatio={4 / 3}
               isAnimationActive={false}
               onClick={handleClick}
-              content={<CustomContent data={treemapData} animKey={animKey} />}
+              content={<CustomContent data={treemapData} animKey={animating ? animKey : -1} />}
             >
               <Tooltip
                 content={<CustomTooltip data={treemapData} tradeType={tradeType} />}

@@ -89,12 +89,19 @@ function CountryDetailContent() {
     setLineAnimActive(false);
     setDisplayData(flatData);
 
-    const timeout = setTimeout(() => {
+    const startTimeout = setTimeout(() => {
       setLineAnimActive(true);
       setDisplayData(timeseries);
     }, 50);
 
-    return () => clearTimeout(timeout);
+    const stopTimeout = setTimeout(() => {
+      setLineAnimActive(false);
+    }, 850);
+
+    return () => {
+      clearTimeout(startTimeout);
+      clearTimeout(stopTimeout);
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [year, subTab]);
 
@@ -103,53 +110,53 @@ function CountryDetailContent() {
       <Header />
       <HeroBanner />
 
-      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "20px 24px" }}>
+      <div className="page-main-container">
         {/* Main tabs */}
         <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
           <button className="main-tab-active">국가별</button>
           <button className="main-tab-inactive" onClick={() => router.push("/?tab=product")}>품목별</button>
         </div>
 
-        {/* Dashboard card */}
-        <div className="dashboard-card">
-          <FilterBar
-            mode="country"
-            showCountrySelect={country.name}
-            defaultYear={DEFAULT_YEAR}
-            onYearChange={setYear}
-            onMonthChange={setMonth}
-            onTradeTypeChange={setTradeType}
-          />
-
-          {kpi ? (
-            <KPIBar
-              tradeType={tradeType}
-              exportVal={kpi.export}
-              importVal={kpi.import}
-              balance={kpi.balance}
-              balancePositive={kpi.positive}
+        <div className="main-content-layout">
+          {/* Dashboard card */}
+          <div className="dashboard-card dashboard-main-card">
+            <FilterBar
+              mode="country"
+              showCountrySelect={country.name}
+              defaultYear={DEFAULT_YEAR}
+              onYearChange={setYear}
+              onMonthChange={setMonth}
+              onTradeTypeChange={setTradeType}
             />
-          ) : (
-            <KPIBar year={year} tradeType={tradeType} />
-          )}
 
-          <div style={{ display: "flex", height: 500 }}>
+            {kpi ? (
+              <KPIBar
+                tradeType={tradeType}
+                exportVal={kpi.export}
+                importVal={kpi.import}
+                balance={kpi.balance}
+                balancePositive={kpi.positive}
+              />
+            ) : (
+              <KPIBar year={year} tradeType={tradeType} />
+            )}
+
+            <div className="split-panel">
             {/* Left info cards */}
             <div className="left-cards">
               <div className="left-cards-stack">
                 <div className="info-card">
-                  <div className="info-card-label">선택 국가</div>
-                  <div style={{ fontSize: 11, color: "#888", marginBottom: 2 }}>{country.region} · {country.iso}</div>
+                  <div className="info-card-label" style={{ fontSize: 12 }}>선택 국가</div>
                   <div style={{ fontSize: 18, fontWeight: 900 }}>{country.name}</div>
                 </div>
 
                 <div className="info-card">
-                  <div className="info-card-label">{tradeType} 국가 순위 ({year})</div>
+                  <div className="info-card-label" style={{ fontSize: 12 }}>{tradeType} 국가 순위 ({year})</div>
                   <div className="info-card-value">{country.rank}위</div>
                 </div>
 
                 <div className="info-card">
-                  <div className="info-card-label">전체 {tradeType} 비중</div>
+                  <div className="info-card-label" style={{ fontSize: 12 }}>{tradeType} 비중</div>
                   <div className="info-card-value">{country.share}%</div>
                 </div>
               </div>
@@ -184,17 +191,6 @@ function CountryDetailContent() {
                           ⚠ 불완전 연도 (1~2월)
                         </span>
                       )}
-                      <select
-                        className="filter-select"
-                        style={{ minWidth: 72 }}
-                        value={year}
-                        onChange={(e) => setYear(e.target.value)}
-                      >
-                        <option value="2026">2026</option>
-                        <option value="2025">2025</option>
-                        <option value="2024">2024</option>
-                        <option value="2023">2023</option>
-                      </select>
                     </>
                   )}
                   <button className="back-btn" onClick={() => router.push("/")}>← 돌아가기</button>
@@ -256,18 +252,31 @@ function CountryDetailContent() {
               </div>
             </div>
 
-            {/* Chatbot */}
-            {chatOpen && (
-              <ChatBot
-                open={true}
-                onToggle={() => setChatOpen(false)}
-                initialMessage={
-                  tradeType === "수입"
-                    ? `${country.name}으로부터의 수입 현황입니다. 특정 품목에 대해 질문해주세요.`
-                    : `${country.name}과의 수출 현황입니다. 특정 품목에 대해 질문해주세요.`
-                }
-              />
-            )}
+            </div>
+          </div>
+
+          <div className={`chatbot-section ${chatOpen ? "expanded" : "collapsed"}`}>
+            <button
+              className="chatbot-slider-btn"
+              onClick={() => setChatOpen((prev) => !prev)}
+              title={chatOpen ? "챗봇 접기" : "챗봇 펼치기"}
+              aria-label={chatOpen ? "챗봇 접기" : "챗봇 펼치기"}
+            >
+              {chatOpen ? "〉" : "〈"}
+            </button>
+            <div className="chatbot-card-shell">
+              <div className="dashboard-card chatbot-card">
+                <ChatBot
+                  open={true}
+                  showInternalToggle={false}
+                  initialMessage={
+                    tradeType === "수입"
+                      ? `${country.name}으로부터의 수입 현황입니다. 특정 품목에 대해 질문해주세요.`
+                      : `${country.name}과의 수출 현황입니다. 특정 품목에 대해 질문해주세요.`
+                  }
+                />
+              </div>
+            </div>
           </div>
         </div>
 
@@ -275,10 +284,6 @@ function CountryDetailContent() {
           <div className="macro-title">거시경제 지표</div>
         </div>
       </div>
-
-      {!chatOpen && (
-        <button className="chatbot-open-btn" onClick={() => setChatOpen(true)}>↑</button>
-      )}
     </div>
   );
 }

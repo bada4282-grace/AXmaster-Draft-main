@@ -45,7 +45,8 @@ export default function KPIBar({
       <div className="kpi-label">수출</div>
       <div className="kpi-value">$ {ev} 억</div>
       <div className={eu ? "kpi-change-up" : "kpi-change-down"}>
-        {eu ? "▲" : "▼"} {ec}%
+        <span className="kpi-change-icon">{eu ? "▲" : "▼"}</span>
+        <span>{ec}%</span>
       </div>
     </div>
   );
@@ -55,7 +56,8 @@ export default function KPIBar({
       <div className="kpi-label">수입</div>
       <div className="kpi-value">$ {iv} 억</div>
       <div className={iu ? "kpi-change-up" : "kpi-change-down"}>
-        {iu ? "▲" : "▼"} {ic}%
+        <span className="kpi-change-icon">{iu ? "▲" : "▼"}</span>
+        <span>{ic}%</span>
       </div>
     </div>
   );
@@ -63,7 +65,7 @@ export default function KPIBar({
   const balanceCard = (
     <div className="kpi-item">
       <div className="kpi-label">무역수지</div>
-      <div className="kpi-value" style={{ color: bp ? "#185FA5" : "#E02020" }}>
+      <div className="kpi-value" style={{ color: bp ? "#E02020" : "#185FA5" }}>
         {bp ? "+" : "-"}$ {bv} 억
       </div>
     </div>
@@ -71,8 +73,8 @@ export default function KPIBar({
 
   return (
     <div className="kpi-bar">
-      {tradeType === "수입" ? importCard : exportCard}
-      {tradeType === "수입" ? exportCard : importCard}
+      {exportCard}
+      {importCard}
       {balanceCard}
     </div>
   );

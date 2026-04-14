@@ -40,7 +40,7 @@ function HomeContent() {
       <Header />
       <HeroBanner />
 
-      <div style={{ maxWidth: 1100, width: "100%", margin: "0 auto", padding: "20px 24px" }}>
+      <div className="page-main-container">
         {/* Main tabs */}
         <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
           {(["국가별", "품목별"] as const).map((tab) => (
@@ -52,42 +52,57 @@ function HomeContent() {
           ))}
         </div>
 
-        {/* Dashboard card */}
-        <div className="dashboard-card">
-          <FilterBar
-            mode={mainTab === "품목별" ? "product" : "country"}
-            defaultYear={DEFAULT_YEAR}
-            onYearChange={setYear}
-            onMonthChange={setMonth}
-            onPeriodChange={setPeriod}
-            onTradeTypeChange={setTradeType}
-          />
+        <div className="main-content-layout">
+          {/* Dashboard card */}
+          <div className="dashboard-card dashboard-main-card">
+            <FilterBar
+              mode={mainTab === "품목별" ? "product" : "country"}
+              defaultYear={DEFAULT_YEAR}
+              onYearChange={setYear}
+              onMonthChange={setMonth}
+              onPeriodChange={setPeriod}
+              onTradeTypeChange={setTradeType}
+            />
 
-          <KPIBar year={year} tradeType={tradeType} />
+            <KPIBar year={year} tradeType={tradeType} />
 
-          {/* Split panel */}
-          <div className="split-panel">
-            <div className="dashboard-area">
-              {mainTab === "국가별" ? (
+            {/* Main dashboard content */}
+            <div className="split-panel">
+              <div className="dashboard-area">
+                {mainTab === "국가별" ? (
                 <WorldMap year={year} month={month} tradeType={tradeType} />
-              ) : (
-                <div style={{ width: "100%", height: "100%", padding: 8 }}>
-                  <TreemapChart year={year} month={month} tradeType={tradeType} />
-                </div>
-              )}
+                ) : (
+                  <div style={{ width: "100%", height: "100%", padding: 8 }}>
+                    <TreemapChart year={year} month={month} tradeType={tradeType} />
+                  </div>
+                )}
+              </div>
             </div>
+          </div>
 
-            {chatOpen && (
-              <ChatBot
-                open={true}
-                onToggle={() => setChatOpen(false)}
-                initialMessage={
-                  mainTab === "국가별"
-                    ? "글로벌 무역통계 대시보드입니다. 특정 국가나 품목에 대해 질문해주세요."
-                    : "품목별 수출 현황입니다. 특정 품목에 대해 질문해주세요."
-                }
-              />
-            )}
+          <div className={`chatbot-section ${chatOpen ? "expanded" : "collapsed"}`}>
+            <button
+              className="chatbot-slider-btn"
+              onClick={() => setChatOpen((prev) => !prev)}
+              title={chatOpen ? "챗봇 접기" : "챗봇 펼치기"}
+              aria-label={chatOpen ? "챗봇 접기" : "챗봇 펼치기"}
+            >
+              {chatOpen ? "〉" : "〈"}
+            </button>
+
+            <div className="chatbot-card-shell">
+              <div className="dashboard-card chatbot-card">
+                <ChatBot
+                  open={true}
+                  showInternalToggle={false}
+                  initialMessage={
+                    mainTab === "국가별"
+                      ? "글로벌 무역통계 대시보드입니다. 특정 국가나 품목에 대해 질문해주세요."
+                      : "품목별 수출 현황입니다. 특정 품목에 대해 질문해주세요."
+                  }
+                />
+              </div>
+            </div>
           </div>
         </div>
 
@@ -110,10 +125,6 @@ function HomeContent() {
           </div>
         </div>
       </div>
-
-      {!chatOpen && (
-        <button className="chatbot-open-btn" onClick={() => setChatOpen(true)}>↑</button>
-      )}
     </div>
   );
 }
