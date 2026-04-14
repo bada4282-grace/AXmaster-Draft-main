@@ -6,7 +6,7 @@ import { signIn } from "@/lib/auth";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -16,7 +16,7 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
     try {
-      await signIn(email, password);
+      await signIn(username, password);
       router.push("/");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "로그인에 실패했습니다.");
@@ -31,11 +31,11 @@ export default function LoginPage() {
         <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 24, color: "#333" }}>로그인</h1>
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: 16 }}>
-            <label style={{ fontSize: 13, color: "#555", display: "block", marginBottom: 6 }}>이메일</label>
+            <label style={{ fontSize: 13, color: "#555", display: "block", marginBottom: 6 }}>아이디</label>
             <input
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
+              type="text"
+              value={username}
+              onChange={e => setUsername(e.target.value)}
               required
               style={{ width: "100%", padding: "10px 12px", border: "1px solid #ddd", borderRadius: 8, fontSize: 14, boxSizing: "border-box" }}
             />
