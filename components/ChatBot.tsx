@@ -106,6 +106,7 @@ export default function ChatBot({
     ]);
 
     let fullResponse = "";
+    let saveResponse = false;
 
     try {
       const res = await fetch("/api/chat", {
@@ -130,6 +131,18 @@ export default function ChatBot({
           { role: "bot", text: fullResponse },
         ]);
       }
+
+      // flush remaining bytes in decoder buffer
+      const finalChunk = decoder.decode();
+      if (finalChunk) {
+        fullResponse += finalChunk;
+        setMessages(prev => [
+          ...prev.slice(0, -1),
+          { role: "bot", text: fullResponse },
+        ]);
+      }
+
+      saveResponse = true;
     } catch {
       fullResponse = "답변 생성 중 오류가 발생했습니다.";
       setMessages(prev => [
@@ -138,9 +151,12 @@ export default function ChatBot({
       ]);
     } finally {
       setIsStreaming(false);
-      // 로그인 사용자만 저장
-      await saveChatLog("user", userMsg);
-      if (fullResponse) await saveChatLog("bot", fullResponse);
+      try {
+        await saveChatLog("user", userMsg);
+        if (saveResponse && fullResponse) await saveChatLog("bot", fullResponse);
+      } catch {
+        // log save failure is non-fatal
+      }
     }
   };
 
