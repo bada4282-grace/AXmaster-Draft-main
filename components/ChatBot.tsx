@@ -23,6 +23,7 @@ export default function ChatBot({
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [welcomeLoading, setWelcomeLoading] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const welcomeFetchedRef = useRef(false);
 
@@ -42,7 +43,6 @@ export default function ChatBot({
 
     const loadWelcome = async () => {
       if (!user) {
-        // 비로그인: 기본 인사말
         setMessages([{ role: "bot", text: initialMessage }]);
         return;
       }
@@ -52,12 +52,10 @@ export default function ChatBot({
         const logs = await getChatLogs(50);
 
         if (logs.length === 0) {
-          // 첫 방문: 기본 인사말
           setMessages([{ role: "bot", text: initialMessage }]);
           return;
         }
 
-        // 이전 로그 복원 + welcome message 생성
         const restored: ChatMessage[] = logs.map(log => ({
           role: log.role,
           text: log.content,
@@ -89,21 +87,61 @@ export default function ChatBot({
   }, [messages]);
 
   const send = async () => {
-    if (!input.trim()) return;
+    if (!input.trim() || isStreaming) return;
     const userMsg = input.trim();
     setInput("");
+    setIsStreaming(true);
 
-    const botReply = "해당 질문에 대한 분석 결과를 준비 중입니다. 실제 서비스에서는 AI가 무역통계를 기반으로 응답합니다.";
+    // 최근 10개 메시지를 히스토리로 전달
+    const history = messages.slice(-10).map(m => ({
+      role: m.role === "user" ? "user" : "assistant" as const,
+      content: m.text,
+    }));
 
+    // 사용자 메시지 + 빈 봇 메시지 추가
     setMessages(prev => [
       ...prev,
       { role: "user", text: userMsg },
-      { role: "bot", text: botReply },
+      { role: "bot", text: "" },
     ]);
 
-    // 로그인 사용자만 저장
-    await saveChatLog("user", userMsg);
-    await saveChatLog("bot", botReply);
+    let fullResponse = "";
+
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: userMsg, history }),
+      });
+
+      if (!res.body) throw new Error("No response body");
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        fullResponse += chunk;
+        // 마지막 봇 메시지를 실시간으로 업데이트
+        setMessages(prev => [
+          ...prev.slice(0, -1),
+          { role: "bot", text: fullResponse },
+        ]);
+      }
+    } catch {
+      fullResponse = "답변 생성 중 오류가 발생했습니다.";
+      setMessages(prev => [
+        ...prev.slice(0, -1),
+        { role: "bot", text: fullResponse },
+      ]);
+    } finally {
+      setIsStreaming(false);
+      // 로그인 사용자만 저장
+      await saveChatLog("user", userMsg);
+      if (fullResponse) await saveChatLog("bot", fullResponse);
+    }
   };
 
   if (!open) {
@@ -145,7 +183,7 @@ export default function ChatBot({
                 <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#fde8e8", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, flexShrink: 0, marginTop: 2 }}>🤖</div>
               )}
               <div className={msg.role === "bot" ? "chatbot-msg-bot" : "chatbot-msg-user"}>
-                {msg.text}
+                {msg.text || (isStreaming && i === messages.length - 1 ? "▌" : "")}
               </div>
             </div>
           ))
@@ -157,12 +195,18 @@ export default function ChatBot({
       <div className="chatbot-input-area">
         <input
           className="chatbot-input"
-          placeholder="질문을 입력하세요..."
+          placeholder={isStreaming ? "답변 생성 중..." : "질문을 입력하세요..."}
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => e.key === "Enter" && send()}
+          disabled={isStreaming}
         />
-        <button className="chatbot-send-btn" onClick={send}>▶</button>
+        <button
+          className="chatbot-send-btn"
+          onClick={send}
+          disabled={isStreaming}
+          style={{ opacity: isStreaming ? 0.5 : 1 }}
+        >▶</button>
       </div>
 
       {/* Close button */}
