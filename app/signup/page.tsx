@@ -6,17 +6,25 @@ import { signUp } from "@/lib/auth";
 
 export default function SignupPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+
+    if (password !== confirmPassword) {
+      setError("비밀번호가 일치하지 않습니다.");
+      return;
+    }
+
     setLoading(true);
     try {
-      await signUp(email, password);
+      await signUp(name, username, password);
       router.push("/login");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "회원가입에 실패했습니다.");
@@ -30,27 +38,57 @@ export default function SignupPage() {
       <div style={{ background: "white", padding: 40, borderRadius: 12, boxShadow: "0 2px 12px rgba(0,0,0,0.08)", width: 360 }}>
         <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 24, color: "#333" }}>회원가입</h1>
         <form onSubmit={handleSubmit}>
+          {/* 이름 */}
           <div style={{ marginBottom: 16 }}>
-            <label style={{ fontSize: 13, color: "#555", display: "block", marginBottom: 6 }}>이메일</label>
+            <label style={{ fontSize: 13, color: "#555", display: "block", marginBottom: 6 }}>이름</label>
             <input
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
+              type="text"
+              value={name}
+              onChange={e => setName(e.target.value)}
               required
               style={{ width: "100%", padding: "10px 12px", border: "1px solid #ddd", borderRadius: 8, fontSize: 14, boxSizing: "border-box" }}
             />
           </div>
-          <div style={{ marginBottom: 24 }}>
-            <label style={{ fontSize: 13, color: "#555", display: "block", marginBottom: 6 }}>비밀번호 (6자 이상)</label>
+
+          {/* 아이디 */}
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ fontSize: 13, color: "#555", display: "block", marginBottom: 6 }}>아이디</label>
+            <input
+              type="text"
+              value={username}
+              onChange={e => setUsername(e.target.value)}
+              required
+              style={{ width: "100%", padding: "10px 12px", border: "1px solid #ddd", borderRadius: 8, fontSize: 14, boxSizing: "border-box" }}
+            />
+          </div>
+
+          {/* 비밀번호 */}
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ fontSize: 13, color: "#555", display: "block", marginBottom: 6 }}>비밀번호</label>
             <input
               type="password"
               value={password}
               onChange={e => setPassword(e.target.value)}
               required
-              minLength={6}
+              minLength={8}
+              style={{ width: "100%", padding: "10px 12px", border: "1px solid #ddd", borderRadius: 8, fontSize: 14, boxSizing: "border-box" }}
+            />
+            <p style={{ fontSize: 11, color: "#999", marginTop: 4 }}>비밀번호는 8자 이상이어야 합니다.</p>
+          </div>
+
+          {/* 비밀번호 확인 */}
+          <div style={{ marginBottom: 24 }}>
+            <label style={{ fontSize: 13, color: "#555", display: "block", marginBottom: 6 }}>비밀번호 확인</label>
+            <input
+              type="password"
+              value={confirmPassword}
+              onChange={e => setConfirmPassword(e.target.value)}
+              required
+              minLength={8}
               style={{ width: "100%", padding: "10px 12px", border: "1px solid #ddd", borderRadius: 8, fontSize: 14, boxSizing: "border-box" }}
             />
           </div>
+
           {error && <p style={{ color: "#E02020", fontSize: 13, marginBottom: 16 }}>{error}</p>}
           <button
             type="submit"
