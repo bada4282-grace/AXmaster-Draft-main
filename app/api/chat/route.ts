@@ -35,15 +35,23 @@ export async function POST(request: NextRequest) {
 
 ${context ? `[참고 데이터]\n${context}` : "[참고 데이터 없음 — 일반적인 무역 지식으로 답변]"}`;
 
-  const stream = await client.messages.stream({
-    model,
-    max_tokens: 1024,
-    system: systemPrompt,
-    messages: [
-      ...history,
-      { role: "user", content: message },
-    ],
-  });
+  let stream;
+  try {
+    stream = await client.messages.stream({
+      model,
+      max_tokens: 1024,
+      system: systemPrompt,
+      messages: [
+        ...history,
+        { role: "user", content: message },
+      ],
+    });
+  } catch {
+    return new Response(
+      JSON.stringify({ error: "답변 생성 중 오류가 발생했습니다." }),
+      { status: 502, headers: { "Content-Type": "application/json" } }
+    );
+  }
 
   const encoder = new TextEncoder();
   const readable = new ReadableStream({
