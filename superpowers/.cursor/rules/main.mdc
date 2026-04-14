@@ -1,0 +1,24 @@
+---
+description: main rules
+alwaysApply: true
+---
+
+# === SUPERPOWERS ===
+
+여기에 Superpowers skill 내용을 붙여넣으세요.
+https://github.com/[superpowers-repo] 에서 원하는 skill의 SKILL.md 내용을 복사해오면 됩니다.
+
+
+# === PROJECT RULES ===
+
+## 프로젝트 컨텍스트
+- 프로젝트명: K-STAT
+- 스택: Next.js, D3.js, Anthropic API
+- 데이터: 한국 무역통계 CSV (MTI 코드 기준, ~530K rows)
+
+## 코딩 규칙
+- 주석은 한국어로
+- 커밋 메시지는 영어로
+
+## 팀
+- 팀원: 효정, 인아, 소원, 종화

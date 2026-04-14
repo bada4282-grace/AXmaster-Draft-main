@@ -46,7 +46,7 @@ export default function ProductDetailPage() {
   const trendMax = trendValues.length ? Math.ceil(Math.max(...trendValues) * 1.1) : 100;
 
   // 상위 국가 (tradeType 반영)
-  const topCountries = product ? getProductTopCountries(product.code, year, tradeType) : [];
+  const topCountries = product ? getProductTopCountries(product.code, year, tradeType).slice(0, 10) : [];
 
   // 현재 연도 금액 & 전년 대비 증감 (tradeType 반영)
   const currentYearData = getTreemapData(year, tradeType).find((p) => p.name === name);
@@ -55,29 +55,43 @@ export default function ProductDetailPage() {
   const prevVal = prevYearData?.value ?? 0;
   const changeRate = prevVal ? ((currentVal - prevVal) / prevVal * 100).toFixed(1) : null;
   const tradeLabel = tradeType === "수입" ? "수입" : "수출";
+  const tooltipFollowProps = {
+    ...rechartsTooltipSurfaceProps,
+    isAnimationActive: false,
+    cursor: false,
+    offset: 18,
+    // 기본은 우측 상단, 공간이 부족하면 차트 내부에서 방향을 바꿔 잘림을 방지한다.
+    position: undefined,
+    reverseDirection: { x: true, y: true },
+    allowEscapeViewBox: { x: false, y: false },
+    wrapperStyle: {
+      ...rechartsTooltipSurfaceProps.wrapperStyle,
+      transition: "none",
+      pointerEvents: "none",
+    },
+  } as const;
 
   return (
     <div style={{ minHeight: "100vh", background: "#f8f8f8" }}>
       <Header />
       <HeroBanner />
 
-      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "20px 24px" }}>
+      <div className="page-main-container">
         {/* Main tabs */}
         <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
           <button className="main-tab-inactive" onClick={() => router.push("/")}>국가별</button>
           <button className="main-tab-active">품목별</button>
         </div>
 
-        {/* Dashboard card */}
-        <div className="dashboard-card">
-          <FilterBar mode="product" defaultYear={DEFAULT_YEAR} onYearChange={setYear} onTradeTypeChange={setTradeType} />
-          <KPIBar year={year} />
+        <div className="main-content-layout">
+          {/* Dashboard card */}
+          <div className="dashboard-card dashboard-main-card">
+            <FilterBar mode="product" defaultYear={DEFAULT_YEAR} onYearChange={setYear} onTradeTypeChange={setTradeType} />
+            <KPIBar year={year} />
 
-          <div style={{ display: "flex", height: 380 }}>
+            <div style={{ display: "flex", height: 380 }}>
             {/* Left info cards */}
             <div className="left-cards">
-              <button className="back-btn" onClick={() => router.push("/?tab=product")}>← 돌아가기</button>
-
               <div className="left-cards-stack">
                 <div className="info-card">
                   <div className="info-card-label">품목명</div>
@@ -121,19 +135,9 @@ export default function ProductDetailPage() {
                     className={subTab === tab ? "subtab-active" : "subtab-inactive"}
                   >{tab}</button>
                 ))}
-                {subTab === "상위 국가" && (
-                  <select
-                    className="filter-select"
-                    style={{ marginLeft: "auto", minWidth: 72 }}
-                    value={year}
-                    onChange={(e) => setYear(e.target.value)}
-                  >
-                    <option value="2026">2026</option>
-                    <option value="2025">2025</option>
-                    <option value="2024">2024</option>
-                    <option value="2023">2023</option>
-                  </select>
-                )}
+                <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6 }}>
+                  <button className="back-btn" onClick={() => router.push("/?tab=product")}>← 돌아가기</button>
+                </div>
               </div>
 
               <div style={{ flex: 1, padding: 12, overflow: "hidden" }}>
@@ -148,7 +152,7 @@ export default function ProductDetailPage() {
                           content={(props) => (
                             <RechartsPayloadTooltip {...props} title={name} />
                           )}
-                          {...rechartsTooltipSurfaceProps}
+                          {...tooltipFollowProps}
                         />
                         <Line
                           type="monotone" dataKey="value" stroke="#14B8A6" strokeWidth={2.5}
@@ -171,9 +175,15 @@ export default function ProductDetailPage() {
                         <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v}`} />
                         <Tooltip
                           content={(props) => <RechartsBarCountryTooltip {...props} />}
-                          {...rechartsTooltipSurfaceProps}
+                          {...tooltipFollowProps}
                         />
-                        <Bar dataKey="value" fill="#3B3BFF" radius={[4, 4, 0, 0]} name={`${tradeLabel}액(억$)`} />
+                        <Bar
+                          dataKey="value"
+                          fill="#14B8A6"
+                          radius={[4, 4, 0, 0]}
+                          barSize={42}
+                          name={`${tradeLabel}액(억$)`}
+                        />
                       </BarChart>
                     </ResponsiveContainer>
                   ) : (
@@ -186,14 +196,27 @@ export default function ProductDetailPage() {
               </div>
             </div>
 
-            {/* Chatbot */}
-            {chatOpen && (
-              <ChatBot
-                open={true}
-                onToggle={() => setChatOpen(false)}
-                initialMessage={`${name} 수출 현황입니다. 궁금한 점을 질문해주세요.`}
-              />
-            )}
+            </div>
+          </div>
+
+          <div className={`chatbot-section ${chatOpen ? "expanded" : "collapsed"}`}>
+            <button
+              className="chatbot-slider-btn"
+              onClick={() => setChatOpen((prev) => !prev)}
+              title={chatOpen ? "챗봇 접기" : "챗봇 펼치기"}
+              aria-label={chatOpen ? "챗봇 접기" : "챗봇 펼치기"}
+            >
+              {chatOpen ? "〉" : "〈"}
+            </button>
+            <div className="chatbot-card-shell">
+              <div className="dashboard-card chatbot-card">
+                <ChatBot
+                  open={true}
+                  showInternalToggle={false}
+                  initialMessage={`${name} 수출 현황입니다. 궁금한 점을 질문해주세요.`}
+                />
+              </div>
+            </div>
           </div>
         </div>
 
@@ -201,10 +224,6 @@ export default function ProductDetailPage() {
           <div className="macro-title">거시경제 지표</div>
         </div>
       </div>
-
-      {!chatOpen && (
-        <button className="chatbot-open-btn" onClick={() => setChatOpen(true)}>↑</button>
-      )}
     </div>
   );
 }

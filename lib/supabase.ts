@@ -2,6 +2,12 @@ import { createClient } from "@supabase/supabase-js";
 import type { ProductNode, TradeType } from "@/lib/data";
 import { MTI_COLORS } from "@/lib/data";
 
+export interface MonthlyCountryMapItem {
+  ctr_name: string;
+  rank: number;
+  total_amt: number;
+}
+
 interface RpcTreemapRow {
   mti_cd: string;
   mti_name: string;
@@ -73,6 +79,26 @@ export async function getMonthlyTreemapData(
     .filter((n): n is ProductNode => n !== null)
     .sort((a, b) => b.value - a.value)
     .slice(0, 30);
+}
+
+// 월별 국가 지도 색상용 순위 데이터 (get_country_map_monthly RPC)
+export async function getMonthlyCountryMapData(
+  year: string,
+  month: string,
+  tradeType: TradeType
+): Promise<MonthlyCountryMapItem[]> {
+  const yymm = `${year}${month}`;
+  const p_mode = tradeType === "수입" ? "import" : "export";
+
+  const { data, error } = await supabase.rpc("get_country_map_monthly", {
+    p_yymm: yymm,
+    p_mode,
+  });
+  if (error) {
+    console.error("[getMonthlyCountryMapData] RPC error:", error.message ?? error);
+    throw error;
+  }
+  return (data ?? []) as MonthlyCountryMapItem[];
 }
 
 // 월별 국가별 품목 트리맵 데이터 (get_country_treemap_monthly RPC)
