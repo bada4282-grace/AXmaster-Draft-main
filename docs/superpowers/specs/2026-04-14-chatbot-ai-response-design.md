@@ -45,8 +45,10 @@ components/ChatBot.tsx      — /api/chat 호출, 스트리밍 수신 및 실시
 
 ### 키워드 추출
 질문 텍스트에서 국가명, 품목명, 연도를 추출한다.
-- 국가명: lib/data.ts의 COUNTRY_DATA 목록과 대조
-- 품목명: MTI_NAMES 목록과 대조 (반도체, 자동차 등)
+- 국가명: lib/data.ts의 COUNTRY_DATA 목록과 부분 일치(substring) 대조
+- 품목명: MTI_NAMES(10개 대분류)가 아닌 **TREEMAP 데이터의 품목명** 기준으로 부분 일치 대조
+  - 예: "반도체" → 코드 "831", "자동차" → 코드 "741"
+  - "메모리 반도체"처럼 일부만 포함해도 매칭됨
 - 연도: 4자리 숫자 패턴 (없으면 DEFAULT_YEAR 사용)
 
 ### 데이터 조회 (추출된 키워드 기준)
