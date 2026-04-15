@@ -135,6 +135,9 @@ export default function ProductDetailPage() {
                     className={subTab === tab ? "subtab-active" : "subtab-inactive"}
                   >{tab}</button>
                 ))}
+                <span style={{ fontSize: 11, color: "#94a3b8", marginLeft: 4, alignSelf: "center" }}>
+                  * 연간 기준 (월 선택과 무관)
+                </span>
                 <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6 }}>
                   <button className="back-btn" onClick={() => router.push("/?tab=product")}>← 돌아가기</button>
                 </div>
