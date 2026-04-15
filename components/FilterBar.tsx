@@ -9,6 +9,7 @@ interface FilterBarProps {
   onMonthChange?: (month: string) => void;
   onPeriodChange?: (period: string) => void;
   onTradeTypeChange?: (type: "수출" | "수입") => void;
+  onCountryChange?: (country: string) => void;
   defaultYear?: string;
 }
 
@@ -19,6 +20,7 @@ export default function FilterBar({
   onMonthChange,
   onPeriodChange,
   onTradeTypeChange,
+  onCountryChange,
   defaultYear = "2026",
 }: FilterBarProps) {
   const [tradeType, setTradeType] = useState<"수출" | "수입">("수출");
@@ -106,10 +108,14 @@ export default function FilterBar({
               <span className="filter-trade-arrow" aria-hidden="true">
                 {tradeType === "수출" ? "→" : "←"}
               </span>
-              <select className="filter-select" style={{ width: 140 }}>
+              <select
+                className="filter-select"
+                style={{ width: 140 }}
+                onChange={(e) => onCountryChange?.(e.target.value)}
+              >
                 <option value="">수입국 (전체)</option>
                 {countryNames.map((n) => (
-                  <option key={n}>{n}</option>
+                  <option key={n} value={n}>{n}</option>
                 ))}
               </select>
             </>

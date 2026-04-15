@@ -8,6 +8,7 @@ import KPIBar from "@/components/KPIBar";
 import ChatBot from "@/components/ChatBot";
 import {
   getTreemapData,
+  getCountryTreemapData,
   getProductTrend,
   getProductTopCountries,
   DEFAULT_YEAR,
@@ -30,6 +31,7 @@ export default function ProductDetailPage() {
 
   const [year, setYear] = useState(DEFAULT_YEAR);
   const [tradeType, setTradeType] = useState<TradeType>("수출");
+  const [country, setCountry] = useState("");
   const [subTab, setSubTab] = useState<"금액 추이" | "상위 국가">("금액 추이");
   const [chatOpen, setChatOpen] = useState(true);
 
@@ -39,8 +41,15 @@ export default function ProductDetailPage() {
     // 수입 전환 후 목록에 없으면 수출 목록에서 코드만 가져옴
     ?? getTreemapData(DEFAULT_YEAR, "수출").find((p) => p.name === name);
 
-  // 해당 품목의 연간 추이 (tradeType 반영)
-  const trend = product ? getProductTrend(product.code, tradeType) : [];
+  // 해당 품목의 연간 추이 (tradeType 반영, 국가 선택 시 국가별 데이터)
+  const trend = product
+    ? country
+      ? ["2023", "2024", "2025", "2026"].map((y) => {
+          const d = getCountryTreemapData(y, country, tradeType).find((p) => p.name === name);
+          return { year: y, value: d?.value ?? 0 };
+        })
+      : getProductTrend(product.code, tradeType)
+    : [];
   const trendValues = trend.map((d) => d.value).filter((v) => v > 0);
   const trendMin = trendValues.length ? Math.floor(Math.min(...trendValues) * 0.85) : 0;
   const trendMax = trendValues.length ? Math.ceil(Math.max(...trendValues) * 1.1) : 100;
@@ -48,9 +57,13 @@ export default function ProductDetailPage() {
   // 상위 국가 (tradeType 반영)
   const topCountries = product ? getProductTopCountries(product.code, year, tradeType).slice(0, 10) : [];
 
-  // 현재 연도 금액 & 전년 대비 증감 (tradeType 반영)
-  const currentYearData = getTreemapData(year, tradeType).find((p) => p.name === name);
-  const prevYearData = getTreemapData(String(parseInt(year) - 1), tradeType).find((p) => p.name === name);
+  // 현재 연도 금액 & 전년 대비 증감 (tradeType 반영, 국가 선택 시 국가별 데이터)
+  const getProductData = (y: string) =>
+    country
+      ? getCountryTreemapData(y, country, tradeType).find((p) => p.name === name)
+      : getTreemapData(y, tradeType).find((p) => p.name === name);
+  const currentYearData = getProductData(year);
+  const prevYearData = getProductData(String(parseInt(year) - 1));
   const currentVal = currentYearData?.value ?? 0;
   const prevVal = prevYearData?.value ?? 0;
   const changeRate = prevVal ? ((currentVal - prevVal) / prevVal * 100).toFixed(1) : null;
@@ -86,7 +99,7 @@ export default function ProductDetailPage() {
         <div className="main-content-layout">
           {/* Dashboard card */}
           <div className="dashboard-card dashboard-main-card">
-            <FilterBar mode="product" defaultYear={DEFAULT_YEAR} onYearChange={setYear} onTradeTypeChange={setTradeType} />
+            <FilterBar mode="product" defaultYear={DEFAULT_YEAR} onYearChange={setYear} onTradeTypeChange={setTradeType} onCountryChange={setCountry} />
             <KPIBar year={year} />
 
             <div style={{ display: "flex", height: 380 }}>
