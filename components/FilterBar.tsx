@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { getCountryData, getTreemapData } from "@/lib/data";
 
 interface FilterBarProps {
@@ -23,9 +24,13 @@ export default function FilterBar({
   onCountryChange,
   defaultYear = "2026",
 }: FilterBarProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
   const [tradeType, setTradeType] = useState<"수출" | "수입">("수출");
   const [year, setYear] = useState(defaultYear);
-  const [month, setMonth] = useState("");
+  // URL에서 초기값 읽기 — 새로고침 시 필터 유지
+  const [month, setMonth] = useState(searchParams.get("month") ?? "");
   const [period, setPeriod] = useState("annual");
 
   const handleTradeType = (t: "수출" | "수입") => {
@@ -38,9 +43,32 @@ export default function FilterBar({
     onYearChange?.(y);
   };
 
-  // 해당 연도의 국가/품목 목록 (수출 기준으로 목록 표시)
-  const countryNames = getCountryData(year, "수출").map((c) => c.name);
-  const productNames = getTreemapData(year, "수출").map((p) => p.name);
+  // 해당 연도의 국가/품목 목록 (현재 tradeType 기준)
+  const countryNames = getCountryData(year, tradeType).map((c) => c.name);
+  const productNames = getTreemapData(year, tradeType).map((p) => p.name);
+
+  const handleMonth = (m: string) => {
+    setMonth(m);
+    onMonthChange?.(m);
+    // KPIBar가 URL에서 month를 읽으므로 URL 동기화
+    const params = new URLSearchParams(searchParams.toString());
+    if (m) params.set("month", m);
+    else params.delete("month");
+    router.replace(`?${params.toString()}`, { scroll: false });
+  };
+
+  const handleProduct = (p: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (p) params.set("product", p);
+    else params.delete("product");
+    router.replace(`?${params.toString()}`, { scroll: false });
+  };
+
+  const handleCountry = (name: string) => {
+    if (!name) return;
+    const mode = tradeType === "수입" ? "import" : "export";
+    router.push(`/country/${encodeURIComponent(name)}?mode=${mode}`);
+  };
 
   return (
     <div className="filter-bar">
@@ -74,7 +102,7 @@ export default function FilterBar({
           <select
             className="filter-select"
             value={month}
-            onChange={(e) => { setMonth(e.target.value); onMonthChange?.(e.target.value); }}
+            onChange={(e) => handleMonth(e.target.value)}
             style={{ width: 96 }}
           >
             <option value="">월 (전체)</option>
@@ -121,16 +149,22 @@ export default function FilterBar({
             </>
           ) : (
             <>
-              <select className="filter-select" style={{ width: 140 }}>
+              <select
+                className="filter-select"
+                style={{ width: 140 }}
+                value={searchParams.get("product") ?? ""}
+                onChange={(e) => handleProduct(e.target.value)}
+              >
                 <option value="">품목 (전체)</option>
                 {productNames.map((n) => (
-                  <option key={n}>{n}</option>
+                  <option key={n} value={n}>{n}</option>
                 ))}
               </select>
               <select
                 className="filter-select"
                 style={{ width: 140 }}
                 defaultValue={showCountrySelect ?? ""}
+                onChange={(e) => handleCountry(e.target.value)}
               >
                 {showCountrySelect ? (
                   <option value={showCountrySelect}>{showCountrySelect}</option>
@@ -138,7 +172,7 @@ export default function FilterBar({
                   <>
                     <option value="">수입국 (전체)</option>
                     {countryNames.map((n) => (
-                      <option key={n}>{n}</option>
+                      <option key={n} value={n}>{n}</option>
                     ))}
                   </>
                 )}
