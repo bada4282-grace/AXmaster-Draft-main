@@ -16,6 +16,12 @@
     "react-simple-maps": "^3.0.0",
     "recharts": "^3.8.1"
   },
+  "overrides": {
+    "react-simple-maps": {
+      "react": "$react",
+      "react-dom": "$react-dom"
+    }
+  },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",

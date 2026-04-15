@@ -6,6 +6,30 @@ import { getMonthlyTreemapData, getCountryMonthlyTreemapData } from "@/lib/supab
 import { useRouter } from "next/navigation";
 import { rechartsTooltipSurfaceProps } from "@/components/RechartsTooltip";
 
+/** MTI 대분류별 SVG 아이콘 path */
+const MTI_ICON_PATHS: Record<number, React.ReactNode> = {
+  // 0 농림수산물 — 잎사귀
+  0: <path d="M12 3c-3 4-7 7-7 11a7 7 0 0 0 14 0c0-4-4-7-7-11z" />,
+  // 1 광산물 — 다이아몬드
+  1: <><path d="M6 3h12l4 6-10 12L2 9z" /><path d="M2 9h20" /></>,
+  // 2 화학공업제품 — 플라스크
+  2: <><path d="M9 3h6v5l4 8a2 2 0 0 1-1.8 3H6.8A2 2 0 0 1 5 16l4-8V3" /><path d="M9 3h6" /></>,
+  // 3 플라스틱·고무·가죽 — 육각형(분자)
+  3: <path d="M12 2l8 4.5v9L12 20l-8-4.5v-9z" />,
+  // 4 섬유류 — 실타래
+  4: <><circle cx="12" cy="12" r="7" /><path d="M5 12c0-3 3-5.5 7-5.5s7 2.5 7 5.5" /><path d="M5 12c0 3 3 5.5 7 5.5s7-2.5 7-5.5" /></>,
+  // 5 생활용품 — 집
+  5: <><path d="M3 10l9-7 9 7" /><path d="M5 10v9a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-9" /></>,
+  // 6 철강·금속 — 너트/볼트
+  6: <><path d="M12 2l8 4.5v9L12 20l-8-4.5v-9z" /><circle cx="12" cy="12" r="3" /></>,
+  // 7 기계·운송장비 — 기어
+  7: <><circle cx="12" cy="12" r="3" /><path d="M12 1v2m0 18v2m-9-11h2m18 0h2m-4.2-6.8l-1.4 1.4M5.6 18.4l-1.4 1.4m0-15.6l1.4 1.4m12.8 12.8l1.4 1.4" /></>,
+  // 8 전자·전기 — 번개
+  8: <path d="M13 2L4 14h7l-2 8 10-12h-7z" fill="currentColor" />,
+  // 9 잡제품 — 그리드
+  9: <><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></>,
+};
+
 // 금액을 적절한 단위로 포맷 (value는 억 단위 기준)
 // 예: 986.3 → "$986.3억" / 0.00634 → "$63.4만" / 82 → "$82억"
 function formatAmount(v: number): string {
@@ -202,6 +226,58 @@ export default function TreemapChart({
           from { opacity: 0; transform: scale(0.97); }
           to   { opacity: 1; transform: scale(1); }
         }
+        .mti-icon-btn {
+          width: 30px; height: 30px;
+          display: flex; align-items: center; justify-content: center;
+          border-radius: 6px;
+          border: 2px solid transparent;
+          background: #f1f5f9;
+          cursor: pointer;
+          transition: all 0.15s ease;
+          position: relative;
+        }
+        .mti-icon-btn:hover {
+          background: var(--mti-color);
+          transform: translateY(-1px);
+          border-color: var(--mti-color);
+        }
+        .mti-icon-btn:hover svg {
+          stroke: #fff;
+        }
+        .mti-icon-btn:hover span {
+          color: #fff !important;
+        }
+        .mti-icon-btn--active {
+          box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+        }
+        .mti-icon-btn--active svg {
+          stroke: #fff;
+        }
+        .mti-icon-btn[data-tooltip] {
+          position: relative;
+        }
+        .mti-icon-btn[data-tooltip]::after {
+          content: attr(data-tooltip);
+          position: absolute;
+          bottom: calc(100% + 6px);
+          left: 50%;
+          transform: translateX(-50%) scale(0.9);
+          padding: 4px 8px;
+          background: #1e293b;
+          color: #fff;
+          font-size: 11px;
+          font-weight: 500;
+          line-height: 1.3;
+          white-space: nowrap;
+          border-radius: 4px;
+          pointer-events: none;
+          opacity: 0;
+          transition: opacity 0.15s ease, transform 0.15s ease;
+        }
+        .mti-icon-btn[data-tooltip]:hover::after {
+          opacity: 1;
+          transform: translateX(-50%) scale(1);
+        }
       `}</style>
 
       <div className="flex-1 min-h-0">
@@ -232,27 +308,41 @@ export default function TreemapChart({
         )}
       </div>
 
-      {/* MTI 카테고리 필터 */}
-      <div className="flex items-center justify-center gap-1 pt-2 flex-wrap">
-        {Object.entries(MTI_COLORS).map(([mti, color]) => (
-          <button
-            key={mti}
-            title={MTI_NAMES[Number(mti)]}
-            onClick={() => setZoomedMti(zoomedMti === Number(mti) ? null : Number(mti))}
-            className={`w-5 h-5 rounded-full border-2 transition-transform hover:scale-110 ${
-              zoomedMti === Number(mti) ? "border-gray-800 scale-110" : "border-white"
-            }`}
-            style={{ background: color as string }}
-          />
-        ))}
-        {zoomedMti !== null && (
-          <button
-            onClick={() => setZoomedMti(null)}
-            className="text-xs text-gray-500 ml-1 hover:text-gray-800"
-          >
-            전체
-          </button>
-        )}
+      {/* MTI 대분류 아이콘 필터 */}
+      <div className="flex items-center justify-center gap-1.5 pt-2 flex-wrap">
+        {Object.entries(MTI_COLORS).map(([mti, color]) => {
+          const n = Number(mti);
+          const isActive = zoomedMti === n;
+          return (
+            <button
+              key={mti}
+              data-tooltip={MTI_NAMES[n]}
+              onClick={() => { setZoomedMti(isActive ? null : n); startTreemapAnimation(); }}
+              className={`mti-icon-btn${isActive ? " mti-icon-btn--active" : ""}`}
+              style={{
+                "--mti-color": color as string,
+                background: isActive ? (color as string) : undefined,
+                borderColor: isActive ? (color as string) : "transparent",
+              } as React.CSSProperties}
+            >
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke={isActive ? "#fff" : (color as string)} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                {MTI_ICON_PATHS[n]}
+              </svg>
+            </button>
+          );
+        })}
+        <button
+          data-tooltip="전체 보기"
+          onClick={() => { setZoomedMti(null); startTreemapAnimation(); }}
+          className={`mti-icon-btn${zoomedMti === null ? " mti-icon-btn--active" : ""}`}
+          style={{
+            "--mti-color": "#475569",
+            background: zoomedMti === null ? "#475569" : undefined,
+            borderColor: zoomedMti === null ? "#475569" : "transparent",
+          } as React.CSSProperties}
+        >
+          <span style={{ fontSize: 9, fontWeight: 700, color: zoomedMti === null ? "#fff" : "#64748b", lineHeight: 1 }}>ALL</span>
+        </button>
       </div>
     </div>
   );
