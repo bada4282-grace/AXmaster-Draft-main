@@ -5,6 +5,76 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* ── 앱 전체 shell: 대시보드(좌) + 챗봇 사이드바(우) ── */
+.app-shell {
+  display: flex;
+  align-items: stretch;
+  min-height: 100vh;
+}
+
+.app-main {
+  flex: 1;
+  min-width: 0;
+  overflow-x: hidden;
+}
+
+/* 레이아웃 레벨 영구 챗봇 사이드바 */
+.app-chatbot-sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  width: clamp(280px, 22vw, 360px);
+  flex-shrink: 0;
+  transition: width 0.3s ease;
+  overflow: visible;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-chatbot-sidebar.collapsed {
+  width: 0;
+}
+
+.app-chatbot-inner {
+  width: clamp(280px, 22vw, 360px);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.3s ease, opacity 0.2s ease;
+}
+
+.app-chatbot-sidebar.collapsed .app-chatbot-inner {
+  transform: translateX(100%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.app-chatbot-sidebar .chatbot-slider-btn {
+  position: absolute;
+  left: -14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 64px;
+  border: 1px solid #E02020;
+  border-right: none;
+  border-radius: 12px 0 0 12px;
+  background: #E02020;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  box-shadow: -2px 2px 8px rgba(0, 0, 0, 0.08);
+  z-index: 20;
+}
+
+.app-chatbot-sidebar .chatbot-slider-btn:hover {
+  background: #c91c1c;
+  border-color: #c91c1c;
+}
+
 body {
   font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: 14px;
