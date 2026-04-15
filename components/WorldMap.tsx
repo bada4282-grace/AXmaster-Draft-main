@@ -1,5 +1,4 @@
 "use client";
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
@@ -10,6 +9,14 @@ import { getMonthlyCountryMapData, type MonthlyCountryMapItem } from "@/lib/supa
 import { ComposableMap, Geographies, Geography, ZoomableGroup } from "react-simple-maps";
 
 const GEO_URL = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
+
+type MapGeo = {
+  id?: string | number;
+  rsmKey: string;
+  properties?: {
+    name?: string;
+  };
+};
 
 const ISO_NUM_TO_ALPHA2: Record<string, string> = {
   "156": "CN", "840": "US", "704": "VN", "392": "JP", "344": "HK",
@@ -181,8 +188,8 @@ export default function WorldMap({ year = DEFAULT_YEAR, month = "", tradeType = 
           }}
         >
           <Geographies geography={GEO_URL}>
-            {({ geographies }: { geographies: any[] }) =>
-              geographies.map((geo: any) => {
+            {({ geographies }: { geographies: MapGeo[] }) =>
+              geographies.map((geo: MapGeo) => {
                 const isoNum = String(geo.id ?? "").padStart(3, "0");
                 const alpha2 = ISO_NUM_TO_ALPHA2[isoNum];
                 const cData = alpha2 ? activeCountryData.find((d) => d.iso === alpha2) : null;
