@@ -39,6 +39,17 @@ interface ChatBotProps {
   showInternalToggle?: boolean;
 }
 
+// ─────────────────────────────────────────────────────────────
+// FAQ_QUESTIONS: 현재는 하드코딩된 질문 목록입니다.
+// 추후 Supabase DB 연동 시, 실제 사용자 질문 빈도 데이터를
+// 기반으로 상위 N개를 동적으로 불러오는 방식으로 교체 예정입니다.
+// ─────────────────────────────────────────────────────────────
+const FAQ_QUESTIONS = [
+  "올해 수출 1위 국가는?",
+  "반도체 수출 현황 알려줘",
+  "최근 무역수지는?",
+];
+
 export default function ChatBot({
   open,
   onToggle,
@@ -216,7 +227,7 @@ export default function ChatBot({
       <div className="chatbot-messages">
         {welcomeLoading ? (
           <div style={{ textAlign: "center", color: "#aaa", fontSize: 13, padding: 20 }}>
-            맞춤 메시지 준비 중...
+            챗봇이 고민 중입니다...
           </div>
         ) : (
           messages.map((msg, i) => (
@@ -237,22 +248,55 @@ export default function ChatBot({
         <div ref={bottomRef} />
       </div>
 
+      {/* FAQ 버튼 - 항상 표시 */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 6, padding: "0 12px 8px" }}>
+        {FAQ_QUESTIONS.map((q, i) => (
+          <button
+            key={i}
+            onClick={() => send(q)}
+            style={{
+              textAlign: "left", background: "#fff", border: "1px solid #e0e0e0",
+              borderRadius: 16, padding: "6px 12px", fontSize: 12, color: "#333",
+              cursor: "pointer", transition: "background 0.15s",
+            }}
+            onMouseEnter={e => (e.currentTarget.style.background = "#fde8e8")}
+            onMouseLeave={e => (e.currentTarget.style.background = "#fff")}
+          >
+            {q}
+          </button>
+        ))}
+      </div>
+
       {/* Input area */}
-      <div className="chatbot-input-area">
-        <input
+      <div className="chatbot-input-area" style={{ alignItems: "flex-end" }}>
+        <textarea
+          ref={textareaRef}
           className="chatbot-input"
           placeholder={isStreaming ? "답변 생성 중..." : "질문을 입력하세요..."}
           value={input}
+          rows={1}
           onChange={e => setInput(e.target.value)}
-          onKeyDown={e => e.key === "Enter" && send()}
-          disabled={isStreaming}
+          onKeyDown={e => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              send();
+            }
+          }}
+          style={{
+            resize: "none",
+            overflow: "hidden",
+            lineHeight: "1.5",
+            maxHeight: "120px",
+            overflowY: "hidden",
+            fontFamily: "inherit",
+          }}
         />
-        <button
-          className="chatbot-send-btn"
-          onClick={send}
-          disabled={isStreaming}
-          style={{ opacity: isStreaming ? 0.5 : 1 }}
-        >▶</button>
+        <button className="chatbot-send-btn" onClick={() => send()}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: "block", transform: "translate(-2px, 1px)" }}>
+            <path d="M22 2L11 13" />
+            <path d="M22 2L15 22L11 13L2 9L22 2Z" />
+          </svg>
+        </button>
       </div>
 
       {/* Close button */}
