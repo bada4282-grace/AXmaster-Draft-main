@@ -1,5 +1,8 @@
 "use client";
-import { useState, useRef, useEffect, Fragment } from "react";
+import { useState, useRef, useEffect } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import rehypeRaw from "rehype-raw";
 import { supabase } from "@/lib/supabase";
 import { saveChatLog, getChatLogs } from "@/lib/chat";
 import type { User } from "@supabase/supabase-js";
@@ -12,22 +15,37 @@ function TypingIndicator() {
   );
 }
 
-// 마크다운 기호 앞뒤 공백 보장 (이미 공백 있으면 추가 안 함)
-function addMarkdownSpaces(text: string): string {
-  return text
-    .replace(/([^\s])\*\*/g, "$1 **")
-    .replace(/\*\*([^\s])/g, "** $1")
-    .replace(/^(#{1,3})([^\s#])/gm, "$1 $2");
-}
-
 function renderBotText(text: string): React.ReactNode {
-  const lines = addMarkdownSpaces(text).split("\n");
-  return lines.map((line, i) => (
-    <Fragment key={i}>
-      {line}
-      {i < lines.length - 1 && <br />}
-    </Fragment>
-  ));
+  // ==토픽== → <mark>토픽</mark> 변환
+  const processed = text.replace(/==([^=]+)==/g, "<mark>$1</mark>");
+  return (
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm]}
+      rehypePlugins={[rehypeRaw]}
+      components={{
+        mark: ({ children }) => <mark className="chatbot-highlight">{children}</mark>,
+        p: ({ children }) => <p style={{ margin: "4px 0" }}>{children}</p>,
+        strong: ({ children }) => <strong style={{ fontWeight: 700 }}>{children}</strong>,
+        ul: ({ children }) => <ul style={{ margin: "4px 0", paddingLeft: 18 }}>{children}</ul>,
+        ol: ({ children }) => <ol style={{ margin: "4px 0", paddingLeft: 18 }}>{children}</ol>,
+        li: ({ children }) => <li style={{ margin: "2px 0" }}>{children}</li>,
+        h1: ({ children }) => <div style={{ fontWeight: 800, fontSize: 15, margin: "6px 0 2px" }}>{children}</div>,
+        h2: ({ children }) => <div style={{ fontWeight: 700, fontSize: 14, margin: "6px 0 2px" }}>{children}</div>,
+        h3: ({ children }) => <div style={{ fontWeight: 700, fontSize: 13, margin: "4px 0 2px" }}>{children}</div>,
+        table: ({ children }) => (
+          <table style={{ borderCollapse: "collapse", margin: "6px 0", fontSize: 11, width: "100%" }}>{children}</table>
+        ),
+        th: ({ children }) => (
+          <th style={{ border: "1px solid #ddd", padding: "3px 6px", background: "#f5f5f5", fontWeight: 600 }}>{children}</th>
+        ),
+        td: ({ children }) => (
+          <td style={{ border: "1px solid #ddd", padding: "3px 6px" }}>{children}</td>
+        ),
+      }}
+    >
+      {processed}
+    </ReactMarkdown>
+  );
 }
 
 interface ChatMessage { role: "bot" | "user"; text: string; }
