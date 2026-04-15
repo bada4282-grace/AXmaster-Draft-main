@@ -1,29 +1,88 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import "maplibre-gl/dist/maplibre-gl.css";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
-import { useRouter } from "next/navigation";
-import { getCountryData, getMapColor, DEFAULT_YEAR, type TradeType } from "@/lib/data";
+import { useRouter, useSearchParams } from "next/navigation";
+import ReactMap, { Source, Layer, Marker } from "react-map-gl/maplibre";
+import type { MapRef } from "react-map-gl/maplibre";
+import type { MapLayerMouseEvent } from "maplibre-gl";
+import { feature as topoFeature } from "topojson-client";
+
+import { getCountryData, getTreemapData, DEFAULT_YEAR, type TradeType, type CountryData } from "@/lib/data";
+
+// 민트-틸 그라데이션 팔레트 (rank 1~30 기준, 5구간)
+function getMapColor(rank: number): string {
+  if (rank <= 3)  return "#054744"; // 1~3위   — 딥 다크 틸
+  if (rank <= 9)  return "#1A9088"; // 4~9위   — 다크 틸
+  if (rank <= 15) return "#50B8AD"; // 10~15위 — 미디엄 틸
+  if (rank <= 21) return "#6DCAB9"; // 16~21위 — 라이트 틸
+  if (rank <= 30) return "#A8E0D4"; // 22~30위 — 연한 민트 틸
+  return "#DCF3EF";                 // 30위 밖 — 유지
+}
+
+// 필터 모드 전용 색상 — #DCF3EF 와 대비가 확보되도록 강화
+function getFilterColor(rank: number): string {
+  if (rank <= 3)  return "#054744";
+  if (rank <= 9)  return "#1A9088";
+  if (rank <= 15) return "#50B8AD";
+  if (rank <= 21) return "#6DCAB9";
+  if (rank <= 30) return "#6DC4B5"; // #A8E0D4 → 더 진하게
+  return "#DCF3EF";
+}
 import { getMonthlyCountryMapData, type MonthlyCountryMapItem } from "@/lib/supabase";
 
-// @ts-ignore
-import { ComposableMap, Geographies, Geography, ZoomableGroup } from "react-simple-maps";
-
+// ─── 상수 ────────────────────────────────────────────────────────────────────
 const GEO_URL = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
 
-type MapGeo = {
-  id?: string | number;
-  rsmKey: string;
-  properties?: {
-    name?: string;
-  };
-};
-
+// ISO 숫자코드 → alpha-2 매핑
 const ISO_NUM_TO_ALPHA2: Record<string, string> = {
   "156": "CN", "840": "US", "704": "VN", "392": "JP", "344": "HK",
-  "036": "AU", "356": "IN", "702": "SG", "158": "TW", "276": "DE",
-  "484": "MX", "458": "MY", "608": "PH", "826": "GB", "528": "NL",
-  "764": "TH", "616": "PL", "360": "ID", "124": "CA", "682": "SA",
-  "792": "TR", "380": "IT", "250": "FR", "724": "ES", "076": "BR",
+  "158": "TW", "702": "SG", "356": "IN", "036": "AU", "484": "MX",
+  "276": "DE", "458": "MY", "360": "ID", "616": "PL", "608": "PH",
+  "792": "TR", "124": "CA", "764": "TH", "528": "NL", "348": "HU",
+  "682": "SA", "826": "GB", "380": "IT", "250": "FR", "724": "ES",
+  "076": "BR", "643": "RU", "784": "AE", "376": "IL", "056": "BE",
+  "756": "CH", "752": "SE", "040": "AT", "208": "DK", "578": "NO",
+  "246": "FI", "203": "CZ", "642": "RO", "710": "ZA", "032": "AR",
+  "152": "CL", "170": "CO", "586": "PK", "050": "BD", "818": "EG",
+  "566": "NG", "398": "KZ", "860": "UZ",
+};
+
+// 한국어 국가명 → ISO alpha-2 (Supabase monthly 데이터의 ctr_name 매핑용)
+// 다양한 표기 변형 포함
+const KO_NAME_TO_ISO: Record<string, string> = {
+  "중국": "CN", "미국": "US", "베트남": "VN", "일본": "JP", "홍콩": "HK",
+  "대만": "TW", "싱가포르": "SG", "인도": "IN", "호주": "AU", "멕시코": "MX",
+  "독일": "DE", "말레이시아": "MY", "인도네시아": "ID", "폴란드": "PL", "필리핀": "PH",
+  "튀르키예": "TR", "터키": "TR",
+  "캐나다": "CA", "태국": "TH", "네덜란드": "NL", "헝가리": "HU",
+  "사우디아라비아": "SA", "사우디": "SA",
+  "영국": "GB",
+  "이탈리아": "IT", "프랑스": "FR", "스페인": "ES", "브라질": "BR",
+  "러시아": "RU", "러시아연방": "RU",
+  "아랍에미리트": "AE", "UAE": "AE", "아랍 에미리트": "AE",
+  "이스라엘": "IL", "벨기에": "BE",
+  "스위스": "CH", "스웨덴": "SE", "오스트리아": "AT", "덴마크": "DK",
+  "노르웨이": "NO", "핀란드": "FI", "체코": "CZ", "루마니아": "RO",
+  "남아프리카공화국": "ZA", "남아프리카": "ZA", "남아공": "ZA",
+  "아르헨티나": "AR", "칠레": "CL", "콜롬비아": "CO",
+  "파키스탄": "PK", "방글라데시": "BD",
+  "이집트": "EG", "나이지리아": "NG",
+  "카자흐스탄": "KZ", "우즈베키스탄": "UZ",
+};
+
+// TOP5 레이블 위치 (지리적 중심 좌표)
+const COUNTRY_CENTROIDS: Record<string, [number, number]> = {
+  "CN": [104,   35  ], "US": [-98,   39  ], "VN": [108,   16  ],
+  "JP": [136,   36  ], "HK": [113,   23.5], "AU": [133,  -27  ],
+  "IN": [78,    22  ], "SG": [103.8,  1.4], "TW": [122,   22  ],
+  "DE": [10,    51  ], "MX": [-102,  23  ], "MY": [109,    4  ],
+  "PH": [122,   12  ], "GB": [-2,    54  ], "NL": [5.3,  52.3 ],
+  "TH": [101,   15  ], "PL": [20,    52  ], "ID": [117,   -2  ],
+  "CA": [-96,   60  ], "SA": [45,    24  ], "TR": [35,    39  ],
+  "IT": [12,    42  ], "FR": [2.5,   46  ], "ES": [-4,    40  ],
+  "BR": [-52,  -10  ],
 };
 
 const COUNTRY_NAME_ALIAS_TO_KO: Record<string, string> = {
@@ -42,11 +101,89 @@ const COUNTRY_NAME_ALIAS_TO_KO: Record<string, string> = {
   "brunei darussalam": "브루나이",
 };
 
+// MapLibre 최소 스타일 (배경색만 — 타일 서버 필요 없음)
+const MAP_STYLE: any = {
+  version: 8,
+  sources: {},
+  layers: [{ id: "bg", type: "background", paint: { "background-color": "#F2FBFF" } }],
+};
+
+// ─── GeoJSON 로드 (topojson → GeoJSON 변환, 모듈 캐싱) ───────────────────────
+// ─── Antimeridian artifact 방지 ────────────────────────────────────────────
+// 문제: 독립 정규화는 인접 정점 간 점프(179° → -179°)를 남겨둠
+//       → MapLibre가 최단 2° 경로 대신 358° 경로로 선을 그어 가로선 생성
+// 해결: 연속 와인딩(continuous winding) — 이전 정점과의 차이가 항상 ±180° 이내가
+//       되도록 경도를 누적 조정. 그 후 [-180, 180] 밖으로 나간 값은 클램프.
+function normLng(lng: number): number {
+  let v = lng % 360;
+  if (v > 180)  v -= 360;
+  if (v < -180) v += 360;
+  return v;
+}
+function normalizeRing(ring: number[][]): number[][] {
+  if (ring.length < 2) return ring;
+  const out: number[][] = [[normLng(ring[0][0]), ring[0][1]]];
+  for (let i = 1; i < ring.length; i++) {
+    const prev = out[out.length - 1][0];
+    let lng = normLng(ring[i][0]);
+    // 이전 정점과의 차이를 항상 ±180° 이내로 유지
+    if (lng - prev > 180)  lng -= 360;
+    if (lng - prev < -180) lng += 360;
+    out.push([lng, ring[i][1]]);
+  }
+  // 연속화 후 범위를 벗어난 값은 클램프 (폴리곤 분할 없이 artifact 제거)
+  return out.map(([lng, lat]) => [Math.max(-180, Math.min(180, lng)), lat]);
+}
+function normalizeGeometry(geom: GeoJSON.Geometry): GeoJSON.Geometry {
+  if (geom.type === "Polygon") {
+    return { ...geom, coordinates: geom.coordinates.map(normalizeRing) };
+  }
+  if (geom.type === "MultiPolygon") {
+    return {
+      ...geom,
+      coordinates: geom.coordinates.map((poly) => poly.map(normalizeRing)),
+    };
+  }
+  return geom;
+}
+
+let _geoCache: GeoJSON.FeatureCollection | null = null;
+// 연간 집계 모듈 캐시 — 동일 year+tradeType 조합의 12회 Supabase 호출 방지
+const _annualRankCache = new Map<string, import("@/lib/supabase").MonthlyCountryMapItem[]>();
+
+async function loadBaseGeoJSON(): Promise<GeoJSON.FeatureCollection> {
+  if (_geoCache) return _geoCache;
+  const res  = await fetch(GEO_URL);
+  const topo = await res.json() as any;
+  const raw  = topoFeature(topo, topo.objects.countries) as unknown as GeoJSON.FeatureCollection;
+  // 경도 정규화 → antimeridian artifact 방지
+  _geoCache = {
+    ...raw,
+    features: raw.features.map((f) => ({
+      ...f,
+      geometry: normalizeGeometry(f.geometry as GeoJSON.Geometry),
+    })),
+  };
+  return _geoCache;
+}
+
+// 한국어 국가명 헬퍼
+const _DisplayNames: any = typeof Intl !== "undefined" ? (Intl as any).DisplayNames : null;
+const _koNames = _DisplayNames ? new _DisplayNames(["ko"], { type: "region" }) : null;
+function getKoreanName(alpha2?: string, fallback = "국가명 정보 없음"): string {
+  if (alpha2 && _koNames) {
+    const ko = _koNames.of(alpha2) as string | undefined;
+    if (ko && ko !== alpha2) return ko;
+  }
+  return fallback;
+}
+
+// ─── 타입 ────────────────────────────────────────────────────────────────────
 interface Tooltip {
   x: number; y: number;
   country: string;
   rank?: number;
-  export?: string;
+  exportVal?: string;
   topProducts?: string[];
   isTop30: boolean;
 }
@@ -57,218 +194,470 @@ interface WorldMapProps {
   tradeType?: TradeType;
 }
 
-export default function WorldMap({ year = DEFAULT_YEAR, month = "", tradeType = "수출" }: WorldMapProps) {
-  const router = useRouter();
+// ─── 컴포넌트 ─────────────────────────────────────────────────────────────────
+export default function WorldMap({
+  year = DEFAULT_YEAR,
+  month = "",
+  tradeType = "수출",
+}: WorldMapProps) {
+  const router    = useRouter();
+  const mapRef        = useRef<MapRef>(null);
+  const hoverIdRef    = useRef<number | null>(null);
+  const markerHoverRef = useRef(false);
+
+  // FilterBar에서 선택한 품목을 URL에서 읽어 지도 필터로 적용
+  const selectedProduct = useSearchParams().get("product") ?? "";
+
   const countryData = getCountryData(year, tradeType);
-  const [monthlyRanks, setMonthlyRanks] = useState<MonthlyCountryMapItem[] | null>(null);
 
+  // 선택된 품목의 상위 수출/수입국 목록 (ISO alpha-2)
+  const productTopIso = useMemo(() => {
+    if (!selectedProduct) return null;
+    const products = getTreemapData(year, tradeType);
+    const found = products.find((p) => p.name === selectedProduct);
+    if (!found?.topCountries?.length) return null;
+    return new Set(
+      found.topCountries
+        .map((name) => KO_NAME_TO_ISO[name])
+        .filter(Boolean) as string[]
+    );
+  }, [selectedProduct, year, tradeType]);
+
+  // ─ Pretendard 폰트 로드 ─
   useEffect(() => {
-    let mounted = true;
-    if (!month) {
-      setMonthlyRanks(null);
-      return () => {
-        mounted = false;
-      };
-    }
-
-    getMonthlyCountryMapData(year, month, tradeType)
-      .then((rows) => {
-        if (mounted) {
-          setMonthlyRanks(rows);
-        }
-      })
-      .catch(() => {
-        if (mounted) {
-          setMonthlyRanks(null);
-        }
-      });
-
-    return () => {
-      mounted = false;
-    };
-  }, [year, month, tradeType]);
-
-  const activeCountryData = useMemo(() => {
-    if (!month || !monthlyRanks) {
-      return countryData;
-    }
-
-    const rankByName = new Map<string, MonthlyCountryMapItem>();
-    monthlyRanks.forEach((row) => {
-      rankByName.set(row.ctr_name, row);
-    });
-
-    return countryData.map((country) => {
-      const monthly = rankByName.get(country.name) ?? rankByName.get(country.nameEn);
-      if (!monthly) {
-        return { ...country, rank: 999, export: "0" };
-      }
-      return {
-        ...country,
-        rank: monthly.rank,
-        export: (monthly.total_amt / 1e8).toFixed(1),
-      };
-    });
-  }, [countryData, month, monthlyRanks]);
-
-  const [zoom, setZoom] = useState(1);
-  const [center, setCenter] = useState<[number, number]>([20, 10]);
-  const [tooltip, setTooltip] = useState<Tooltip | null>(null);
-
-  const englishToKoreanMap = useMemo(() => {
-    const koNames = new Intl.DisplayNames(["ko"], { type: "region" });
-    const enNames = new Intl.DisplayNames(["en"], { type: "region" });
-    const mapping = new Map<string, string>();
-
-    for (let i = 65; i <= 90; i += 1) {
-      for (let j = 65; j <= 90; j += 1) {
-        const regionCode = `${String.fromCharCode(i)}${String.fromCharCode(j)}`;
-        const en = enNames.of(regionCode);
-        const ko = koNames.of(regionCode);
-        if (!en || !ko || en === regionCode || ko === regionCode) {
-          continue;
-        }
-        mapping.set(en.toLowerCase(), ko);
-      }
-    }
-
-    return mapping;
+    const id = "pretendard-font";
+    if (document.getElementById(id)) return;
+    const link = document.createElement("link");
+    link.id   = id;
+    link.rel  = "stylesheet";
+    link.href = "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css";
+    document.head.appendChild(link);
   }, []);
 
-  const getKoreanCountryName = (englishName?: string, alpha2?: string, fallback = "알 수 없음") => {
-    if (alpha2) {
-      const koName = new Intl.DisplayNames(["ko"], { type: "region" }).of(alpha2);
-      if (koName && koName !== alpha2) return koName;
+  // ─ 월별 Supabase 데이터 ─
+  const [monthlyRanks, setMonthlyRanks] = useState<MonthlyCountryMapItem[] | null>(null);
+  useEffect(() => {
+    let mounted = true;
+    if (!month) { setMonthlyRanks(null); return () => { mounted = false; }; }
+    getMonthlyCountryMapData(year, month, tradeType)
+      .then((rows) => { if (mounted) setMonthlyRanks(rows); })
+      .catch(() => { if (mounted) setMonthlyRanks(null); });
+    return () => { mounted = false; };
+  }, [year, month, tradeType]);
+
+  // ─ 연간 집계 (월 미선택 시 12개월 합산 → rank 1~30) ─
+  const [annualRanks, setAnnualRanks] = useState<MonthlyCountryMapItem[] | null>(null);
+  useEffect(() => {
+    if (month) { setAnnualRanks(null); return; }
+    const cacheKey = `${year}-${tradeType}`;
+    if (_annualRankCache.has(cacheKey)) {
+      setAnnualRanks(_annualRankCache.get(cacheKey)!);
+      return;
+    }
+    let mounted = true;
+    const MONTHS = ["01","02","03","04","05","06","07","08","09","10","11","12"];
+    Promise.allSettled(
+      MONTHS.map((m) => getMonthlyCountryMapData(year, m, tradeType))
+    ).then((results) => {
+      if (!mounted) return;
+      const totals = new Map<string, number>();
+      results.forEach((r) => {
+        if (r.status === "fulfilled") {
+          r.value.forEach((item) => {
+            totals.set(item.ctr_name, (totals.get(item.ctr_name) ?? 0) + item.total_amt);
+          });
+        }
+      });
+      const sorted: MonthlyCountryMapItem[] = Array.from(totals.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 30)
+        .map(([ctr_name, total_amt], i) => ({ ctr_name, total_amt, rank: i + 1 }));
+      const result = sorted.length > 0 ? sorted : null;
+      if (result) _annualRankCache.set(cacheKey, result);
+      setAnnualRanks(result);
+    });
+    return () => { mounted = false; };
+  }, [year, tradeType, month]);
+
+  const activeCountryData = useMemo((): CountryData[] => {
+    const effectiveRanks = month ? monthlyRanks : annualRanks;
+    if (!effectiveRanks) return countryData;
+
+    const rankByName = new Map<string, MonthlyCountryMapItem>();
+    effectiveRanks.forEach((row) => rankByName.set(row.ctr_name, row));
+
+    // 1. static 국가 rank 업데이트
+    const staticIsoSet = new Set(countryData.map((c) => c.iso));
+    const updated = countryData.map((country) => {
+      const monthly = rankByName.get(country.name) ?? rankByName.get(country.nameEn);
+      if (!monthly) return { ...country, rank: 999, export: "0" };
+      return { ...country, rank: monthly.rank, export: (monthly.total_amt / 1e8).toFixed(1) };
+    });
+
+    // 2. static에 없는 Supabase 국가 추가 (rank 1~30)
+    const extras: CountryData[] = [];
+    effectiveRanks.forEach((row) => {
+      if (row.rank > 30) return;
+      const iso = KO_NAME_TO_ISO[row.ctr_name];
+      if (!iso || staticIsoSet.has(iso)) return;
+      extras.push({
+        iso,
+        name: row.ctr_name,
+        nameEn: "",
+        rank: row.rank,
+        export: (row.total_amt / 1e8).toFixed(1),
+        import: "0",
+        region: "",
+        topProducts: [],
+        topImportProducts: [],
+        share: 0,
+      });
+    });
+
+    return [...updated, ...extras];
+  }, [countryData, month, monthlyRanks, annualRanks]);
+
+  const top5Countries = useMemo(
+    () => activeCountryData.filter((c) => c.rank <= 5).sort((a, b) => a.rank - b.rank),
+    [activeCountryData]
+  );
+
+  // ─ GeoJSON 기본 데이터 로드 ─
+  const [baseGeoJSON, setBaseGeoJSON] = useState<GeoJSON.FeatureCollection | null>(null);
+  useEffect(() => { loadBaseGeoJSON().then(setBaseGeoJSON); }, []);
+
+  // ─ 순위 구간 필터 ─
+  const [filterTier, setFilterTier] = useState<string>("all");
+
+  // ─ choropleth 색상 주입 ─
+  const coloredGeoJSON = useMemo((): GeoJSON.FeatureCollection | null => {
+    if (!baseGeoJSON) return null;
+
+    // 월별/연간 Supabase rank를 ISO alpha-2 기준으로 직접 맵핑
+    // (static 20개국 리스트에 없는 22~30위 국가도 커버)
+    const effectiveRanks = month ? monthlyRanks : annualRanks;
+    const monthlyByIso = new Map<string, MonthlyCountryMapItem>();
+    if (effectiveRanks) {
+      effectiveRanks.forEach((row) => {
+        const iso = KO_NAME_TO_ISO[row.ctr_name];
+        if (iso) monthlyByIso.set(iso, row);
+      });
     }
 
-    if (!englishName) return fallback;
-    const normalized = englishName.toLowerCase();
-    const alias = COUNTRY_NAME_ALIAS_TO_KO[normalized];
-    if (alias) return alias;
-    return englishToKoreanMap.get(normalized) ?? englishName;
-  };
+    return {
+      type: "FeatureCollection",
+      features: baseGeoJSON.features.map((f) => {
+        const isoNum = String(f.id ?? "").padStart(3, "0");
+        const alpha2 = ISO_NUM_TO_ALPHA2[isoNum] ?? "";
 
-  const getCountryColor = (isoNum: string) => {
-    const alpha2 = ISO_NUM_TO_ALPHA2[isoNum];
-    if (!alpha2) return "#CDE8DA";
-    const c = activeCountryData.find((d) => d.iso === alpha2);
-    if (!c) return "#CDE8DA";
-    return getMapColor(c.rank);
-  };
+        // 1순위: activeCountryData (static + 월별 업데이트)
+        const cData = alpha2 ? activeCountryData.find((d) => d.iso === alpha2) : undefined;
+        // 2순위: Supabase 직접 lookup (22~30위 국가가 static에 없을 때 fallback)
+        const mRow  = alpha2 ? monthlyByIso.get(alpha2) : undefined;
 
+        const rank      = cData ? cData.rank : (mRow ? mRow.rank : 999);
+        const exportVal = cData ? cData.export : (mRow ? (mRow.total_amt / 1e8).toFixed(1) : "0");
+        const isTop30   = rank <= 30;
+        const countryName = cData?.name ?? (alpha2 ? getKoreanName(alpha2) : "");
+
+        const inTier =
+          filterTier === "all"   ? true :
+          filterTier === "1-3"   ? rank >= 1  && rank <= 3  :
+          filterTier === "4-9"   ? rank >= 4  && rank <= 9  :
+          filterTier === "10-15" ? rank >= 10 && rank <= 15 :
+          filterTier === "16-21" ? rank >= 16 && rank <= 21 :
+          filterTier === "22-30" ? rank >= 22 && rank <= 30 : false;
+
+        // 품목 필터: 선택된 품목이 있으면 그 품목의 상위 국가만 강조
+        const inProduct = !productTopIso || (alpha2 ? productTopIso.has(alpha2) : false);
+
+        return {
+          ...f,
+          id: typeof f.id === "number" ? f.id : Number(isoNum) || 0,
+          properties: {
+            alpha2,
+            fill_color:   (isTop30 && inTier && inProduct)
+              ? (filterTier === "all" ? getMapColor(rank) : getFilterColor(rank))
+              : "#DCF3EF",
+            rank,
+            is_top30:     isTop30 ? 1 : 0,
+            country_name: countryName,
+            export_val:   exportVal,
+            top_products: (cData?.topProducts ?? []).join("||"),
+          },
+        };
+      }),
+    };
+  }, [baseGeoJSON, activeCountryData, filterTier, month, monthlyRanks, annualRanks, productTopIso]);
+
+  // ─ 툴팁 ─
+  const [tooltip, setTooltip] = useState<Tooltip | null>(null);
+
+  const clearHover = useCallback(() => {
+    const map = mapRef.current?.getMap();
+    if (map && hoverIdRef.current !== null) {
+      map.setFeatureState({ source: "countries", id: hoverIdRef.current }, { hover: false });
+      hoverIdRef.current = null;
+    }
+    // 마커 위에 호버 중이면 툴팁 유지
+    if (!markerHoverRef.current) setTooltip(null);
+  }, []);
+
+  const onMouseMove = useCallback((e: MapLayerMouseEvent) => {
+    const map = mapRef.current?.getMap();
+    if (!map) return;
+
+    const features = (e as any).features as any[] | undefined;
+    if (!features || features.length === 0) {
+      clearHover();
+      return;
+    }
+
+    const f  = features[0];
+    const id = f.id as number | undefined;
+
+    // 이전 hover 해제
+    if (hoverIdRef.current !== null && hoverIdRef.current !== id) {
+      map.setFeatureState({ source: "countries", id: hoverIdRef.current }, { hover: false });
+    }
+    if (id !== undefined) {
+      map.setFeatureState({ source: "countries", id }, { hover: true });
+      hoverIdRef.current = id;
+    }
+
+    const p           = f.properties ?? {};
+    const countryName = p.country_name || getKoreanName(p.alpha2 || undefined);
+    const oe          = e.originalEvent as MouseEvent;
+    setTooltip({
+      x: oe.clientX,
+      y: oe.clientY,
+      country:     countryName,
+      rank:        p.rank < 999 ? (p.rank as number) : undefined,
+      exportVal:   p.export_val as string,
+      topProducts: p.top_products
+        ? (p.top_products as string).split("||").filter(Boolean)
+        : [],
+      isTop30: !!p.is_top30,
+    });
+  }, [clearHover]);
+
+  const onMouseLeave = useCallback(() => clearHover(), [clearHover]);
+
+  const onClick = useCallback((e: MapLayerMouseEvent) => {
+    const features = (e as any).features as any[] | undefined;
+    if (!features || features.length === 0) return;
+    const p = features[0].properties ?? {};
+    if (p.is_top30 && p.country_name) {
+      const mode = tradeType === "수입" ? "import" : "export";
+      router.push(`/country/${encodeURIComponent(p.country_name as string)}?mode=${mode}`);
+    }
+  }, [router, tradeType]);
+
+  // ─ 로드 후 컨테이너 너비 기반 minZoom 동적 설정 ─
+  // MapLibre 타일 기준: zoom z 에서 세계 너비 = 512 * 2^z px
+  // "세계 한 바퀴 ≥ 화면 너비" 조건: 2^minZ ≥ containerWidth / 512
+  const onMapLoad = useCallback(() => {
+    const raw = mapRef.current?.getMap() as any;
+    if (!raw) return;
+    const containerEl = raw.getContainer() as HTMLElement;
+    const { width } = containerEl.getBoundingClientRect();
+    if (!width) return;
+    // minZoom = 세계 1벌이 화면 너비를 정확히 채우는 줌
+    // → 이 이하로 줌아웃 불가 = world copy 동시 노출 방지
+    const minZ = Math.log2(width / 512);
+    raw.setMinZoom(Math.max(minZ, 0.3));
+  }, []);
+
+  // ─ 렌더 ─
   return (
-    <div className="relative w-full h-full bg-[#F2FBFF]" style={{ minHeight: 340 }}>
-      {/* Zoom controls — 우측 하단 고정 */}
-      <div className="absolute bottom-10 right-2 z-10 flex flex-col gap-1">
-        {[
-          { label: "+", fn: () => setZoom((z) => Math.min(z + 0.5, 6)) },
-          { label: "−", fn: () => setZoom((z) => Math.max(z - 0.5, 1)) },
-        ].map(({ label, fn }) => (
-          <button
-            key={label}
-            onClick={fn}
-            className="bg-white border border-gray-300 text-base w-7 h-7 flex items-center justify-center rounded shadow hover:bg-gray-50 font-medium"
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-
-      <ComposableMap
-        projection="geoMercator"
-        projectionConfig={{ scale: 140, center: [20, 15] }}
-        style={{ width: "100%", height: "100%" }}
-      >
-        <ZoomableGroup
-          zoom={zoom}
-          center={center}
-          onMoveEnd={({ coordinates, zoom: z }: { coordinates: [number, number]; zoom: number }) => {
-            setCenter(coordinates);
-            setZoom(z);
-          }}
+    <div className="flex flex-col w-full h-full" style={{ minHeight: 340 }}>
+      {/* 지도 영역 */}
+      <div className="relative flex-1 bg-[#F2FBFF]">
+        <ReactMap
+          ref={mapRef}
+          mapStyle={MAP_STYLE}
+          initialViewState={{ longitude: 155, latitude: 20, zoom: 1.0 }}
+          // ★ MapLibre 엔진 레벨 world wrap
+          renderWorldCopies={true}
+          dragRotate={false}
+          pitchWithRotate={false}
+          style={{ width: "100%", height: "100%" }}
+          interactiveLayerIds={coloredGeoJSON ? ["countries-fill"] : []}
+          onLoad={onMapLoad}
+          onMouseMove={onMouseMove as any}
+          onMouseLeave={onMouseLeave}
+          onClick={onClick as any}
+          cursor={tooltip?.isTop30 ? "pointer" : "grab"}
         >
-          <Geographies geography={GEO_URL}>
-            {({ geographies }: { geographies: MapGeo[] }) =>
-              geographies.map((geo: MapGeo) => {
-                const isoNum = String(geo.id ?? "").padStart(3, "0");
-                const alpha2 = ISO_NUM_TO_ALPHA2[isoNum];
-                const cData = alpha2 ? activeCountryData.find((d) => d.iso === alpha2) : null;
-
-                return (
-                  <Geography
-                    key={geo.rsmKey}
-                    geography={geo}
-                    fill={getCountryColor(isoNum)}
-                    stroke="#fff"
-                    strokeWidth={0.5}
-                    style={{
-                      default: { outline: "none", cursor: (cData && cData.rank <= 30) ? "pointer" : "default" },
-                      hover: {
-                        outline: "none",
-                        fill: "#FFD700",
-                        opacity: 0.9,
-                        cursor: (cData && cData.rank <= 30) ? "pointer" : "default",
-                      },
-                      pressed: { outline: "none" },
-                    }}
-                    onMouseEnter={(evt: React.MouseEvent<SVGPathElement>) => {
-                      setTooltip({
-                        x: evt.clientX,
-                        y: evt.clientY,
-                        country: cData?.name ?? getKoreanCountryName(geo.properties?.name, alpha2, "국가명 정보 없음"),
-                        rank: cData?.rank,
-                        export: cData?.export,
-                        topProducts: cData?.topProducts,
-                        isTop30: !!cData && cData.rank <= 30,
-                      });
-                    }}
-                    onMouseMove={(evt: React.MouseEvent<SVGPathElement>) => {
-                      setTooltip((prev) =>
-                        prev ? { ...prev, x: evt.clientX, y: evt.clientY } : null
-                      );
-                    }}
-                    onMouseLeave={() => setTooltip(null)}
-                    onClick={() => {
-                      if (cData && cData.rank <= 30) {
-                        const mode = tradeType === "수입" ? "import" : "export";
-                        router.push(`/country/${encodeURIComponent(cData.name)}?mode=${mode}`);
-                      }
-                    }}
-                  />
-                );
-              })
-            }
-          </Geographies>
-        </ZoomableGroup>
-      </ComposableMap>
-
-      {/* Legend */}
-      <div className="absolute bottom-2 left-2 flex items-center gap-2 flex-wrap text-[9px]">
-        <span className="text-gray-600 mr-1 font-medium">{tradeType === "수입" ? "수입액" : "수출액"} 순위</span>
-        {[
-          { color: "#0F4C5C", label: "1~3위" },
-          { color: "#1D6F78", label: "4~9위" },
-          { color: "#3E8F92", label: "10~15위" },
-          { color: "#66AFA9", label: "16~21위" },
-          { color: "#95CBC0", label: "22~30위" },
-          { color: "#CDE8DA", label: "TOP30 외" },
-        ].map(({ color, label }) => (
-          <div key={label} className="flex items-center gap-0.5">
-            <div className="w-5 h-3 rounded-sm" style={{ background: color }} />
-            <span className="text-gray-600">{label}</span>
+          {/* 순위 구간 필터 — 우상단 */}
+          <div style={{
+            position:        "absolute",
+            top:             12,
+            right:           12,
+            zIndex:          10,
+          }}>
+            <select
+              value={filterTier}
+              onChange={(e) => setFilterTier(e.target.value)}
+              style={{
+                appearance:      "none",
+                backgroundColor: "rgba(255,255,255,0.88)",
+                backdropFilter:  "blur(6px)",
+                border:          "1px solid rgba(255,255,255,0.6)",
+                borderRadius:    8,
+                padding:         "5px 28px 5px 11px",
+                fontSize:        11,
+                fontWeight:      600,
+                color:           "#1f2937",
+                boxShadow:       "0 2px 10px rgba(0,0,0,0.12)",
+                cursor:          "pointer",
+                outline:         "none",
+                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2.5' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
+                backgroundRepeat:   "no-repeat",
+                backgroundPosition: "right 9px center",
+              }}
+            >
+              <option value="all">전체 보기</option>
+              <option value="1-3">1 ~ 3위</option>
+              <option value="4-9">4 ~ 9위</option>
+              <option value="10-15">10 ~ 15위</option>
+              <option value="16-21">16 ~ 21위</option>
+              <option value="22-30">22 ~ 30위</option>
+            </select>
           </div>
-        ))}
+
+          {coloredGeoJSON && (
+            <Source id="countries" type="geojson" data={coloredGeoJSON}>
+              {/* fill: choropleth 색상 + hover 시 금색 */}
+              <Layer
+                id="countries-fill"
+                type="fill"
+                paint={{
+                  "fill-color": [
+                    "case",
+                    ["boolean", ["feature-state", "hover"], false],
+                    "#FFD700",
+                    ["get", "fill_color"],
+                  ],
+                  "fill-opacity": 0.9,
+                }}
+              />
+              {/* 국가 경계선 */}
+              <Layer
+                id="countries-border"
+                type="line"
+                paint={{
+                  "line-color": "#ffffff",
+                  "line-width": 0.5,
+                }}
+              />
+            </Source>
+          )}
+
+          {/* TOP5 순위 레이블 — HTML Marker (한국어 지원) */}
+          {top5Countries.map((country) => {
+            const coords = COUNTRY_CENTROIDS[country.iso];
+            if (!coords) return null;
+            return (
+              <Marker
+                key={country.iso}
+                longitude={coords[0]}
+                latitude={coords[1]}
+                anchor="center"
+              >
+                <span
+                  style={{
+                    color:         "white",
+                    fontSize:      10,
+                    fontWeight:    700,
+                    fontFamily:    "'Pretendard', 'Noto Sans KR', sans-serif",
+                    textShadow:    "0 0 4px rgba(4,22,30,1), 0 0 4px rgba(4,22,30,1), 0 0 8px rgba(4,22,30,0.8)",
+                    pointerEvents: "auto",
+                    whiteSpace:    "nowrap",
+                    userSelect:    "none",
+                    cursor:        "pointer",
+                  }}
+                  onMouseEnter={(e) => {
+                    markerHoverRef.current = true;
+                    const el = e.currentTarget as HTMLElement;
+                    const rect = el.getBoundingClientRect();
+                    setTooltip({
+                      x:           rect.left + rect.width / 2,
+                      y:           rect.top,
+                      country:     country.name,
+                      rank:        country.rank,
+                      exportVal:   country.export,
+                      topProducts: country.topProducts ?? [],
+                      isTop30:     true,
+                    });
+                  }}
+                  onMouseLeave={() => {
+                    markerHoverRef.current = false;
+                    setTooltip(null);
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const mode = tradeType === "수입" ? "import" : "export";
+                    router.push(`/country/${encodeURIComponent(country.name)}?mode=${mode}`);
+                  }}
+                >
+                  {country.name}
+                </span>
+              </Marker>
+            );
+          })}
+        </ReactMap>
       </div>
 
-      {/* Tooltip */}
+      {/* 범례 — 지도 아래 흰색 바 */}
+      <div style={{
+        height: 44,
+        backgroundColor: "#ffffff",
+        borderTop: "1px solid #e5e7eb",
+        display: "flex",
+        alignItems: "center",
+        paddingLeft: 16,
+        paddingRight: 16,
+        gap: 10,
+        flexShrink: 0,
+      }}>
+        <span style={{ fontSize: 9, color: "#4b5563", fontWeight: 600, whiteSpace: "nowrap" }}>
+          {tradeType === "수입" ? "수입액" : "수출액"} 순위
+        </span>
+        <div style={{ flex: 1 }}>
+          {/* 구간별 색상 바 */}
+          <div style={{ display: "flex", width: "100%", height: 10, borderRadius: 3, overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.15)" }}>
+            {[
+              { color: "#DCF3EF" },
+              { color: "#A8E0D4" },
+              { color: "#6DCAB9" },
+              { color: "#50B8AD" },
+              { color: "#1A9088" },
+              { color: "#054744" },
+            ].map(({ color }) => (
+              <div key={color} style={{ flex: 1, backgroundColor: color }} />
+            ))}
+          </div>
+          {/* 눈금 라벨 */}
+          <div style={{ display: "flex", marginTop: 3 }}>
+            {["30위 밖", "22~30위", "16~21위", "10~15위", "4~9위", "1~3위"].map((label) => (
+              <div key={label} style={{ flex: 1, textAlign: "center" }}>
+                <span style={{ fontSize: 8, color: "#6b7280" }}>{label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* 툴팁 */}
       {tooltip &&
         typeof document !== "undefined" &&
         createPortal(
           <div
             className="tooltip-shell tooltip-shell--fixed"
             style={{
-              left: tooltip.x,
-              top: tooltip.y,
+              left:      tooltip.x,
+              top:       tooltip.y,
               transform: "translate(-50%, calc(-100% - 12px))",
             }}
           >
@@ -276,12 +665,17 @@ export default function WorldMap({ year = DEFAULT_YEAR, month = "", tradeType = 
             {tooltip.isTop30 ? (
               <>
                 <p className="tooltip-shell-line">
-                  {tradeType === "수입" ? "수입" : "수출"} 순위: <strong>{tooltip.rank}위</strong>
+                  {tradeType === "수입" ? "수입" : "수출"} 순위:{" "}
+                  <strong>{tooltip.rank}위</strong>
                 </p>
                 <p className="tooltip-shell-line">
-                  {tradeType === "수입" ? "수입액" : "수출액"}: <strong>${tooltip.export}억</strong>
+                  {tradeType === "수입" ? "수입액" : "수출액"}:{" "}
+                  <strong>${tooltip.exportVal}억</strong>
                 </p>
-                <p className="tooltip-shell-line" style={{ marginTop: 10, fontWeight: 600, color: "#64748b" }}>
+                <p
+                  className="tooltip-shell-line"
+                  style={{ marginTop: 10, fontWeight: 600, color: "#64748b" }}
+                >
                   상위 품목:
                 </p>
                 <ul className="tooltip-shell-list">
@@ -292,7 +686,10 @@ export default function WorldMap({ year = DEFAULT_YEAR, month = "", tradeType = 
                 <p className="tooltip-shell-hint">클릭 → 상세페이지</p>
               </>
             ) : (
-              <p className="tooltip-shell-sub" style={{ margin: 0, color: "#94a3b8" }}>
+              <p
+                className="tooltip-shell-sub"
+                style={{ margin: 0, color: "#94a3b8" }}
+              >
                 상세 데이터 제한
               </p>
             )}

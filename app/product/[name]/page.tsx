@@ -8,6 +8,7 @@ import KPIBar from "@/components/KPIBar";
 import ChatBot from "@/components/ChatBot";
 import {
   getTreemapData,
+  getCountryTreemapData,
   getProductTrend,
   getProductTopCountries,
   DEFAULT_YEAR,
@@ -30,6 +31,7 @@ export default function ProductDetailPage() {
 
   const [year, setYear] = useState(DEFAULT_YEAR);
   const [tradeType, setTradeType] = useState<TradeType>("수출");
+  const [country, setCountry] = useState("");
   const [subTab, setSubTab] = useState<"금액 추이" | "상위 국가">("금액 추이");
   const [chatOpen, setChatOpen] = useState(true);
 
@@ -39,8 +41,15 @@ export default function ProductDetailPage() {
     // 수입 전환 후 목록에 없으면 수출 목록에서 코드만 가져옴
     ?? getTreemapData(DEFAULT_YEAR, "수출").find((p) => p.name === name);
 
-  // 해당 품목의 연간 추이 (tradeType 반영)
-  const trend = product ? getProductTrend(product.code, tradeType) : [];
+  // 해당 품목의 연간 추이 (tradeType 반영, 국가 선택 시 국가별 데이터)
+  const trend = product
+    ? country
+      ? ["2023", "2024", "2025", "2026"].map((y) => {
+          const d = getCountryTreemapData(y, country, tradeType).find((p) => p.name === name);
+          return { year: y, value: d?.value ?? 0 };
+        })
+      : getProductTrend(product.code, tradeType)
+    : [];
   const trendValues = trend.map((d) => d.value).filter((v) => v > 0);
   const trendMin = trendValues.length ? Math.floor(Math.min(...trendValues) * 0.85) : 0;
   const trendMax = trendValues.length ? Math.ceil(Math.max(...trendValues) * 1.1) : 100;
@@ -48,9 +57,13 @@ export default function ProductDetailPage() {
   // 상위 국가 (tradeType 반영)
   const topCountries = product ? getProductTopCountries(product.code, year, tradeType).slice(0, 10) : [];
 
-  // 현재 연도 금액 & 전년 대비 증감 (tradeType 반영)
-  const currentYearData = getTreemapData(year, tradeType).find((p) => p.name === name);
-  const prevYearData = getTreemapData(String(parseInt(year) - 1), tradeType).find((p) => p.name === name);
+  // 현재 연도 금액 & 전년 대비 증감 (tradeType 반영, 국가 선택 시 국가별 데이터)
+  const getProductData = (y: string) =>
+    country
+      ? getCountryTreemapData(y, country, tradeType).find((p) => p.name === name)
+      : getTreemapData(y, tradeType).find((p) => p.name === name);
+  const currentYearData = getProductData(year);
+  const prevYearData = getProductData(String(parseInt(year) - 1));
   const currentVal = currentYearData?.value ?? 0;
   const prevVal = prevYearData?.value ?? 0;
   const changeRate = prevVal ? ((currentVal - prevVal) / prevVal * 100).toFixed(1) : null;
@@ -86,7 +99,7 @@ export default function ProductDetailPage() {
         <div className="main-content-layout">
           {/* Dashboard card */}
           <div className="dashboard-card dashboard-main-card">
-            <FilterBar mode="product" defaultYear={DEFAULT_YEAR} onYearChange={setYear} onTradeTypeChange={setTradeType} />
+            <FilterBar mode="product" defaultYear={DEFAULT_YEAR} onYearChange={setYear} onTradeTypeChange={setTradeType} onCountryChange={setCountry} />
             <KPIBar year={year} />
 
             <div style={{ display: "flex", height: 380 }}>
@@ -106,8 +119,9 @@ export default function ProductDetailPage() {
                 <div className="info-card">
                   <div className="info-card-label">{year}년 {tradeLabel}액</div>
                   <div style={{ fontSize: 16, fontWeight: 700 }}>
-                    $ {currentVal.toLocaleString()}억
+                    {currentVal.toLocaleString()} 억
                   </div>
+                  <div style={{ fontSize: 10, color: "#888", fontWeight: 500 }}>달러</div>
                 </div>
 
                 {changeRate !== null && (
@@ -117,7 +131,10 @@ export default function ProductDetailPage() {
                       fontSize: 18, fontWeight: 900,
                       color: parseFloat(changeRate) >= 0 ? "#E02020" : "#185FA5",
                     }}>
-                      {parseFloat(changeRate) >= 0 ? "▲" : "▼"} {Math.abs(parseFloat(changeRate))}%
+                      {Math.abs(parseFloat(changeRate))}%
+                    </div>
+                    <div style={{ fontSize: 10, color: parseFloat(changeRate) >= 0 ? "#E02020" : "#185FA5", fontWeight: 500 }}>
+                      {parseFloat(changeRate) >= 0 ? "상승" : "하락"}
                     </div>
                   </div>
                 )}
@@ -135,6 +152,9 @@ export default function ProductDetailPage() {
                     className={subTab === tab ? "subtab-active" : "subtab-inactive"}
                   >{tab}</button>
                 ))}
+                <span style={{ fontSize: 11, color: "#94a3b8", marginLeft: 4, alignSelf: "center" }}>
+                  * 연간 기준 (월 선택과 무관)
+                </span>
                 <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6 }}>
                   <button className="back-btn" onClick={() => router.push("/?tab=product")}>← 돌아가기</button>
                 </div>
@@ -147,7 +167,7 @@ export default function ProductDetailPage() {
                       <LineChart data={trend} margin={{ top: 8, right: 24, left: 8, bottom: 4 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                         <XAxis dataKey="year" tick={{ fontSize: 11 }} />
-                        <YAxis domain={[trendMin, trendMax]} tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v}`} />
+                        <YAxis domain={[trendMin, trendMax]} tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v}억`} />
                         <Tooltip
                           content={(props) => (
                             <RechartsPayloadTooltip {...props} title={name} />
@@ -156,7 +176,7 @@ export default function ProductDetailPage() {
                         />
                         <Line
                           type="monotone" dataKey="value" stroke="#14B8A6" strokeWidth={2.5}
-                          dot={{ r: 4, fill: "#14B8A6" }} activeDot={{ r: 6 }} name={`${tradeLabel}액(억$)`}
+                          dot={{ r: 4, fill: "#14B8A6" }} activeDot={{ r: 6 }} name={`${tradeLabel}액($억)`}
                         />
                       </LineChart>
                     </ResponsiveContainer>
@@ -172,9 +192,9 @@ export default function ProductDetailPage() {
                       <BarChart data={topCountries} margin={{ top: 8, right: 16, left: 8, bottom: 4 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                         <XAxis dataKey="country" tick={{ fontSize: 12 }} />
-                        <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v}`} />
+                        <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v}억`} />
                         <Tooltip
-                          content={(props) => <RechartsBarCountryTooltip {...props} />}
+                          content={(props) => <RechartsBarCountryTooltip {...props} tradeLabel={tradeLabel} />}
                           {...tooltipFollowProps}
                         />
                         <Bar
@@ -182,7 +202,7 @@ export default function ProductDetailPage() {
                           fill="#14B8A6"
                           radius={[4, 4, 0, 0]}
                           barSize={42}
-                          name={`${tradeLabel}액(억$)`}
+                          name={`${tradeLabel}액($억)`}
                         />
                       </BarChart>
                     </ResponsiveContainer>
