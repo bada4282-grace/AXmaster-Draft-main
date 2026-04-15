@@ -77,11 +77,7 @@ export default function ChatBot({
   const [user, setUser] = useState<User | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
-<<<<<<< HEAD
   const [fontSize, setFontSize] = useState(12);
-  const [welcomeLoading, setWelcomeLoading] = useState(false);
-=======
->>>>>>> Draft
   const [isStreaming, setIsStreaming] = useState(false);
   const [welcomeLoading, setWelcomeLoading] = useState(false);
   // SIGNED_IN이 발생할 때마다 증가 — user 참조가 동일해도 welcome effect 재실행 보장
@@ -301,59 +297,57 @@ export default function ChatBot({
         }}>🤖</div>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 20, fontWeight: 600, color: "#333" }}>K-stat AI 어시스턴트</div>
-          <div style={{ fontSize: 10, color: "#999" }}>
-            {user ? `${user.email} 로그인 중` : "무역통계 전문 AI"}
-          </div>
+          {user && (
+            <div style={{ fontSize: 10, color: "#999" }}>
+              {user.email} 로그인 중
+            </div>
+          )}
         </div>
-        {/* 폰트 크기 조절 버튼 */}
         <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
           <span style={{ fontSize: 11, color: "#999", marginRight: 2 }}>Aa</span>
           <button onClick={decreaseFontSize} style={{ width: 22, height: 22, borderRadius: "50%", border: "1px solid #ddd", background: "#fff", cursor: "pointer", fontSize: 14, color: "#555", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>−</button>
-          <button onClick={increaseFontSize} style={{ width: 22, height: 22, borderRadius: "50%", border: "1px solid #ddd", background: "#fff", cursor: "pointer", fontSize: 14, color: "#555", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>+</button>
+          <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+            <button onClick={increaseFontSize} style={{ width: 22, height: 22, borderRadius: "50%", border: "1px solid #ddd", background: "#fff", cursor: "pointer", fontSize: 14, color: "#555", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>+</button>
+            <button
+              onClick={() => setMessages([{ role: "bot", text: initialMessage }])}
+              title="대화 내용 지우기"
+              style={{ width: 22, height: 22, borderRadius: "50%", border: "1px solid #ddd", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+              onMouseEnter={e => (e.currentTarget.style.background = "#fde8e8")}
+              onMouseLeave={e => (e.currentTarget.style.background = "#fff")}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="3 6 5 6 21 6" />
+                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                <path d="M10 11v6" />
+                <path d="M14 11v6" />
+                <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Messages */}
-<<<<<<< HEAD
       <div className="chatbot-messages" style={{ minHeight: 0 }}>
-        {welcomeLoading ? (
-          <div style={{ textAlign: "center", color: "#aaa", fontSize: 13, padding: 20 }}>
-            챗봇이 고민 중입니다...
-          </div>
-        ) : (
-          messages.map((msg, i) => (
-            <div key={i} style={{ display: "flex", justifyContent: msg.role === "user" ? "flex-end" : "flex-start", alignItems: "flex-start", gap: 4 }}>
-              {msg.role === "bot" && (
-                <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#fde8e8", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, flexShrink: 0, marginTop: 2 }}>🤖</div>
-              )}
-              <div className={msg.role === "bot" ? "chatbot-msg-bot" : "chatbot-msg-user"} style={{ fontSize, ...(msg.role === "bot" ? { maxHeight: 110, overflowY: "auto" } : {}) }}>
-                {msg.role === "bot"
-                  ? (msg.text === "" && isStreaming && i === messages.length - 1
-                      ? <TypingIndicator />
-                      : renderBotText(msg.text))
-                  : msg.text}
-              </div>
-=======
-      <div className="chatbot-messages">
         {messages.map((msg, i) => (
           <div key={i} style={{ display: "flex", justifyContent: msg.role === "user" ? "flex-end" : "flex-start", alignItems: "flex-start", gap: 4 }}>
             {msg.role === "bot" && (
               <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#fde8e8", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, flexShrink: 0, marginTop: 2 }}>🤖</div>
             )}
-            <div className={msg.role === "bot" ? "chatbot-msg-bot" : "chatbot-msg-user"}>
+            <div className={msg.role === "bot" ? "chatbot-msg-bot" : "chatbot-msg-user"} style={{ fontSize }}>
               {msg.role === "bot"
                 ? (msg.text === "" && (isStreaming || welcomeLoading) && i === messages.length - 1
                     ? <TypingIndicator />
                     : renderBotText(msg.text))
                 : msg.text}
->>>>>>> Draft
             </div>
           </div>
         ))}
         <div ref={bottomRef} />
       </div>
 
-      {/* FAQ 버튼 - 항상 표시 */}
+      {/* FAQ 버튼 */}
+      {!messages.some(m => m.role === "user") && (
       <div style={{ display: "flex", flexDirection: "column", gap: 6, padding: "0 12px 8px" }}>
         {FAQ_QUESTIONS.map((q, i) => (
           <button
@@ -371,6 +365,7 @@ export default function ChatBot({
           </button>
         ))}
       </div>
+      )}
 
       {/* Input area */}
       <div className="chatbot-input-area" style={{ alignItems: "flex-end" }}>
@@ -394,7 +389,6 @@ export default function ChatBot({
             maxHeight: "120px",
             overflowY: "hidden",
             fontFamily: "inherit",
-            paddingTop: 5,
           }}
         />
         <button className="chatbot-send-btn" onClick={() => send()}>
