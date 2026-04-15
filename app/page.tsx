@@ -6,7 +6,6 @@ import Header from "@/components/Header";
 import HeroBanner from "@/components/HeroBanner";
 import FilterBar from "@/components/FilterBar";
 import KPIBar from "@/components/KPIBar";
-import ChatBot from "@/components/ChatBot";
 import { DEFAULT_YEAR, type TradeType } from "@/lib/data";
 
 const WorldMap = dynamic(() => import("@/components/WorldMap"), { ssr: false });
@@ -29,7 +28,6 @@ function HomeContent() {
     setMainTab(tab);
     router.replace(`/?tab=${tab === "국가별" ? "country" : "product"}`);
   };
-  const [chatOpen, setChatOpen] = useState(true);
   const [year, setYear] = useState(DEFAULT_YEAR);
   const [tradeType, setTradeType] = useState<TradeType>("수출");
   const [month, setMonth] = useState("");
@@ -80,30 +78,6 @@ function HomeContent() {
             </div>
           </div>
 
-          <div className={`chatbot-section ${chatOpen ? "expanded" : "collapsed"}`}>
-            <button
-              className="chatbot-slider-btn"
-              onClick={() => setChatOpen((prev) => !prev)}
-              title={chatOpen ? "챗봇 접기" : "챗봇 펼치기"}
-              aria-label={chatOpen ? "챗봇 접기" : "챗봇 펼치기"}
-            >
-              {chatOpen ? "〉" : "〈"}
-            </button>
-
-            <div className="chatbot-card-shell">
-              <div className="dashboard-card chatbot-card">
-                <ChatBot
-                  open={true}
-                  showInternalToggle={false}
-                  initialMessage={
-                    mainTab === "국가별"
-                      ? "글로벌 무역통계 대시보드입니다. 특정 국가나 품목에 대해 질문해주세요."
-                      : "품목별 수출 현황입니다. 특정 품목에 대해 질문해주세요."
-                  }
-                />
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Macro section */}
