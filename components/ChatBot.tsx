@@ -77,11 +77,7 @@ export default function ChatBot({
   const [user, setUser] = useState<User | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
-<<<<<<< HEAD
   const [fontSize, setFontSize] = useState(12);
-  const [welcomeLoading, setWelcomeLoading] = useState(false);
-=======
->>>>>>> Draft
   const [isStreaming, setIsStreaming] = useState(false);
   const [welcomeLoading, setWelcomeLoading] = useState(false);
   // SIGNED_IN이 발생할 때마다 증가 — user 참조가 동일해도 welcome effect 재실행 보장
@@ -314,39 +310,18 @@ export default function ChatBot({
       </div>
 
       {/* Messages */}
-<<<<<<< HEAD
       <div className="chatbot-messages" style={{ minHeight: 0 }}>
-        {welcomeLoading ? (
-          <div style={{ textAlign: "center", color: "#aaa", fontSize: 13, padding: 20 }}>
-            챗봇이 고민 중입니다...
-          </div>
-        ) : (
-          messages.map((msg, i) => (
-            <div key={i} style={{ display: "flex", justifyContent: msg.role === "user" ? "flex-end" : "flex-start", alignItems: "flex-start", gap: 4 }}>
-              {msg.role === "bot" && (
-                <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#fde8e8", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, flexShrink: 0, marginTop: 2 }}>🤖</div>
-              )}
-              <div className={msg.role === "bot" ? "chatbot-msg-bot" : "chatbot-msg-user"} style={{ fontSize, ...(msg.role === "bot" ? { maxHeight: 110, overflowY: "auto" } : {}) }}>
-                {msg.role === "bot"
-                  ? (msg.text === "" && isStreaming && i === messages.length - 1
-                      ? <TypingIndicator />
-                      : renderBotText(msg.text))
-                  : msg.text}
-              </div>
-=======
-      <div className="chatbot-messages">
         {messages.map((msg, i) => (
           <div key={i} style={{ display: "flex", justifyContent: msg.role === "user" ? "flex-end" : "flex-start", alignItems: "flex-start", gap: 4 }}>
             {msg.role === "bot" && (
               <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#fde8e8", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, flexShrink: 0, marginTop: 2 }}>🤖</div>
             )}
-            <div className={msg.role === "bot" ? "chatbot-msg-bot" : "chatbot-msg-user"}>
+            <div className={msg.role === "bot" ? "chatbot-msg-bot" : "chatbot-msg-user"} style={{ fontSize, ...(msg.role === "bot" ? { maxHeight: 110, overflowY: "auto" } : {}) }}>
               {msg.role === "bot"
                 ? (msg.text === "" && (isStreaming || welcomeLoading) && i === messages.length - 1
                     ? <TypingIndicator />
                     : renderBotText(msg.text))
                 : msg.text}
->>>>>>> Draft
             </div>
           </div>
         ))}
