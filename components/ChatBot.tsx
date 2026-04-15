@@ -1,5 +1,34 @@
 "use client";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, Fragment } from "react";
+import { supabase } from "@/lib/supabase";
+import { saveChatLog, getChatLogs } from "@/lib/chat";
+import type { User } from "@supabase/supabase-js";
+
+function TypingIndicator() {
+  return (
+    <div className="chatbot-typing">
+      <span /><span /><span />
+    </div>
+  );
+}
+
+// 마크다운 기호 앞뒤 공백 보장 (이미 공백 있으면 추가 안 함)
+function addMarkdownSpaces(text: string): string {
+  return text
+    .replace(/([^\s])\*\*/g, "$1 **")
+    .replace(/\*\*([^\s])/g, "** $1")
+    .replace(/^(#{1,3})([^\s#])/gm, "$1 $2");
+}
+
+function renderBotText(text: string): React.ReactNode {
+  const lines = addMarkdownSpaces(text).split("\n");
+  return lines.map((line, i) => (
+    <Fragment key={i}>
+      {line}
+      {i < lines.length - 1 && <br />}
+    </Fragment>
+  ));
+}
 
 interface ChatMessage { role: "bot" | "user"; text: string; }
 
@@ -27,37 +56,145 @@ export default function ChatBot({
   initialMessage,
   showInternalToggle = true,
 }: ChatBotProps) {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    { role: "bot", text: initialMessage },
-  ]);
+  const [user, setUser] = useState<User | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
-  const [fontSize, setFontSize] = useState(12);
-  const increaseFontSize = () => setFontSize(prev => Math.min(prev + 1, 16));
-  const decreaseFontSize = () => setFontSize(prev => Math.max(prev - 1, 10));
+  const [welcomeLoading, setWelcomeLoading] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const welcomeFetchedRef = useRef(false);
 
-  // 입력 내용에 따라 textarea 높이 자동 조절
+  // 로그인 상태 감지
   useEffect(() => {
-    const el = textareaRef.current;
-    if (!el) return;
-    el.style.height = "auto";
-    el.style.height = `${el.scrollHeight}px`;
-  }, [input]);
+    supabase.auth.getUser().then(({ data: { user } }) => setUser(user));
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // 챗봇이 열릴 때 welcome message 생성
+  useEffect(() => {
+    if (!open || welcomeFetchedRef.current) return;
+    welcomeFetchedRef.current = true;
+
+    const loadWelcome = async () => {
+      if (!user) {
+        setMessages([{ role: "bot", text: initialMessage }]);
+        return;
+      }
+
+      setWelcomeLoading(true);
+      try {
+        const logs = await getChatLogs(50);
+
+        if (logs.length === 0) {
+          setMessages([{ role: "bot", text: initialMessage }]);
+          return;
+        }
+
+        const restored: ChatMessage[] = logs.map(log => ({
+          role: log.role,
+          text: log.content,
+        }));
+
+        const res = await fetch("/api/welcome", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ logs }),
+        });
+        const { message } = await res.json();
+
+        setMessages([
+          ...restored,
+          { role: "bot", text: message ?? initialMessage },
+        ]);
+      } catch {
+        setMessages([{ role: "bot", text: initialMessage }]);
+      } finally {
+        setWelcomeLoading(false);
+      }
+    };
+
+    loadWelcome();
+  }, [open, user, initialMessage]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const send = (text?: string) => {
-    const userMsg = (text ?? input).trim();
-    if (!userMsg) return;
+  const send = async () => {
+    if (!input.trim() || isStreaming) return;
+    const userMsg = input.trim();
     setInput("");
+    setIsStreaming(true);
+
+    // 최근 10개 메시지를 히스토리로 전달
+    const history = messages.slice(-10).map(m => ({
+      role: m.role === "user" ? "user" : "assistant" as const,
+      content: m.text,
+    }));
+
+    // 사용자 메시지 + 빈 봇 메시지 추가
     setMessages(prev => [
       ...prev,
       { role: "user", text: userMsg },
-      { role: "bot", text: "해당 질문에 대한 분석 결과를 준비 중입니다. 실제 서비스에서는 AI가 무역통계를 기반으로 응답합니다." },
+      { role: "bot", text: "" },
     ]);
+
+    let fullResponse = "";
+    let saveResponse = false;
+
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: userMsg, history }),
+      });
+
+      if (!res.body) throw new Error("No response body");
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        fullResponse += chunk;
+        // 마지막 봇 메시지를 실시간으로 업데이트
+        setMessages(prev => [
+          ...prev.slice(0, -1),
+          { role: "bot", text: fullResponse },
+        ]);
+      }
+
+      // flush remaining bytes in decoder buffer
+      const finalChunk = decoder.decode();
+      if (finalChunk) {
+        fullResponse += finalChunk;
+        setMessages(prev => [
+          ...prev.slice(0, -1),
+          { role: "bot", text: fullResponse },
+        ]);
+      }
+
+      saveResponse = true;
+    } catch {
+      fullResponse = "답변 생성 중 오류가 발생했습니다.";
+      setMessages(prev => [
+        ...prev.slice(0, -1),
+        { role: "bot", text: fullResponse },
+      ]);
+    } finally {
+      setIsStreaming(false);
+      try {
+        await saveChatLog("user", userMsg);
+        if (saveResponse && fullResponse) await saveChatLog("bot", fullResponse);
+      } catch {
+        // log save failure is non-fatal
+      }
+    }
   };
 
   if (!open) {
@@ -78,29 +215,36 @@ export default function ChatBot({
           display: "flex", alignItems: "center", justifyContent: "center",
           fontSize: 14, flexShrink: 0,
         }}>🤖</div>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 20, fontWeight: 600, color: "#333" }}>K-stat AI 어시스턴트</div>
-        </div>
-        {/* 폰트 크기 조절 버튼 */}
-        <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
-          <span style={{ fontSize: 11, color: "#999", marginRight: 2 }}>Aa</span>
-          <button onClick={decreaseFontSize} style={{ width: 22, height: 22, borderRadius: "50%", border: "1px solid #ddd", background: "#fff", cursor: "pointer", fontSize: 14, color: "#555", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>−</button>
-          <button onClick={increaseFontSize} style={{ width: 22, height: 22, borderRadius: "50%", border: "1px solid #ddd", background: "#fff", cursor: "pointer", fontSize: 14, color: "#555", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>+</button>
+        <div>
+          <div style={{ fontSize: 12, fontWeight: 600, color: "#333" }}>K-stat AI 어시스턴트</div>
+          <div style={{ fontSize: 10, color: "#999" }}>
+            {user ? `${user.email} 로그인 중` : "무역통계 전문 AI"}
+          </div>
         </div>
       </div>
 
       {/* Messages */}
       <div className="chatbot-messages">
-        {messages.map((msg, i) => (
-          <div key={i} style={{ display: "flex", justifyContent: msg.role === "user" ? "flex-end" : "flex-start", alignItems: "flex-start", gap: 4 }}>
-            {msg.role === "bot" && (
-              <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#fde8e8", display:"flex", alignItems:"center", justifyContent:"center", fontSize:10, flexShrink:0, marginTop:2 }}>🤖</div>
-            )}
-            <div className={msg.role === "bot" ? "chatbot-msg-bot" : "chatbot-msg-user"} style={{ fontSize }}>
-              {msg.text}
-            </div>
+        {welcomeLoading ? (
+          <div style={{ textAlign: "center", color: "#aaa", fontSize: 13, padding: 20 }}>
+            챗봇이 고민 중입니다...
           </div>
-        ))}
+        ) : (
+          messages.map((msg, i) => (
+            <div key={i} style={{ display: "flex", justifyContent: msg.role === "user" ? "flex-end" : "flex-start", alignItems: "flex-start", gap: 4 }}>
+              {msg.role === "bot" && (
+                <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#fde8e8", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, flexShrink: 0, marginTop: 2 }}>🤖</div>
+              )}
+              <div className={msg.role === "bot" ? "chatbot-msg-bot" : "chatbot-msg-user"}>
+                {msg.role === "bot"
+                  ? (msg.text === "" && isStreaming && i === messages.length - 1
+                      ? <TypingIndicator />
+                      : renderBotText(msg.text))
+                  : msg.text}
+              </div>
+            </div>
+          ))
+        )}
         <div ref={bottomRef} />
       </div>
 
@@ -128,7 +272,7 @@ export default function ChatBot({
         <textarea
           ref={textareaRef}
           className="chatbot-input"
-          placeholder="질문을 입력하세요..."
+          placeholder={isStreaming ? "답변 생성 중..." : "질문을 입력하세요..."}
           value={input}
           rows={1}
           onChange={e => setInput(e.target.value)}
