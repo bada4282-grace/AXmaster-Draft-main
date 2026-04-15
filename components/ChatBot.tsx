@@ -59,6 +59,11 @@ export default function ChatBot({
   const [user, setUser] = useState<User | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
+<<<<<<< HEAD
+  const [fontSize, setFontSize] = useState(12);
+  const [welcomeLoading, setWelcomeLoading] = useState(false);
+=======
+>>>>>>> Draft
   const [isStreaming, setIsStreaming] = useState(false);
   const [welcomeLoading, setWelcomeLoading] = useState(false);
   // SIGNED_IN이 발생할 때마다 증가 — user 참조가 동일해도 welcome effect 재실행 보장
@@ -68,6 +73,16 @@ export default function ChatBot({
   const bottomRef = useRef<HTMLDivElement>(null);
   const welcomeFetchedRef = useRef(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const increaseFontSize = () => setFontSize(prev => Math.min(prev + 1, 16));
+  const decreaseFontSize = () => setFontSize(prev => Math.max(prev - 1, 10));
+
+  // 입력 내용에 따라 textarea 높이 자동 조절
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, [input]);
 
   // initialMessage는 항상 최신 값을 참조하도록 ref 유지
   const initialMessageRef = useRef(initialMessage);
@@ -266,15 +281,41 @@ export default function ChatBot({
           display: "flex", alignItems: "center", justifyContent: "center",
           fontSize: 14, flexShrink: 0,
         }}>🤖</div>
-        <div>
-          <div style={{ fontSize: 12, fontWeight: 600, color: "#333" }}>K-stat AI 어시스턴트</div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 20, fontWeight: 600, color: "#333" }}>K-stat AI 어시스턴트</div>
           <div style={{ fontSize: 10, color: "#999" }}>
             {user ? `${user.email} 로그인 중` : "무역통계 전문 AI"}
           </div>
         </div>
+        {/* 폰트 크기 조절 버튼 */}
+        <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+          <span style={{ fontSize: 11, color: "#999", marginRight: 2 }}>Aa</span>
+          <button onClick={decreaseFontSize} style={{ width: 22, height: 22, borderRadius: "50%", border: "1px solid #ddd", background: "#fff", cursor: "pointer", fontSize: 14, color: "#555", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>−</button>
+          <button onClick={increaseFontSize} style={{ width: 22, height: 22, borderRadius: "50%", border: "1px solid #ddd", background: "#fff", cursor: "pointer", fontSize: 14, color: "#555", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>+</button>
+        </div>
       </div>
 
       {/* Messages */}
+<<<<<<< HEAD
+      <div className="chatbot-messages" style={{ minHeight: 0 }}>
+        {welcomeLoading ? (
+          <div style={{ textAlign: "center", color: "#aaa", fontSize: 13, padding: 20 }}>
+            챗봇이 고민 중입니다...
+          </div>
+        ) : (
+          messages.map((msg, i) => (
+            <div key={i} style={{ display: "flex", justifyContent: msg.role === "user" ? "flex-end" : "flex-start", alignItems: "flex-start", gap: 4 }}>
+              {msg.role === "bot" && (
+                <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#fde8e8", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, flexShrink: 0, marginTop: 2 }}>🤖</div>
+              )}
+              <div className={msg.role === "bot" ? "chatbot-msg-bot" : "chatbot-msg-user"} style={{ fontSize, ...(msg.role === "bot" ? { maxHeight: 110, overflowY: "auto" } : {}) }}>
+                {msg.role === "bot"
+                  ? (msg.text === "" && isStreaming && i === messages.length - 1
+                      ? <TypingIndicator />
+                      : renderBotText(msg.text))
+                  : msg.text}
+              </div>
+=======
       <div className="chatbot-messages">
         {messages.map((msg, i) => (
           <div key={i} style={{ display: "flex", justifyContent: msg.role === "user" ? "flex-end" : "flex-start", alignItems: "flex-start", gap: 4 }}>
@@ -287,6 +328,7 @@ export default function ChatBot({
                     ? <TypingIndicator />
                     : renderBotText(msg.text))
                 : msg.text}
+>>>>>>> Draft
             </div>
           </div>
         ))}
@@ -334,6 +376,7 @@ export default function ChatBot({
             maxHeight: "120px",
             overflowY: "hidden",
             fontFamily: "inherit",
+            paddingTop: 5,
           }}
         />
         <button className="chatbot-send-btn" onClick={() => send()}>
