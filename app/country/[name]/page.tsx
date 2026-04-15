@@ -6,7 +6,6 @@ import Header from "@/components/Header";
 import HeroBanner from "@/components/HeroBanner";
 import FilterBar from "@/components/FilterBar";
 import KPIBar from "@/components/KPIBar";
-import ChatBot from "@/components/ChatBot";
 import {
   getCountryByName,
   getCountryTimeseries,
@@ -32,7 +31,7 @@ function CountryDetailContent() {
   const [month, setMonth] = useState("");
   const [tradeType, setTradeType] = useState<TradeType>(initialTradeType);
   const [subTab, setSubTab] = useState<"품목별" | "시계열 추이">("품목별");
-  const [chatOpen, setChatOpen] = useState(true);
+
 
   // 연도·수출입 모드에 따라 순위·비중이 달라짐
   const country = getCountryByName(name, year, tradeType) ?? {
@@ -255,29 +254,6 @@ function CountryDetailContent() {
             </div>
           </div>
 
-          <div className={`chatbot-section ${chatOpen ? "expanded" : "collapsed"}`}>
-            <button
-              className="chatbot-slider-btn"
-              onClick={() => setChatOpen((prev) => !prev)}
-              title={chatOpen ? "챗봇 접기" : "챗봇 펼치기"}
-              aria-label={chatOpen ? "챗봇 접기" : "챗봇 펼치기"}
-            >
-              {chatOpen ? "〉" : "〈"}
-            </button>
-            <div className="chatbot-card-shell">
-              <div className="dashboard-card chatbot-card">
-                <ChatBot
-                  open={true}
-                  showInternalToggle={false}
-                  initialMessage={
-                    tradeType === "수입"
-                      ? `${country.name}으로부터의 수입 현황입니다. 특정 품목에 대해 질문해주세요.`
-                      : `${country.name}과의 수출 현황입니다. 특정 품목에 대해 질문해주세요.`
-                  }
-                />
-              </div>
-            </div>
-          </div>
         </div>
 
         <div className="macro-section">
