@@ -119,8 +119,9 @@ export default function ProductDetailPage() {
                 <div className="info-card">
                   <div className="info-card-label">{year}년 {tradeLabel}액</div>
                   <div style={{ fontSize: 16, fontWeight: 700 }}>
-                    $ {currentVal.toLocaleString()}억
+                    {currentVal.toLocaleString()} 억
                   </div>
+                  <div style={{ fontSize: 10, color: "#888", fontWeight: 500 }}>달러</div>
                 </div>
 
                 {changeRate !== null && (
@@ -130,7 +131,10 @@ export default function ProductDetailPage() {
                       fontSize: 18, fontWeight: 900,
                       color: parseFloat(changeRate) >= 0 ? "#E02020" : "#185FA5",
                     }}>
-                      {parseFloat(changeRate) >= 0 ? "▲" : "▼"} {Math.abs(parseFloat(changeRate))}%
+                      {Math.abs(parseFloat(changeRate))}%
+                    </div>
+                    <div style={{ fontSize: 10, color: parseFloat(changeRate) >= 0 ? "#E02020" : "#185FA5", fontWeight: 500 }}>
+                      {parseFloat(changeRate) >= 0 ? "상승" : "하락"}
                     </div>
                   </div>
                 )}
@@ -163,7 +167,7 @@ export default function ProductDetailPage() {
                       <LineChart data={trend} margin={{ top: 8, right: 24, left: 8, bottom: 4 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                         <XAxis dataKey="year" tick={{ fontSize: 11 }} />
-                        <YAxis domain={[trendMin, trendMax]} tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v}`} />
+                        <YAxis domain={[trendMin, trendMax]} tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v}억`} />
                         <Tooltip
                           content={(props) => (
                             <RechartsPayloadTooltip {...props} title={name} />
@@ -172,7 +176,7 @@ export default function ProductDetailPage() {
                         />
                         <Line
                           type="monotone" dataKey="value" stroke="#14B8A6" strokeWidth={2.5}
-                          dot={{ r: 4, fill: "#14B8A6" }} activeDot={{ r: 6 }} name={`${tradeLabel}액(억$)`}
+                          dot={{ r: 4, fill: "#14B8A6" }} activeDot={{ r: 6 }} name={`${tradeLabel}액($억)`}
                         />
                       </LineChart>
                     </ResponsiveContainer>
@@ -188,9 +192,9 @@ export default function ProductDetailPage() {
                       <BarChart data={topCountries} margin={{ top: 8, right: 16, left: 8, bottom: 4 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                         <XAxis dataKey="country" tick={{ fontSize: 12 }} />
-                        <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v}`} />
+                        <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v}억`} />
                         <Tooltip
-                          content={(props) => <RechartsBarCountryTooltip {...props} />}
+                          content={(props) => <RechartsBarCountryTooltip {...props} tradeLabel={tradeLabel} />}
                           {...tooltipFollowProps}
                         />
                         <Bar
@@ -198,7 +202,7 @@ export default function ProductDetailPage() {
                           fill="#14B8A6"
                           radius={[4, 4, 0, 0]}
                           barSize={42}
-                          name={`${tradeLabel}액(억$)`}
+                          name={`${tradeLabel}액($억)`}
                         />
                       </BarChart>
                     </ResponsiveContainer>
