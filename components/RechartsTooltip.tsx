@@ -60,9 +60,11 @@ interface BarPayloadRow {
 export function RechartsBarCountryTooltip({
   active,
   payload,
+  tradeLabel = "수출",
 }: {
   active?: boolean;
   payload?: TooltipPayload;
+  tradeLabel?: string;
 }) {
   if (!active || !payload?.length) return null;
   const row = payload[0]?.payload as BarPayloadRow | undefined;
@@ -71,8 +73,8 @@ export function RechartsBarCountryTooltip({
     <div className="tooltip-shell">
       <p className="tooltip-shell-title">{row.country}</p>
       <div className="tooltip-shell-row">
-        <span>수출액</span>
-        <span>${row.value}B</span>
+        <span>{tradeLabel}액</span>
+        <span>${row.value}억</span>
       </div>
     </div>
   );

@@ -7,6 +7,7 @@ import FilterBar from "@/components/FilterBar";
 import KPIBar from "@/components/KPIBar";
 import {
   getTreemapData,
+  getCountryTreemapData,
   getProductTrend,
   getProductTopCountries,
   DEFAULT_YEAR,
@@ -29,16 +30,23 @@ export default function ProductDetailPage() {
 
   const [year, setYear] = useState(DEFAULT_YEAR);
   const [tradeType, setTradeType] = useState<TradeType>("수출");
+  const [country, setCountry] = useState("");
   const [subTab, setSubTab] = useState<"금액 추이" | "상위 국가">("금액 추이");
 
   // 해당 품목 정보 찾기 (기본 연도 + 현재 tradeType 기준)
   const treemapData = getTreemapData(DEFAULT_YEAR, tradeType);
   const product = treemapData.find((p) => p.name === name)
-    // 수입 전환 후 목록에 없으면 수출 목록에서 코드만 가져옴
     ?? getTreemapData(DEFAULT_YEAR, "수출").find((p) => p.name === name);
 
-  // 해당 품목의 연간 추이 (tradeType 반영)
-  const trend = product ? getProductTrend(product.code, tradeType) : [];
+  // 해당 품목의 연간 추이 (tradeType 반영, 국가 선택 시 국가별 데이터)
+  const trend = product
+    ? country
+      ? ["2023", "2024", "2025", "2026"].map((y) => {
+          const d = getCountryTreemapData(y, country, tradeType).find((p) => p.name === name);
+          return { year: y, value: d?.value ?? 0 };
+        })
+      : getProductTrend(product.code, tradeType)
+    : [];
   const trendValues = trend.map((d) => d.value).filter((v) => v > 0);
   const trendMin = trendValues.length ? Math.floor(Math.min(...trendValues) * 0.85) : 0;
   const trendMax = trendValues.length ? Math.ceil(Math.max(...trendValues) * 1.1) : 100;
@@ -47,8 +55,6 @@ export default function ProductDetailPage() {
   const topCountries = product ? getProductTopCountries(product.code, year, tradeType).slice(0, 10) : [];
 
   // ── 애니메이션: 국가 상세 페이지와 동일한 패턴 ──
-  // 플랫 데이터 → 실제 데이터로 교체하여 Recharts 애니메이션 트리거
-  // 애니메이션 완료 후 비활성화 → 사이드바 리사이즈 시 재생 방지
   const flatTrend = trend.map((d) => ({ ...d, value: trendMin }));
   const flatCountries = topCountries.map((d) => ({ ...d, value: 0 }));
 
@@ -90,7 +96,6 @@ export default function ProductDetailPage() {
     isAnimationActive: false,
     cursor: false,
     offset: 18,
-    // 기본은 우측 상단, 공간이 부족하면 차트 내부에서 방향을 바꿔 잘림을 방지한다.
     position: undefined,
     reverseDirection: { x: true, y: true },
     allowEscapeViewBox: { x: false, y: false },
@@ -116,7 +121,7 @@ export default function ProductDetailPage() {
         <div className="main-content-layout">
           {/* Dashboard card */}
           <div className="dashboard-card dashboard-main-card">
-            <FilterBar mode="product" defaultYear={DEFAULT_YEAR} onYearChange={setYear} onTradeTypeChange={setTradeType} />
+            <FilterBar mode="product" defaultYear={DEFAULT_YEAR} onYearChange={setYear} onTradeTypeChange={setTradeType} onCountryChange={setCountry} />
             <KPIBar year={year} />
 
             <div className="split-panel" style={{ height: 380 }}>
@@ -136,8 +141,9 @@ export default function ProductDetailPage() {
                 <div className="info-card">
                   <div className="info-card-label">{year}년 {tradeLabel}액</div>
                   <div style={{ fontSize: 16, fontWeight: 700 }}>
-                    $ {currentVal.toLocaleString()}억
+                    {currentVal.toLocaleString()} 억
                   </div>
+                  <div style={{ fontSize: 10, color: "#888", fontWeight: 500 }}>달러</div>
                 </div>
 
                 {changeRate !== null && (
@@ -147,7 +153,10 @@ export default function ProductDetailPage() {
                       fontSize: 18, fontWeight: 900,
                       color: parseFloat(changeRate) >= 0 ? "#E02020" : "#185FA5",
                     }}>
-                      {parseFloat(changeRate) >= 0 ? "▲" : "▼"} {Math.abs(parseFloat(changeRate))}%
+                      {Math.abs(parseFloat(changeRate))}%
+                    </div>
+                    <div style={{ fontSize: 10, color: parseFloat(changeRate) >= 0 ? "#E02020" : "#185FA5", fontWeight: 500 }}>
+                      {parseFloat(changeRate) >= 0 ? "상승" : "하락"}
                     </div>
                   </div>
                 )}
@@ -165,6 +174,9 @@ export default function ProductDetailPage() {
                     className={subTab === tab ? "subtab-active" : "subtab-inactive"}
                   >{tab}</button>
                 ))}
+                <span style={{ fontSize: 11, color: "#94a3b8", marginLeft: 4, alignSelf: "center" }}>
+                  * 연간 기준 (월 선택과 무관)
+                </span>
                 <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6 }}>
                   <button className="back-btn" onClick={() => router.push("/?tab=product")}>← 돌아가기</button>
                 </div>
@@ -177,7 +189,7 @@ export default function ProductDetailPage() {
                       <LineChart data={displayTrend} margin={{ top: 8, right: 24, left: 8, bottom: 4 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                         <XAxis dataKey="year" tick={{ fontSize: 11 }} />
-                        <YAxis domain={[trendMin, trendMax]} tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v}`} />
+                        <YAxis domain={[trendMin, trendMax]} tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v}억`} />
                         <Tooltip
                           content={(props) => (
                             <RechartsPayloadTooltip {...props} title={name} />
@@ -204,9 +216,9 @@ export default function ProductDetailPage() {
                       <BarChart data={displayCountries} margin={{ top: 8, right: 16, left: 8, bottom: 4 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                         <XAxis dataKey="country" tick={{ fontSize: 12 }} />
-                        <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v}`} />
+                        <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v}억`} />
                         <Tooltip
-                          content={(props) => <RechartsBarCountryTooltip {...props} />}
+                          content={(props) => <RechartsBarCountryTooltip {...props} tradeLabel={tradeLabel} />}
                           {...tooltipFollowProps}
                         />
                         <Bar
