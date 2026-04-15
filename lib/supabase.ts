@@ -74,7 +74,8 @@ export async function getMonthlyTreemapData(
     console.error("[getMonthlyTreemapData] RPC error:", error.message ?? error);
     throw error;
   }
-  return (data ?? [])
+  const rows = (data ?? []) as RpcTreemapRow[];
+  return rows
     .map(mapToProductNode)
     .filter((n): n is ProductNode => n !== null)
     .sort((a, b) => b.value - a.value)
@@ -120,7 +121,8 @@ export async function getCountryMonthlyTreemapData(
     console.error("[getCountryMonthlyTreemapData] RPC error:", error.message ?? error);
     throw error;
   }
-  return (data ?? [])
+  const rows = (data ?? []) as RpcTreemapRow[];
+  return rows
     .map(mapToProductNode)
     .filter((n): n is ProductNode => n !== null)
     .sort((a, b) => b.value - a.value)
