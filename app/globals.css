@@ -21,8 +21,8 @@
 /* 레이아웃 레벨 영구 챗봇 사이드바 */
 .app-chatbot-sidebar {
   position: sticky;
-  top: 0;
-  height: 100vh;
+  top: 230px;
+  height: calc(100vh - 230px);
   width: clamp(280px, 22vw, 360px);
   flex-shrink: 0;
   transition: width 0.3s ease;
@@ -115,7 +115,8 @@ body {
 /* Hero */
 .hero-banner {
   width: 100%;
-  height: 130px;
+  min-height: 100px;
+  height: clamp(100px, 10vw, 150px);
   background: linear-gradient(160deg, #0d1b35 0%, #0a2040 40%, #0c3060 70%, #0d1b35 100%);
   display: flex;
   flex-direction: column;
@@ -123,6 +124,8 @@ body {
   justify-content: center;
   position: relative;
   overflow: hidden;
+  box-sizing: border-box;
+  flex-shrink: 0;
 }
 
 /* Main tab pills */
