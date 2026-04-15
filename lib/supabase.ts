@@ -34,7 +34,12 @@ function mapToProductNode(row: RpcTreemapRow): ProductNode | null {
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    storage: typeof window !== "undefined" ? window.sessionStorage : undefined,
+    persistSession: true,
+  },
+});
 
 // 국가 + 품목 기준 교역 데이터 조회
 export async function queryTrade({

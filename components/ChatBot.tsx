@@ -1,8 +1,34 @@
 "use client";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, Fragment } from "react";
 import { supabase } from "@/lib/supabase";
 import { saveChatLog, getChatLogs } from "@/lib/chat";
 import type { User } from "@supabase/supabase-js";
+
+function TypingIndicator() {
+  return (
+    <div className="chatbot-typing">
+      <span /><span /><span />
+    </div>
+  );
+}
+
+// 마크다운 기호 앞뒤 공백 보장 (이미 공백 있으면 추가 안 함)
+function addMarkdownSpaces(text: string): string {
+  return text
+    .replace(/([^\s])\*\*/g, "$1 **")
+    .replace(/\*\*([^\s])/g, "** $1")
+    .replace(/^(#{1,3})([^\s#])/gm, "$1 $2");
+}
+
+function renderBotText(text: string): React.ReactNode {
+  const lines = addMarkdownSpaces(text).split("\n");
+  return lines.map((line, i) => (
+    <Fragment key={i}>
+      {line}
+      {i < lines.length - 1 && <br />}
+    </Fragment>
+  ));
+}
 
 interface ChatMessage { role: "bot" | "user"; text: string; }
 
@@ -199,7 +225,11 @@ export default function ChatBot({
                 <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#fde8e8", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, flexShrink: 0, marginTop: 2 }}>🤖</div>
               )}
               <div className={msg.role === "bot" ? "chatbot-msg-bot" : "chatbot-msg-user"}>
-                {msg.text || (isStreaming && i === messages.length - 1 ? "▌" : "")}
+                {msg.role === "bot"
+                  ? (msg.text === "" && isStreaming && i === messages.length - 1
+                      ? <TypingIndicator />
+                      : renderBotText(msg.text))
+                  : msg.text}
               </div>
             </div>
           ))
