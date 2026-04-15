@@ -490,43 +490,43 @@ export default function WorldMap({
           cursor={tooltip?.isTop30 ? "pointer" : "grab"}
         >
           {/* 순위 구간 필터 — 우상단 */}
-        <div style={{
-          position:        "absolute",
-          top:             12,
-          right:           12,
-          zIndex:          10,
-        }}>
-          <select
-            value={filterTier}
-            onChange={(e) => setFilterTier(e.target.value)}
-            style={{
-              appearance:      "none",
-              backgroundColor: "rgba(255,255,255,0.88)",
-              backdropFilter:  "blur(6px)",
-              border:          "1px solid rgba(255,255,255,0.6)",
-              borderRadius:    8,
-              padding:         "5px 28px 5px 11px",
-              fontSize:        11,
-              fontWeight:      600,
-              color:           "#1f2937",
-              boxShadow:       "0 2px 10px rgba(0,0,0,0.12)",
-              cursor:          "pointer",
-              outline:         "none",
-              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2.5' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
-              backgroundRepeat:   "no-repeat",
-              backgroundPosition: "right 9px center",
-            }}
-          >
-            <option value="all">전체 보기</option>
-            <option value="1-3">1 ~ 3위</option>
-            <option value="4-9">4 ~ 9위</option>
-            <option value="10-15">10 ~ 15위</option>
-            <option value="16-21">16 ~ 21위</option>
-            <option value="22-30">22 ~ 30위</option>
-          </select>
-        </div>
+          <div style={{
+            position:        "absolute",
+            top:             12,
+            right:           12,
+            zIndex:          10,
+          }}>
+            <select
+              value={filterTier}
+              onChange={(e) => setFilterTier(e.target.value)}
+              style={{
+                appearance:      "none",
+                backgroundColor: "rgba(255,255,255,0.88)",
+                backdropFilter:  "blur(6px)",
+                border:          "1px solid rgba(255,255,255,0.6)",
+                borderRadius:    8,
+                padding:         "5px 28px 5px 11px",
+                fontSize:        11,
+                fontWeight:      600,
+                color:           "#1f2937",
+                boxShadow:       "0 2px 10px rgba(0,0,0,0.12)",
+                cursor:          "pointer",
+                outline:         "none",
+                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2.5' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
+                backgroundRepeat:   "no-repeat",
+                backgroundPosition: "right 9px center",
+              }}
+            >
+              <option value="all">전체 보기</option>
+              <option value="1-3">1 ~ 3위</option>
+              <option value="4-9">4 ~ 9위</option>
+              <option value="10-15">10 ~ 15위</option>
+              <option value="16-21">16 ~ 21위</option>
+              <option value="22-30">22 ~ 30위</option>
+            </select>
+          </div>
 
-        {coloredGeoJSON && (
+          {coloredGeoJSON && (
             <Source id="countries" type="geojson" data={coloredGeoJSON}>
               {/* fill: choropleth 색상 + hover 시 금색 */}
               <Layer
@@ -628,26 +628,19 @@ export default function WorldMap({
           {/* 구간별 색상 바 */}
           <div style={{ display: "flex", width: "100%", height: 10, borderRadius: 3, overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.15)" }}>
             {[
-              { color: "#DCF3EF", label: "30위 밖" },
-              { color: "#A8E0D4", label: "22~30위" },
-              { color: "#6DCAB9", label: "16~21위" },
-              { color: "#50B8AD", label: "10~15위" },
-              { color: "#1A9088", label: "4~9위"   },
-              { color: "#054744", label: "1~3위"   },
+              { color: "#DCF3EF" },
+              { color: "#A8E0D4" },
+              { color: "#6DCAB9" },
+              { color: "#50B8AD" },
+              { color: "#1A9088" },
+              { color: "#054744" },
             ].map(({ color }) => (
               <div key={color} style={{ flex: 1, backgroundColor: color }} />
             ))}
           </div>
           {/* 눈금 라벨 */}
           <div style={{ display: "flex", marginTop: 3 }}>
-            {[
-              { label: "30위 밖" },
-              { label: "22~30위" },
-              { label: "16~21위" },
-              { label: "10~15위" },
-              { label: "4~9위"   },
-              { label: "1~3위"   },
-            ].map(({ label }) => (
+            {["30위 밖", "22~30위", "16~21위", "10~15위", "4~9위", "1~3위"].map((label) => (
               <div key={label} style={{ flex: 1, textAlign: "center" }}>
                 <span style={{ fontSize: 8, color: "#6b7280" }}>{label}</span>
               </div>
