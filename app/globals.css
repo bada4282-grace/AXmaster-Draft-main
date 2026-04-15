@@ -457,6 +457,14 @@ body {
 .chatbot-header { padding: 10px 12px; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 8px; background: #fafafa; }
 .chatbot-messages { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
 .chatbot-msg-bot { background: #f3f4f6; border-radius: 8px; padding: 8px 10px; font-size: 12px; color: #333; line-height: 1.5; max-width: 90%; word-break: break-word; }
+.chatbot-msg-bot > :first-child { margin-top: 0; }
+.chatbot-msg-bot > :last-child { margin-bottom: 0; }
+.chatbot-highlight {
+  background: linear-gradient(transparent 40%, #FFF176 40%);
+  padding: 0 2px;
+  font-weight: 600;
+  color: #333;
+}
 .chatbot-typing { display: flex; gap: 4px; align-items: center; padding: 2px 0; }
 .chatbot-typing span { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #aaa; animation: chatbot-bounce 1.2s ease-in-out infinite; }
 .chatbot-typing span:nth-child(2) { animation-delay: 0.2s; }
