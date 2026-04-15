@@ -5,6 +5,8 @@ import {
   getProductTopCountries,
   getProductTrend,
   getCountryTreemapData,
+  getTreemapData,
+  MTI_NAMES,
   DEFAULT_YEAR,
   KPI_BY_YEAR,
 } from "@/lib/data";
@@ -61,6 +63,17 @@ function isRankingQuery(question: string): boolean {
   return keywords.some(kw => question.includes(kw));
 }
 
+// 품목 개요 관련 질문인지 감지
+function isProductOverviewQuery(question: string): boolean {
+  const keywords = [
+    "MTI", "mti", "품목별", "상품별", "제품별",
+    "품목 현황", "품목 통계", "품목 순위", "상품 현황", "상품 통계",
+    "어떤 품목", "어떤 상품", "주요 품목", "주요 상품",
+    "무슨 제품", "뭘 수출", "뭘 수입", "많이 팔리는", "많이 팔린",
+  ];
+  return keywords.some(kw => question.includes(kw));
+}
+
 // 질문에서 국가명, 품목명, 연도 추출 (부분 일치)
 export function extractKeywords(question: string): ExtractedKeywords {
   const yearMatch = question.match(/\b(20\d{2})\b/);
@@ -96,6 +109,19 @@ export function buildChatContext(question: string): string {
     sections.push(
       `[${year}년 전체 무역 요약]\n수출: ${kpi.export.value}억달러, 수입: ${kpi.import.value}억달러, 무역수지: ${kpi.balance.value}억달러`
     );
+  }
+
+  // 품목 개요 — 품목별/MTI별 질문이거나 특정 품목이 지정되지 않은 경우 포함
+  if (isProductOverviewQuery(question) || (productCodes.length === 0 && countries.length === 0)) {
+    const products = getTreemapData(year, tradeType)
+      .slice()
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 15);
+    const mtiNames = MTI_NAMES as Record<number, string>;
+    const lines = products.map((p, i) =>
+      `${i + 1}위: ${p.name} (${mtiNames[p.mti] ?? "기타"}) — ${tradeType} ${p.value.toFixed(1)}억달러`
+    );
+    sections.push(`[${year}년 품목별 ${tradeType} TOP15]\n${lines.join("\n")}`);
   }
 
   // 국가 순위 목록 — 순위 관련 질문이거나 특정 국가가 지정되지 않은 경우 포함
