@@ -4,5 +4,5 @@ out/
 build/
 .env.local
 !.env.example
-*.csv".next/" 
-"*.tsbuildinfo" 
+*.csv
+*.tsbuildinfo
