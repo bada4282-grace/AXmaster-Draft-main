@@ -81,8 +81,8 @@ export async function getMonthlyTreemapData(
   }
   return (data ?? [])
     .map(mapToProductNode)
-    .filter((n): n is ProductNode => n !== null)
-    .sort((a, b) => b.value - a.value)
+    .filter((n: ProductNode | null): n is ProductNode => n !== null)
+    .sort((a: ProductNode, b: ProductNode) => b.value - a.value)
     .slice(0, 30);
 }
 
@@ -127,7 +127,7 @@ export async function getCountryMonthlyTreemapData(
   }
   return (data ?? [])
     .map(mapToProductNode)
-    .filter((n): n is ProductNode => n !== null)
-    .sort((a, b) => b.value - a.value)
+    .filter((n: ProductNode | null): n is ProductNode => n !== null)
+    .sort((a: ProductNode, b: ProductNode) => b.value - a.value)
     .slice(0, 30);
 }
