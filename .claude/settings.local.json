@@ -4,7 +4,9 @@
       "Bash(node -e ':*)",
       "Bash(node scripts/generate-data.js)",
       "Bash(npm install:*)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(cat app/api/macro/route.ts)",
+      "Bash(cat app/api/macro/route.tsx)"
     ]
   }
 }
