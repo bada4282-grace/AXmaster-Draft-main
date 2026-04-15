@@ -25,7 +25,14 @@ export async function POST(request: NextRequest) {
     return new Response("Message required", { status: 400 });
   }
 
-  const context = buildChatContext(message);
+  // buildChatContext는 대용량 데이터 접근을 포함하므로 에러를 명시적으로 잡습니다
+  let context = "";
+  try {
+    context = buildChatContext(message);
+  } catch (err) {
+    console.error("[chat/route] buildChatContext error:", err);
+  }
+
   const model = process.env.ANTHROPIC_MODEL ?? "claude-haiku-4-5-20251001";
 
   const systemPrompt = `당신은 한국 무역통계 전문 AI 어시스턴트입니다. 아래 데이터를 기반으로 사용자 질문에 한국어로 자연스럽게 답변하세요.
@@ -39,6 +46,25 @@ export async function POST(request: NextRequest) {
 
 ${context ? `[데이터]\n${context}` : "[데이터 없음]"}`;
 
+  // Anthropic API는 user로 시작하고 content가 비어있지 않은 메시지만 허용합니다
+  const validHistory = history
+    .filter(m => m.content.trim().length > 0)
+    .reduce<HistoryEntry[]>((acc, m) => {
+      // 연속된 같은 role 메시지 방지
+      if (acc.length > 0 && acc[acc.length - 1].role === m.role) return acc;
+      acc.push(m);
+      return acc;
+    }, []);
+
+  // 첫 메시지는 반드시 user여야 합니다
+  const firstUserIdx = validHistory.findIndex(m => m.role === "user");
+  const cleanHistory = firstUserIdx > 0 ? validHistory.slice(firstUserIdx) : validHistory;
+
+  // cleanHistory가 assistant로 끝나면 마지막 assistant 제거 (user가 뒤에 추가됨)
+  const finalHistory = cleanHistory.length > 0 && cleanHistory[cleanHistory.length - 1].role === "assistant"
+    ? cleanHistory.slice(0, -1)
+    : cleanHistory;
+
   let stream;
   try {
     stream = await client.messages.stream({
@@ -46,11 +72,12 @@ ${context ? `[데이터]\n${context}` : "[데이터 없음]"}`;
       max_tokens: 1024,
       system: systemPrompt,
       messages: [
-        ...history,
+        ...finalHistory,
         { role: "user", content: message },
       ],
     });
-  } catch {
+  } catch (err) {
+    console.error("[chat/route] Anthropic stream error:", err);
     return new Response(
       JSON.stringify({ error: "답변 생성 중 오류가 발생했습니다." }),
       { status: 502, headers: { "Content-Type": "application/json" } }
