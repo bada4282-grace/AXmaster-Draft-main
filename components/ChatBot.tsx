@@ -253,7 +253,7 @@ export default function ChatBot({
       </div>
 
       {/* Messages */}
-      <div className="chatbot-messages">
+      <div className="chatbot-messages" style={{ minHeight: 0 }}>
         {welcomeLoading ? (
           <div style={{ textAlign: "center", color: "#aaa", fontSize: 13, padding: 20 }}>
             챗봇이 고민 중입니다...
@@ -264,7 +264,7 @@ export default function ChatBot({
               {msg.role === "bot" && (
                 <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#fde8e8", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, flexShrink: 0, marginTop: 2 }}>🤖</div>
               )}
-              <div className={msg.role === "bot" ? "chatbot-msg-bot" : "chatbot-msg-user"} style={{ fontSize }}>
+              <div className={msg.role === "bot" ? "chatbot-msg-bot" : "chatbot-msg-user"} style={{ fontSize, ...(msg.role === "bot" ? { maxHeight: 110, overflowY: "auto" } : {}) }}>
                 {msg.role === "bot"
                   ? (msg.text === "" && isStreaming && i === messages.length - 1
                       ? <TypingIndicator />
