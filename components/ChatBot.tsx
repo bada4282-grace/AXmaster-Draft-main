@@ -131,11 +131,21 @@ export default function ChatBot({
     if (!overrideMsg) setInput("");
     setIsStreaming(true);
 
-    // 최근 10개 메시지를 히스토리로 전달
-    const history = messages.slice(-10).map(m => ({
-      role: m.role === "user" ? "user" : "assistant" as const,
-      content: m.text,
-    }));
+    // 최근 10개 메시지를 히스토리로 전달 (빈 메시지·연속 같은 role 제거, user로 시작 보장)
+    type HistoryMsg = { role: "user" | "assistant"; content: string };
+    const rawHistory = messages.slice(-10)
+      .filter(m => m.text.trim().length > 0)
+      .map((m): HistoryMsg => ({
+        role: m.role === "user" ? "user" : "assistant",
+        content: m.text,
+      }))
+      .reduce<HistoryMsg[]>((acc, m) => {
+        if (acc.length > 0 && acc[acc.length - 1].role === m.role) return acc;
+        acc.push(m);
+        return acc;
+      }, []);
+    const firstUserIdx = rawHistory.findIndex(m => m.role === "user");
+    const history = firstUserIdx > 0 ? rawHistory.slice(firstUserIdx) : rawHistory;
 
     // 사용자 메시지 + 빈 봇 메시지 추가
     setMessages(prev => [
