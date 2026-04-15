@@ -63,6 +63,7 @@ export default function ChatBot({
   const [isStreaming, setIsStreaming] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const welcomeFetchedRef = useRef(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // 로그인 상태 감지
   useEffect(() => {
@@ -123,10 +124,11 @@ export default function ChatBot({
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const send = async () => {
-    if (!input.trim() || isStreaming) return;
-    const userMsg = input.trim();
-    setInput("");
+  const send = async (overrideMsg?: string) => {
+    const msgToSend = overrideMsg ?? input;
+    if (!msgToSend.trim() || isStreaming) return;
+    const userMsg = msgToSend.trim();
+    if (!overrideMsg) setInput("");
     setIsStreaming(true);
 
     // 최근 10개 메시지를 히스토리로 전달

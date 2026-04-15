@@ -66,15 +66,9 @@ export default function WorldMap({ year = DEFAULT_YEAR, month = "", tradeType = 
 
     getMonthlyCountryMapData(year, month, tradeType)
       .then((rows) => {
-<<<<<<< Updated upstream
         if (mounted) {
           setMonthlyRanks(rows);
         }
-=======
-        const m = new Map<string, MonthlyCountryMapItem>();
-        rows.forEach((r) => m.set(r.ctr_name, r));
-        setMonthlyMap(m);
->>>>>>> Stashed changes
       })
       .catch(() => {
         if (mounted) {
