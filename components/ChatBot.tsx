@@ -59,9 +59,17 @@ export default function ChatBot({
   const [user, setUser] = useState<User | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
+<<<<<<< HEAD
   const [fontSize, setFontSize] = useState(12);
   const [welcomeLoading, setWelcomeLoading] = useState(false);
+=======
+>>>>>>> Draft
   const [isStreaming, setIsStreaming] = useState(false);
+  const [welcomeLoading, setWelcomeLoading] = useState(false);
+  // SIGNED_IN이 발생할 때마다 증가 — user 참조가 동일해도 welcome effect 재실행 보장
+  const [welcomeTrigger, setWelcomeTrigger] = useState(0);
+  // onAuthStateChange 클로저에서 현재 user id를 참조하기 위한 ref
+  const currentUserIdRef = useRef<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const welcomeFetchedRef = useRef(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -76,60 +84,95 @@ export default function ChatBot({
     el.style.height = `${el.scrollHeight}px`;
   }, [input]);
 
-  // 로그인 상태 감지
+  // initialMessage는 항상 최신 값을 참조하도록 ref 유지
+  const initialMessageRef = useRef(initialMessage);
+  useEffect(() => { initialMessageRef.current = initialMessage; });
+
+  // 로그인 상태 감지 — 이벤트 종류에 따라 메시지 처리 분기
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => setUser(user));
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    // getSession()은 로컬 스토리지에서 즉시 읽음 → 네트워크 없이 초기 user 확보
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      currentUserIdRef.current = session?.user?.id ?? null;
       setUser(session?.user ?? null);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      const newUserId = session?.user?.id ?? null;
+      const newUser = session?.user ?? null;
+      const prevUserId = currentUserIdRef.current;
+
+      // ref는 항상 최신 상태 유지 (state 변경 없이 타이밍 이슈 방지)
+      currentUserIdRef.current = newUserId;
+
+      if (event === "SIGNED_IN") {
+        setUser(newUser);
+        // userId가 실제로 바뀐 경우만 welcome 리셋 (토큰 갱신·Alt+Tab 복귀 제외)
+        if (newUserId !== prevUserId) {
+          welcomeFetchedRef.current = false;
+          setMessages([]);
+          setWelcomeTrigger(t => t + 1);
+        }
+      } else if (event === "SIGNED_OUT") {
+        setUser(null);
+        welcomeFetchedRef.current = true;
+        setMessages([{ role: "bot", text: initialMessageRef.current }]);
+      }
+      // TOKEN_REFRESHED, INITIAL_SESSION, USER_UPDATED 등:
+      // user 정보 변경 없으므로 setUser 호출하지 않음 → welcome effect 재실행 없음
     });
     return () => subscription.unsubscribe();
   }, []);
 
-  // 챗봇이 열릴 때 welcome message 생성
+  // 챗봇이 열릴 때 또는 로그인 시 welcome message 생성
   useEffect(() => {
     if (!open || welcomeFetchedRef.current) return;
     welcomeFetchedRef.current = true;
 
-    const loadWelcome = async () => {
-      if (!user) {
-        setMessages([{ role: "bot", text: initialMessage }]);
-        return;
-      }
+    const currentUser = user; // effect 실행 시점의 user를 고정
+    const fallback = initialMessageRef.current;
 
+    // 비로그인 상태: 기본 메시지 표시 후 ref를 false로 되돌려
+    // 로그인 시 이 effect가 다시 실행될 수 있도록 허용
+    if (!currentUser) {
+      setMessages([{ role: "bot", text: fallback }]);
+      welcomeFetchedRef.current = false;
+      return;
+    }
+
+    // 로그인 상태: 개인화 welcome 로드
+    const loadWelcome = async () => {
+      // 로딩 중 타이핑 인디케이터 표시
+      setMessages([{ role: "bot", text: "" }]);
       setWelcomeLoading(true);
+
       try {
-        const logs = await getChatLogs(50);
+        const logs = await getChatLogs(5);
 
         if (logs.length === 0) {
-          setMessages([{ role: "bot", text: initialMessage }]);
+          setMessages([{ role: "bot", text: fallback }]);
           return;
         }
 
-        const restored: ChatMessage[] = logs.map(log => ({
-          role: log.role,
-          text: log.content,
-        }));
-
+        // 최신 5개 로그를 컨텍스트로 사용 — 화면에 복원하지 않음
+        const recentLogs = logs;
         const res = await fetch("/api/welcome", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ logs }),
+          body: JSON.stringify({ logs: recentLogs }),
         });
         const { message } = await res.json();
 
-        setMessages([
-          ...restored,
-          { role: "bot", text: message ?? initialMessage },
-        ]);
+        setMessages([{ role: "bot", text: message ?? fallback }]);
       } catch {
-        setMessages([{ role: "bot", text: initialMessage }]);
+        setMessages([{ role: "bot", text: fallback }]);
       } finally {
         setWelcomeLoading(false);
       }
     };
 
     loadWelcome();
-  }, [open, user, initialMessage]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, user, welcomeTrigger]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -253,6 +296,7 @@ export default function ChatBot({
       </div>
 
       {/* Messages */}
+<<<<<<< HEAD
       <div className="chatbot-messages" style={{ minHeight: 0 }}>
         {welcomeLoading ? (
           <div style={{ textAlign: "center", color: "#aaa", fontSize: 13, padding: 20 }}>
@@ -271,9 +315,23 @@ export default function ChatBot({
                       : renderBotText(msg.text))
                   : msg.text}
               </div>
+=======
+      <div className="chatbot-messages">
+        {messages.map((msg, i) => (
+          <div key={i} style={{ display: "flex", justifyContent: msg.role === "user" ? "flex-end" : "flex-start", alignItems: "flex-start", gap: 4 }}>
+            {msg.role === "bot" && (
+              <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#fde8e8", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, flexShrink: 0, marginTop: 2 }}>🤖</div>
+            )}
+            <div className={msg.role === "bot" ? "chatbot-msg-bot" : "chatbot-msg-user"}>
+              {msg.role === "bot"
+                ? (msg.text === "" && (isStreaming || welcomeLoading) && i === messages.length - 1
+                    ? <TypingIndicator />
+                    : renderBotText(msg.text))
+                : msg.text}
+>>>>>>> Draft
             </div>
-          ))
-        )}
+          </div>
+        ))}
         <div ref={bottomRef} />
       </div>
 
