@@ -9,6 +9,7 @@ interface FilterBarProps {
   showCountrySelect?: string;
   onYearChange?: (year: string) => void;
   onMonthChange?: (month: string) => void;
+  /** @deprecated 기간 셀렉트 제거됨 — 호환성 유지용 */
   onPeriodChange?: (period: string) => void;
   onTradeTypeChange?: (type: "수출" | "수입") => void;
   onCountryChange?: (country: string) => void;
@@ -24,7 +25,6 @@ export default function FilterBar({
   showCountrySelect,
   onYearChange,
   onMonthChange,
-  onPeriodChange,
   onTradeTypeChange,
   onCountryChange,
   defaultYear = "2026",
@@ -35,20 +35,18 @@ export default function FilterBar({
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [tradeType, setTradeType] = useState<"수출" | "수입">("수출");
+  const [tradeType, setTradeType] = useState<"수출" | "수입">(
+    searchParams.get("tradeType") === "import" || searchParams.get("mode") === "import" ? "수입" : "수출"
+  );
   const [year, setYear] = useState(defaultYear);
   // URL에서 초기값 읽기 — 새로고침 시 필터 유지
   const [month, setMonth] = useState(searchParams.get("month") ?? "");
-  const [period, setPeriod] = useState("annual");
 
   // 데이터 없음 토스트
   const [noDataToast, setNoDataToast] = useState(false);
   const [toastFading, setToastFading] = useState(false);
   useEffect(() => {
     if (!noDataToast) return;
-    // .dashboard-area에 position:relative 보장 (absolute 자식 배치용)
-    const el = document.querySelector<HTMLElement>(".dashboard-area");
-    if (el && getComputedStyle(el).position === "static") el.style.position = "relative";
     const fadeTimer = setTimeout(() => setToastFading(true), 1800);
     const hideTimer = setTimeout(() => { setNoDataToast(false); setToastFading(false); }, 2400);
     return () => { clearTimeout(fadeTimer); clearTimeout(hideTimer); };
@@ -57,11 +55,19 @@ export default function FilterBar({
   const handleTradeType = (t: "수출" | "수입") => {
     setTradeType(t);
     onTradeTypeChange?.(t);
+    // URL 동기화 — 상세 페이지 이동 시 mode 유지
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tradeType", t === "수입" ? "import" : "export");
+    router.replace(`?${params.toString()}`, { scroll: false });
   };
 
   const handleYear = (y: string) => {
     setYear(y);
     onYearChange?.(y);
+    // KPIBar가 URL에서 year를 읽으므로 URL 동기화
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("year", y);
+    router.replace(`?${params.toString()}`, { scroll: false });
   };
 
   // 해당 연도의 국가/품목 목록 (현재 tradeType 기준)
@@ -119,7 +125,7 @@ export default function FilterBar({
             className="filter-select"
             value={year}
             onChange={(e) => handleYear(e.target.value)}
-            style={{ width: 96 }}
+            style={{ width: 140 }}
           >
             <option value="2026">2026</option>
             <option value="2025">2025</option>
@@ -135,26 +141,14 @@ export default function FilterBar({
             value={month}
             onChange={(e) => handleMonth(e.target.value)}
             disabled={disableMonthPeriod}
-            style={{ width: 96, ...(disableMonthPeriod ? { opacity: 0.4, cursor: "not-allowed", pointerEvents: "none" as const } : {}) }}
+            style={{ width: 140, ...(disableMonthPeriod ? { opacity: 0.4, cursor: "not-allowed", pointerEvents: "none" as const } : {}) }}
           >
-            <option value="">월 (전체)</option>
+            <option value="">연간 데이터</option>
             {Array.from({ length: 12 }, (_, i) => (
               <option key={i} value={String(i + 1).padStart(2, "0")}>
                 {i + 1}월
               </option>
             ))}
-          </select>
-
-          <select
-            className="filter-select"
-            style={{ width: 96, ...(disableMonthPeriod ? { opacity: 0.4, cursor: "not-allowed", pointerEvents: "none" as const } : {}) }}
-            value={period}
-            disabled={disableMonthPeriod}
-            onChange={(e) => { setPeriod(e.target.value); onPeriodChange?.(e.target.value); }}
-          >
-            <option value="annual">연간</option>
-            <option value="cumulative">누적</option>
-            <option value="monthly">해당월</option>
           </select>
         </div>
       </div>
@@ -227,10 +221,13 @@ export default function FilterBar({
       )}
     </div>
 
-    {/* 데이터 없음 토스트 — .dashboard-area 중앙에 표시 */}
+    {/* 데이터 없음 토스트 — 대시보드 영역 중앙에 표시 */}
     {noDataToast && typeof document !== "undefined" && (() => {
-      const target = document.querySelector(".dashboard-area");
+      const target = document.querySelector(".split-panel");
       if (!target) return null;
+      // portal 대상에 position:relative 보장
+      const el = target as HTMLElement;
+      if (getComputedStyle(el).position === "static") el.style.position = "relative";
       return createPortal(
         <div
           style={{

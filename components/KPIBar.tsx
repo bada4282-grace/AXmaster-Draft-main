@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, usePathname } from "next/navigation";
 import { KPI_BY_YEAR, DEFAULT_YEAR } from "@/lib/data";
 import { getMonthlyCountryMapData, type MonthlyCountryMapItem } from "@/lib/supabase";
 
@@ -43,7 +43,12 @@ function prevMonthInfo(year: string, month: string): { y: string; m: string } {
   return { y: year, m: String(m - 1).padStart(2, "0") };
 }
 
-function sumAmt(items: MonthlyCountryMapItem[]) {
+function sumAmt(items: MonthlyCountryMapItem[], countryName?: string) {
+  if (countryName) {
+    return items
+      .filter((i) => i.ctr_name === countryName)
+      .reduce((s, i) => s + i.total_amt, 0);
+  }
   return items.reduce((s, i) => s + i.total_amt, 0);
 }
 
@@ -65,17 +70,23 @@ export default function KPIBar({
   balance: pBv,
   balancePositive: pBp,
 }: KPIBarProps) {
-  const kpi = KPI[year] ?? KPI[DEFAULT_YEAR];
-  // 상세 페이지에서 값을 직접 주입하면 월별 계산 스킵
-  const hasCustom = pEv !== undefined;
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
 
-  // page.tsx가 month prop을 넘기지 않으므로 URL에서 직접 읽음
-  const urlMonth = useSearchParams().get("month") ?? "";
-  const effectiveMonth = month || urlMonth;
+  // page.tsx가 year/month prop을 넘기지 않으므로 URL에서 직접 읽음
+  const effectiveYear = searchParams.get("year") ?? year;
+  const effectiveMonth = month || (searchParams.get("month") ?? "");
+
+  const kpi = KPI[effectiveYear] ?? KPI[DEFAULT_YEAR];
+
+  // 국가 상세 페이지 감지 (/country/{name}) → 해당 국가만 필터링
+  const countryMatch = pathname.match(/^\/country\/([^?/]+)/);
+  const currentCountry = countryMatch ? decodeURIComponent(countryMatch[1]) : undefined;
 
   // 불완전 연도 판별: 현재 연도이면서 12월 데이터가 아직 없는 경우
   const currentYear = new Date().getFullYear();
   const isIncompleteYear = parseInt(year, 10) >= currentYear;
+  const hasCustom = pEv !== undefined;
 
   const [mom, setMom] = useState<MomState | null>(null);
   // 불완전 연도 자동 전월대비용
@@ -83,25 +94,29 @@ export default function KPIBar({
   const [incMonthLabel, setIncMonthLabel] = useState("");
 
   useEffect(() => {
-    let mounted = true;
-
-    if (!effectiveMonth || hasCustom) {
-      return () => { mounted = false; };
+    if (!effectiveMonth) {
+      setMom(null);
+      return;
     }
-    const { y: py, m: pm } = prevMonthInfo(year, effectiveMonth);
+
+    let cancelled = false;
+    const { y: py, m: pm } = prevMonthInfo(effectiveYear, effectiveMonth);
 
     Promise.all([
-      getMonthlyCountryMapData(year, effectiveMonth, "수출"),
+      getMonthlyCountryMapData(effectiveYear, effectiveMonth, "수출"),
       getMonthlyCountryMapData(py, pm, "수출"),
-      getMonthlyCountryMapData(year, effectiveMonth, "수입"),
+      getMonthlyCountryMapData(effectiveYear, effectiveMonth, "수입"),
       getMonthlyCountryMapData(py, pm, "수입"),
     ]).then(([ce, pe, ci, pi]) => {
-      if (!mounted) return;
+      if (cancelled) return;
 
-      const ceAmt = sumAmt(ce);
-      const peAmt = sumAmt(pe);
-      const ciAmt = sumAmt(ci);
-      const piAmt = sumAmt(pi);
+      const ceAmt = sumAmt(ce, currentCountry);
+      const peAmt = sumAmt(pe, currentCountry);
+      const ciAmt = sumAmt(ci, currentCountry);
+      const piAmt = sumAmt(pi, currentCountry);
+
+      // 국가 상세: 국가 매칭이 안 되면 (데이터 없으면) 이전 상태 유지
+      if (currentCountry && ceAmt === 0 && ciAmt === 0) return;
 
       const pct = (cur: number, prev: number) =>
         prev === 0 ? 0 : parseFloat(Math.abs(((cur - prev) / prev) * 100).toFixed(1));
@@ -119,12 +134,10 @@ export default function KPIBar({
         balanceVal: fmtBillion(Math.abs(ceBil - ciBil)),
         balancePositive: ceBil >= ciBil,
       });
-    }).catch(() => {
-      if (mounted) setMom(null);
-    });
+    }).catch(() => { /* 에러 시 이전 상태 유지 */ });
 
-    return () => { mounted = false; };
-  }, [year, effectiveMonth, hasCustom]);
+    return () => { cancelled = true; };
+  }, [effectiveYear, effectiveMonth, currentCountry]);
 
   // 불완전 연도 + 월 미선택 시: 마지막 월 자동 탐지 → 전월 대비 계산
   useEffect(() => {
@@ -156,10 +169,10 @@ export default function KPIBar({
       ]);
       if (!mounted) return;
 
-      const ceAmt = sumAmt(ce);
-      const peAmt = sumAmt(pe);
-      const ciAmt = sumAmt(ci);
-      const piAmt = sumAmt(pi);
+      const ceAmt = sumAmt(ce, currentCountry);
+      const peAmt = sumAmt(pe, currentCountry);
+      const ciAmt = sumAmt(ci, currentCountry);
+      const piAmt = sumAmt(pi, currentCountry);
 
       const pct = (cur: number, prev: number) =>
         prev === 0 ? 0 : parseFloat(Math.abs(((cur - prev) / prev) * 100).toFixed(1));
@@ -183,7 +196,7 @@ export default function KPIBar({
     });
 
     return () => { mounted = false; };
-  }, [year, effectiveMonth, hasCustom, isIncompleteYear]);
+  }, [year, effectiveMonth, hasCustom, isIncompleteYear, currentCountry]);
 
   const useMom = !!effectiveMonth && !hasCustom && !!mom;
   const useIncMom = !effectiveMonth && !hasCustom && isIncompleteYear && !!incMom;

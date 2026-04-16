@@ -114,7 +114,7 @@ function CountryDetailContent() {
       <div className="page-main-container">
         {/* Main tabs */}
         <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-          <button className="main-tab-active">국가별</button>
+          <button className="main-tab-active" onClick={() => router.push("/")}>국가별</button>
           <button className="main-tab-inactive" onClick={() => router.push("/?tab=product")}>품목별</button>
         </div>
 
