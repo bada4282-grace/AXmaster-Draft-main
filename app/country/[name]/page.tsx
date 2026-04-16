@@ -127,6 +127,7 @@ function CountryDetailContent() {
               onYearChange={setYear}
               onMonthChange={setMonth}
               onTradeTypeChange={setTradeType}
+              disableMonthPeriod={subTab === "시계열 추이"}
             />
 
             {kpi ? (
