@@ -85,22 +85,6 @@ const COUNTRY_CENTROIDS: Record<string, [number, number]> = {
   "BR": [-52,  -10  ],
 };
 
-const COUNTRY_NAME_ALIAS_TO_KO: Record<string, string> = {
-  "united states of america": "미국",
-  "russian federation": "러시아",
-  "korea, republic of": "대한민국",
-  "korea, democratic people's republic of": "북한",
-  "lao people's democratic republic": "라오스",
-  "viet nam": "베트남",
-  "iran, islamic republic of": "이란",
-  "syrian arab republic": "시리아",
-  "venezuela, bolivarian republic of": "베네수엘라",
-  "bolivia, plurinational state of": "볼리비아",
-  "tanzania, united republic of": "탄자니아",
-  "moldova, republic of": "몰도바",
-  "brunei darussalam": "브루나이",
-};
-
 // MapLibre 최소 스타일 (배경색만 — 타일 서버 필요 없음)
 const MAP_STYLE: any = {
   version: 8,
@@ -238,7 +222,7 @@ export default function WorldMap({
   const [monthlyRanks, setMonthlyRanks] = useState<MonthlyCountryMapItem[] | null>(null);
   useEffect(() => {
     let mounted = true;
-    if (!month) { setMonthlyRanks(null); return () => { mounted = false; }; }
+    if (!month) { return () => { mounted = false; }; }
     getMonthlyCountryMapData(year, month, tradeType)
       .then((rows) => { if (mounted) setMonthlyRanks(rows); })
       .catch(() => { if (mounted) setMonthlyRanks(null); });
@@ -248,10 +232,11 @@ export default function WorldMap({
   // ─ 연간 집계 (월 미선택 시 12개월 합산 → rank 1~30) ─
   const [annualRanks, setAnnualRanks] = useState<MonthlyCountryMapItem[] | null>(null);
   useEffect(() => {
-    if (month) { setAnnualRanks(null); return; }
+    if (month) { return; }
     const cacheKey = `${year}-${tradeType}`;
     if (_annualRankCache.has(cacheKey)) {
-      setAnnualRanks(_annualRankCache.get(cacheKey)!);
+      const cached = _annualRankCache.get(cacheKey)!;
+      Promise.resolve().then(() => setAnnualRanks(cached));
       return;
     }
     let mounted = true;
@@ -477,8 +462,8 @@ export default function WorldMap({
           ref={mapRef}
           mapStyle={MAP_STYLE}
           initialViewState={{ longitude: 155, latitude: 20, zoom: 1.0 }}
-          // ★ MapLibre 엔진 레벨 world wrap
-          renderWorldCopies={true}
+          renderWorldCopies={false}
+          maxBounds={[[-180, -85], [360, 85]]}
           dragRotate={false}
           pitchWithRotate={false}
           style={{ width: "100%", height: "100%" }}

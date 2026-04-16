@@ -14,6 +14,7 @@ import {
   COUNTRY_KPI_BY_YEAR,
   COUNTRY_TREEMAP_EXP_BY_YEAR,
   COUNTRY_TREEMAP_IMP_BY_YEAR,
+  MTI_LOOKUP as MTI_LOOKUP_RAW,
 } from "./tradeData.generated";
 
 export type TradeType = "수출" | "수입";
@@ -75,9 +76,10 @@ export function getMapColor(rank: number): string {
   return "#CDE8DA";
 }
 
-// ─── MTI 색상 / 명칭 ─────────────────────────────────────────────────────
+// ─── MTI 색상 / 명칭 / 룩업 ──────────────────────────────────────────────
 export const MTI_COLORS = MTI_COLORS_RAW as Record<number, string>;
 export const MTI_NAMES = MTI_NAMES_RAW as Record<number, string>;
+export const MTI_LOOKUP = MTI_LOOKUP_RAW as Record<string, string>;
 
 // ─── Treemap ──────────────────────────────────────────────────────────────
 export interface ProductNode {
@@ -121,6 +123,46 @@ export function getCountryTreemapData(
   return getTreemapData(year, tradeType);
 }
 
+// ─── MTI 깊이별 트리맵 집계 ───────────────────────────────────────────────
+/**
+ * 6단위 트리맵 데이터를 지정된 MTI 깊이(1~6)로 그룹핑하여 반환
+ * depth=6이면 원본 그대로, depth=1이면 대분류 10개로 집계
+ */
+export function aggregateTreemapByDepth(
+  data: ProductNode[],
+  depth: number
+): ProductNode[] {
+  if (depth >= 6) return data;
+
+  const grouped = new Map<string, { value: number; topCountries: string[] }>();
+  for (const node of data) {
+    const prefix = node.code.slice(0, depth);
+    const existing = grouped.get(prefix);
+    if (existing) {
+      existing.value = Math.round((existing.value + node.value) * 10) / 10;
+    } else {
+      grouped.set(prefix, {
+        value: node.value,
+        topCountries: node.topCountries ? [...node.topCountries] : [],
+      });
+    }
+  }
+
+  return Array.from(grouped.entries())
+    .map(([prefix, { value, topCountries }]) => {
+      const mti1 = parseInt(prefix[0]) || 0;
+      return {
+        code: prefix,
+        name: MTI_LOOKUP[prefix] || MTI_NAMES[mti1] || prefix,
+        value,
+        mti: mti1,
+        color: MTI_COLORS[mti1] || "#9CA3AF",
+        topCountries,
+      };
+    })
+    .sort((a, b) => b.value - a.value);
+}
+
 // ─── 국가별 월별 시계열 ───────────────────────────────────────────────────
 export interface MonthlyData {
   month: string;   // "N월" 형식
@@ -148,7 +190,7 @@ export function getProductTrend(productCode: string, tradeType: TradeType = "수
   return (dict as Record<string, YearlyTrend[]>)[productCode] ?? [];
 }
 
-export const SEMICONDUCTOR_TREND: YearlyTrend[] = getProductTrend("831", "수출");
+export const SEMICONDUCTOR_TREND: YearlyTrend[] = getProductTrend("831110", "수출");
 
 // ─── 품목별 상위 국가 ─────────────────────────────────────────────────────
 export interface CountryValue {
@@ -168,7 +210,7 @@ export function getProductTopCountries(
 }
 
 export const TOP5_COUNTRIES_SEMICONDUCTOR: CountryValue[] =
-  getProductTopCountries("831", DEFAULT_YEAR, "수출");
+  getProductTopCountries("831110", DEFAULT_YEAR, "수출");
 
 // ─── 국가별 KPI ───────────────────────────────────────────────────────────
 export interface CountryKPI {

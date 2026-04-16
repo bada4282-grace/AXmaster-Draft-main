@@ -24,14 +24,6 @@ function fmt(n: number, decimals = 1): string {
   });
 }
 
-/** 변동률 문자열 + 방향 계산 */
-function calcChange(now: number, prev: number): { change: string; up: boolean } {
-  if (!prev) return { change: "N/A", up: true };
-  const pct = ((now - prev) / prev) * 100;
-  const up = pct >= 0;
-  return { change: `${up ? "+" : ""}${pct.toFixed(1)}%`, up };
-}
-
 export async function GET() {
   // 캐시 유효 시 반환
   if (cache && Date.now() - cache.fetchedAt < CACHE_TTL_MS) {

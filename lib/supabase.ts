@@ -68,7 +68,7 @@ export async function queryTrade({
   return data;
 }
 
-// 월별 전체 품목 트리맵 데이터 (get_treemap_monthly RPC)
+// 월별 전체 품목 트리맵 데이터 (get_treemap_mti6 RPC)
 export async function getMonthlyTreemapData(
   year: string,
   month: string,
@@ -77,9 +77,10 @@ export async function getMonthlyTreemapData(
   const yymm = `${year}${month}`;
   const p_mode = tradeType === "수입" ? "import" : "export";
 
-  const { data, error } = await supabase.rpc("get_treemap_monthly", {
+  const { data, error } = await supabase.rpc("get_treemap_mti6", {
     p_yymm: yymm,
     p_mode,
+    p_mti_depth: 6,
   });
   if (error) {
     console.error("[getMonthlyTreemapData] RPC error:", error.message ?? error);
@@ -93,7 +94,7 @@ export async function getMonthlyTreemapData(
     .slice(0, 30);
 }
 
-// 월별 국가 지도 색상용 순위 데이터 (get_country_map_monthly RPC)
+// 월별 국가 지도 색상용 순위 데이터 (get_country_map_mti6 RPC)
 export async function getMonthlyCountryMapData(
   year: string,
   month: string,
@@ -102,7 +103,7 @@ export async function getMonthlyCountryMapData(
   const yymm = `${year}${month}`;
   const p_mode = tradeType === "수입" ? "import" : "export";
 
-  const { data, error } = await supabase.rpc("get_country_map_monthly", {
+  const { data, error } = await supabase.rpc("get_country_map_mti6", {
     p_yymm: yymm,
     p_mode,
   });
@@ -113,7 +114,7 @@ export async function getMonthlyCountryMapData(
   return (data ?? []) as MonthlyCountryMapItem[];
 }
 
-// 월별 국가별 품목 트리맵 데이터 (get_country_treemap_monthly RPC)
+// 월별 국가별 품목 트리맵 데이터 (get_country_treemap_mti6 RPC)
 export async function getCountryMonthlyTreemapData(
   year: string,
   month: string,
@@ -123,10 +124,11 @@ export async function getCountryMonthlyTreemapData(
   const yymm = `${year}${month}`;
   const p_mode = tradeType === "수입" ? "import" : "export";
 
-  const { data, error } = await supabase.rpc("get_country_treemap_monthly", {
+  const { data, error } = await supabase.rpc("get_country_treemap_mti6", {
     p_yymm: yymm,
     p_ctr_name: countryName,
     p_mode,
+    p_mti_depth: 6,
   });
   if (error) {
     console.error("[getCountryMonthlyTreemapData] RPC error:", error.message ?? error);

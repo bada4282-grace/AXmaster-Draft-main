@@ -32,6 +32,7 @@ function HomeContent() {
   const [tradeType, setTradeType] = useState<TradeType>("수출");
   const [month, setMonth] = useState("");
   const [, setPeriod] = useState("annual");
+  const [mtiDepth, setMtiDepth] = useState(6);
 
   return (
     <div style={{ minHeight: "100vh", background: "#f8f8f8" }}>
@@ -60,6 +61,8 @@ function HomeContent() {
               onMonthChange={setMonth}
               onPeriodChange={setPeriod}
               onTradeTypeChange={setTradeType}
+              mtiDepth={mainTab === "품목별" ? mtiDepth : undefined}
+              onMtiDepthChange={setMtiDepth}
             />
 
             <KPIBar year={year} tradeType={tradeType} />
@@ -71,7 +74,7 @@ function HomeContent() {
                 <WorldMap year={year} month={month} tradeType={tradeType} />
                 ) : (
                   <div style={{ width: "100%", height: "100%", padding: 8 }}>
-                    <TreemapChart year={year} month={month} tradeType={tradeType} />
+                    <TreemapChart year={year} month={month} tradeType={tradeType} mtiDepth={mtiDepth} />
                   </div>
                 )}
               </div>
