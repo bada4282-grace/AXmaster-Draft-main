@@ -54,6 +54,7 @@ function fmtBillion(v: number) {
 export default function KPIBar({
   year = DEFAULT_YEAR,
   month = "",
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   tradeType = "수출",
   exportVal: pEv,
   exportChange: pEc,
@@ -75,12 +76,11 @@ export default function KPIBar({
   const [mom, setMom] = useState<MomState | null>(null);
 
   useEffect(() => {
-    if (!effectiveMonth || hasCustom) {
-      setMom(null);
-      return;
-    }
-
     let mounted = true;
+
+    if (!effectiveMonth || hasCustom) {
+      return () => { mounted = false; };
+    }
     const { y: py, m: pm } = prevMonthInfo(year, effectiveMonth);
 
     Promise.all([

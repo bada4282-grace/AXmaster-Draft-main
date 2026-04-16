@@ -31,6 +31,7 @@ function CountryDetailContent() {
   const [month, setMonth] = useState("");
   const [tradeType, setTradeType] = useState<TradeType>(initialTradeType);
   const [subTab, setSubTab] = useState<"품목별" | "시계열 추이">("품목별");
+  const [mtiDepth, setMtiDepth] = useState(6);
 
 
   // 연도·수출입 모드에 따라 순위·비중이 달라짐
@@ -192,13 +193,28 @@ function CountryDetailContent() {
                       )}
                     </>
                   )}
+                  {subTab === "품목별" && (
+                    <select
+                      value={mtiDepth}
+                      onChange={(e) => setMtiDepth(Number(e.target.value))}
+                      className="filter-select"
+                      style={{ width: 80 }}
+                    >
+                      <option value={1}>1단위</option>
+                      <option value={2}>2단위</option>
+                      <option value={3}>3단위</option>
+                      <option value={4}>4단위</option>
+                      <option value={5}>5단위</option>
+                      <option value={6}>6단위</option>
+                    </select>
+                  )}
                   <button className="back-btn" onClick={() => router.push("/")}>← 돌아가기</button>
                 </div>
               </div>
 
               <div style={{ flex: 1, padding: 8, overflow: "hidden" }}>
                 {subTab === "품목별" ? (
-                  <TreemapChart forCountry countryName={country.name} year={year} month={month} tradeType={tradeType} />
+                  <TreemapChart forCountry countryName={country.name} year={year} month={month} tradeType={tradeType} mtiDepth={mtiDepth} />
                 ) : timeseries.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={displayData} margin={{ top: 8, right: 44, left: 8, bottom: 4 }}>

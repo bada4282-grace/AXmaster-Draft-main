@@ -163,7 +163,6 @@ export default function ChatBot({
     };
 
     loadWelcome();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, user, welcomeTrigger]);
 
   useEffect(() => {

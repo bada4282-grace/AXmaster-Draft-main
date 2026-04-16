@@ -164,12 +164,12 @@ header.w-full {
 }
 .main-tab-inactive:hover { border-color: #E02020; color: #E02020; }
 
-/* Dashboard card: overflow는 visible — 내부 가로 넘침 시 챗봇이 잘리지 않도록 */
+/* Dashboard card */
 .dashboard-card {
   background: #fff;
   border: 1px solid #e0e0e0;
   border-radius: 8px;
-  overflow: visible;
+  overflow: hidden;
 }
 .dashboard-card > .filter-bar {
   border-radius: 8px 8px 0 0;
@@ -197,15 +197,13 @@ header.w-full {
 .filter-bar {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  row-gap: 8px;
+  flex-wrap: nowrap;
   padding: 10px 0;
   border-bottom: 1px solid #f0f0f0;
+  overflow-x: auto;
 }
 .filter-section {
-  flex: 1;
-  flex-basis: 220px;
-  min-width: 0;
+  flex-shrink: 0;
   display: flex;
   justify-content: center;
   align-items: center;

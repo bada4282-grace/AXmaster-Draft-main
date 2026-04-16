@@ -50,11 +50,13 @@ export async function fetchCountryProducts({
   year,
   mode = "export",
   limit = 10,
+  mtiDepth = 6,
 }: {
   country: string;
   year?: string;
   mode?: "export" | "import";
   limit?: number;
+  mtiDepth?: number;
 }): Promise<TradeProductRow[]> {
   const sb = getServerClient();
 
@@ -77,10 +79,11 @@ export async function fetchCountryProducts({
 
   // 유효한 데이터가 있는 첫 번째 YYMM 사용
   for (const yymm of yymmList) {
-    const { data, error } = await sb.rpc("get_country_treemap_monthly", {
+    const { data, error } = await sb.rpc("get_country_treemap_mti6", {
       p_yymm: yymm,
       p_ctr_name: country,
       p_mode: mode,
+      p_mti_depth: mtiDepth,
     });
     if (error) {
       console.error(`[fetchCountryProducts] RPC error yymm=${yymm}:`, error.message);
@@ -110,10 +113,12 @@ export async function fetchAllProducts({
   year,
   mode = "export",
   limit = 15,
+  mtiDepth = 6,
 }: {
   year?: string;
   mode?: "export" | "import";
   limit?: number;
+  mtiDepth?: number;
 }): Promise<TradeProductRow[]> {
   const sb = getServerClient();
 
@@ -133,9 +138,10 @@ export async function fetchAllProducts({
   }
 
   for (const yymm of yymmList) {
-    const { data, error } = await sb.rpc("get_treemap_monthly", {
+    const { data, error } = await sb.rpc("get_treemap_mti6", {
       p_yymm: yymm,
       p_mode: mode,
+      p_mti_depth: mtiDepth,
     });
     if (error) {
       console.error(`[fetchAllProducts] RPC error yymm=${yymm}:`, error.message);
@@ -188,7 +194,7 @@ export async function fetchCountryRanking({
   }
 
   for (const yymm of yymmList) {
-    const { data, error } = await sb.rpc("get_country_map_monthly", {
+    const { data, error } = await sb.rpc("get_country_map_mti6", {
       p_yymm: yymm,
       p_mode: mode,
     });

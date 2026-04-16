@@ -12,6 +12,8 @@ interface FilterBarProps {
   onTradeTypeChange?: (type: "수출" | "수입") => void;
   onCountryChange?: (country: string) => void;
   defaultYear?: string;
+  mtiDepth?: number;
+  onMtiDepthChange?: (depth: number) => void;
 }
 
 export default function FilterBar({
@@ -23,6 +25,8 @@ export default function FilterBar({
   onTradeTypeChange,
   onCountryChange,
   defaultYear = "2026",
+  mtiDepth,
+  onMtiDepthChange,
 }: FilterBarProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -184,6 +188,24 @@ export default function FilterBar({
           )}
         </div>
       </div>
+
+      {mtiDepth !== undefined && onMtiDepthChange && (
+        <div className="filter-section filter-section-divider">
+          <select
+            className="filter-select"
+            value={mtiDepth}
+            onChange={(e) => onMtiDepthChange(Number(e.target.value))}
+            style={{ width: 80 }}
+          >
+            <option value={1}>1단위</option>
+            <option value={2}>2단위</option>
+            <option value={3}>3단위</option>
+            <option value={4}>4단위</option>
+            <option value={5}>5단위</option>
+            <option value={6}>6단위</option>
+          </select>
+        </div>
+      )}
     </div>
   );
 }
