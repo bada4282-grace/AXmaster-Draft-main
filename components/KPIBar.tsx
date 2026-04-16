@@ -37,6 +37,12 @@ interface MomState {
   balancePositive: boolean;
 }
 
+/** 전년 동기: 같은 월의 전년도 */
+function sameMonthPrevYear(year: string, month: string): { y: string; m: string } {
+  return { y: String(parseInt(year, 10) - 1), m: month };
+}
+
+/** 전월 */
 function prevMonthInfo(year: string, month: string): { y: string; m: string } {
   const m = parseInt(month, 10);
   if (m === 1) return { y: String(parseInt(year, 10) - 1), m: "12" };
@@ -56,6 +62,28 @@ function fmtBillion(v: number) {
   return v.toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 }
 
+function pctChange(cur: number, prev: number): number {
+  if (!prev) return 0;
+  return parseFloat(Math.abs(((cur - prev) / prev) * 100).toFixed(1));
+}
+
+function buildMomState(
+  ceAmt: number, peAmt: number, ciAmt: number, piAmt: number,
+): MomState {
+  const ceBil = ceAmt / 1e8;
+  const ciBil = ciAmt / 1e8;
+  return {
+    exportVal: fmtBillion(ceBil),
+    exportChange: pctChange(ceAmt, peAmt),
+    exportUp: ceAmt >= peAmt,
+    importVal: fmtBillion(ciBil),
+    importChange: pctChange(ciAmt, piAmt),
+    importUp: ciAmt >= piAmt,
+    balanceVal: fmtBillion(Math.abs(ceBil - ciBil)),
+    balancePositive: ceBil >= ciBil,
+  };
+}
+
 export default function KPIBar({
   year = DEFAULT_YEAR,
   month = "",
@@ -73,26 +101,26 @@ export default function KPIBar({
   const searchParams = useSearchParams();
   const pathname = usePathname();
 
-  // page.tsx가 year/month prop을 넘기지 않으므로 URL에서 직접 읽음
-  const effectiveYear = searchParams.get("year") ?? year;
+  const effectiveYear = year;
   const effectiveMonth = month || (searchParams.get("month") ?? "");
 
   const kpi = KPI[effectiveYear] ?? KPI[DEFAULT_YEAR];
+  const prevYearKpi = KPI[String(parseInt(effectiveYear, 10) - 1)];
 
   // 국가 상세 페이지 감지 (/country/{name}) → 해당 국가만 필터링
   const countryMatch = pathname.match(/^\/country\/([^?/]+)/);
   const currentCountry = countryMatch ? decodeURIComponent(countryMatch[1]) : undefined;
 
-  // 불완전 연도 판별: 현재 연도이면서 12월 데이터가 아직 없는 경우
+  // 불완전 연도 판별: 현재 연도 이상이면 불완전
   const currentYear = new Date().getFullYear();
   const isIncompleteYear = parseInt(year, 10) >= currentYear;
   const hasCustom = pEv !== undefined;
 
-  const [mom, setMom] = useState<MomState | null>(null);
-  // 불완전 연도 자동 전월대비용
-  const [incMom, setIncMom] = useState<MomState | null>(null);
-  const [incMonthLabel, setIncMonthLabel] = useState("");
+  // 전년도가 없는 경우 (2020 등) — 증감율 표시 불가
+  const noPrevYear = !prevYearKpi;
 
+  // ─── 월 선택 시: 전년 동기 대비 (커스텀 값 주입 여부와 무관하게 항상 동작) ───
+  const [mom, setMom] = useState<MomState | null>(null);
   useEffect(() => {
     if (!effectiveMonth) {
       setMom(null);
@@ -100,7 +128,8 @@ export default function KPIBar({
     }
 
     let cancelled = false;
-    const { y: py, m: pm } = prevMonthInfo(effectiveYear, effectiveMonth);
+    // 전년 동기 (같은 월, 전년도)
+    const { y: py, m: pm } = sameMonthPrevYear(effectiveYear, effectiveMonth);
 
     Promise.all([
       getMonthlyCountryMapData(effectiveYear, effectiveMonth, "수출"),
@@ -115,31 +144,19 @@ export default function KPIBar({
       const ciAmt = sumAmt(ci, currentCountry);
       const piAmt = sumAmt(pi, currentCountry);
 
-      // 국가 상세: 국가 매칭이 안 되면 (데이터 없으면) 이전 상태 유지
+      // 국가 상세: 현재 월 데이터가 없으면 이전 상태 유지
       if (currentCountry && ceAmt === 0 && ciAmt === 0) return;
 
-      const pct = (cur: number, prev: number) =>
-        prev === 0 ? 0 : parseFloat(Math.abs(((cur - prev) / prev) * 100).toFixed(1));
-
-      const ceBil = ceAmt / 1e8;
-      const ciBil = ciAmt / 1e8;
-
-      setMom({
-        exportVal: fmtBillion(ceBil),
-        exportChange: pct(ceAmt, peAmt),
-        exportUp: ceAmt >= peAmt,
-        importVal: fmtBillion(ciBil),
-        importChange: pct(ciAmt, piAmt),
-        importUp: ciAmt >= piAmt,
-        balanceVal: fmtBillion(Math.abs(ceBil - ciBil)),
-        balancePositive: ceBil >= ciBil,
-      });
+      setMom(buildMomState(ceAmt, peAmt, ciAmt, piAmt));
     }).catch(() => { /* 에러 시 이전 상태 유지 */ });
 
     return () => { cancelled = true; };
   }, [effectiveYear, effectiveMonth, currentCountry]);
 
-  // 불완전 연도 + 월 미선택 시: 마지막 월 자동 탐지 → 전월 대비 계산
+  // ─── 불완전 연도 + 월 미선택: 최신 월 자동 탐지 → 전월 대비 ───
+  const [incMom, setIncMom] = useState<MomState | null>(null);
+  const [incMonthLabel, setIncMonthLabel] = useState("");
+
   useEffect(() => {
     let mounted = true;
     if (effectiveMonth || hasCustom || !isIncompleteYear) {
@@ -147,7 +164,6 @@ export default function KPIBar({
       return () => { mounted = false; };
     }
 
-    // 12월부터 역순으로 데이터 있는 월 찾기
     const findLastMonth = async () => {
       for (let m = 12; m >= 1; m--) {
         const mm = String(m).padStart(2, "0");
@@ -174,23 +190,8 @@ export default function KPIBar({
       const ciAmt = sumAmt(ci, currentCountry);
       const piAmt = sumAmt(pi, currentCountry);
 
-      const pct = (cur: number, prev: number) =>
-        prev === 0 ? 0 : parseFloat(Math.abs(((cur - prev) / prev) * 100).toFixed(1));
-
-      const ceBil = ceAmt / 1e8;
-      const ciBil = ciAmt / 1e8;
-
       setIncMonthLabel(`${parseInt(lastMonth, 10)}월`);
-      setIncMom({
-        exportVal: fmtBillion(ceBil),
-        exportChange: pct(ceAmt, peAmt),
-        exportUp: ceAmt >= peAmt,
-        importVal: fmtBillion(ciBil),
-        importChange: pct(ciAmt, piAmt),
-        importUp: ciAmt >= piAmt,
-        balanceVal: fmtBillion(Math.abs(ceBil - ciBil)),
-        balancePositive: ceBil >= ciBil,
-      });
+      setIncMom(buildMomState(ceAmt, peAmt, ciAmt, piAmt));
     }).catch(() => {
       if (mounted) setIncMom(null);
     });
@@ -198,37 +199,49 @@ export default function KPIBar({
     return () => { mounted = false; };
   }, [year, effectiveMonth, hasCustom, isIncompleteYear, currentCountry]);
 
-  const useMom = !!effectiveMonth && !hasCustom && !!mom;
+  // ─── 값 결정 ───
+  // 월 선택 시: Supabase 월별 데이터 (전년 동기 대비) 우선
+  const useMom = !!effectiveMonth && !!mom;
   const useIncMom = !effectiveMonth && !hasCustom && isIncompleteYear && !!incMom;
 
   const periodLabel = effectiveMonth
-    ? "(전월 대비)"
+    ? "(전년 동기 대비)"
     : useIncMom
-      ? "(전월 대비)"
+      ? `(전월 대비 · ${incMonthLabel})`
       : "(전년 대비)";
 
-  const ev = pEv ?? (useMom ? mom!.exportVal : useIncMom ? incMom!.exportVal : kpi.export.value);
-  const ec = pEc ?? (useMom ? mom!.exportChange : useIncMom ? incMom!.exportChange : kpi.export.change);
-  const eu = pEu ?? (useMom ? mom!.exportUp : useIncMom ? incMom!.exportUp : kpi.export.up);
-  const iv = pIv ?? (useMom ? mom!.importVal : useIncMom ? incMom!.importVal : kpi.import.value);
-  const ic = pIc ?? (useMom ? mom!.importChange : useIncMom ? incMom!.importChange : kpi.import.change);
-  const iu = pIu ?? (useMom ? mom!.importUp : useIncMom ? incMom!.importUp : kpi.import.up);
-  const bv = pBv ?? (useMom ? mom!.balanceVal : useIncMom ? incMom!.balanceVal : kpi.balance.value);
-  const bp = pBp ?? (useMom ? mom!.balancePositive : useIncMom ? incMom!.balancePositive : kpi.balance.positive);
+  // 월 선택 시 Supabase 데이터가 커스텀 값보다 우선 (월별 KPI + 증감률 정확성)
+  const ev = useMom ? mom!.exportVal : (pEv ?? (useIncMom ? incMom!.exportVal : kpi.export.value));
+  const ec = useMom ? mom!.exportChange : (pEc ?? (useIncMom ? incMom!.exportChange : kpi.export.change));
+  const eu = useMom ? mom!.exportUp : (pEu ?? (useIncMom ? incMom!.exportUp : kpi.export.up));
+  const iv = useMom ? mom!.importVal : (pIv ?? (useIncMom ? incMom!.importVal : kpi.import.value));
+  const ic = useMom ? mom!.importChange : (pIc ?? (useIncMom ? incMom!.importChange : kpi.import.change));
+  const iu = useMom ? mom!.importUp : (pIu ?? (useIncMom ? incMom!.importUp : kpi.import.up));
+  const bv = useMom ? mom!.balanceVal : (pBv ?? (useIncMom ? incMom!.balanceVal : kpi.balance.value));
+  const bp = useMom ? mom!.balancePositive : (pBp ?? (useIncMom ? incMom!.balancePositive : kpi.balance.positive));
 
-  // 불완전 연도 + 월 미선택이면 증감율 항상 숨김
-  const hideChange = !hasCustom && !effectiveMonth && isIncompleteYear;
+  // 증감율 숨김 조건:
+  // 1. 불완전 연도 + 월 미선택 + 자동탐지 미완료
+  // 2. 변화율 0% (전년도 데이터 없거나 변화 미미)
+  const hideExportChange = (!effectiveMonth && isIncompleteYear && !incMom && !hasCustom)
+    || (!useMom && !useIncMom && ec === 0);
+  const hideImportChange = (!effectiveMonth && isIncompleteYear && !incMom && !hasCustom)
+    || (!useMom && !useIncMom && ic === 0);
 
   // 상승: 빨간색, 하락: 파란색 (한국 금융 관례)
-  const expColor  = eu ? "#E02020" : "#185FA5";
-  const impColor  = iu ? "#E02020" : "#185FA5";
+  const expColor = eu ? "#E02020" : "#185FA5";
+  const impColor = iu ? "#E02020" : "#185FA5";
 
   const exportCard = (
     <div className="kpi-item">
       <div className="kpi-label">수출</div>
       <div className="kpi-value">$ {ev} 억</div>
-      {hideChange ? (
-        <div style={{ fontSize: 12, color: "#999", marginTop: 2 }}>- <span style={{ fontSize: 10, opacity: 0.55 }}>(전월 대비)</span></div>
+      {hideExportChange ? (
+        <div style={{ fontSize: 12, color: "#999", marginTop: 2 }}>
+          - <span style={{ fontSize: 10, opacity: 0.55 }}>
+            {isIncompleteYear && !effectiveMonth ? "(전월 대비)" : periodLabel}
+          </span>
+        </div>
       ) : (
         <div className={eu ? "kpi-change-up" : "kpi-change-down"} style={{ color: expColor }}>
           <span className="kpi-change-icon">{eu ? "▲" : "▼"}</span>
@@ -245,8 +258,12 @@ export default function KPIBar({
     <div className="kpi-item">
       <div className="kpi-label">수입</div>
       <div className="kpi-value">$ {iv} 억</div>
-      {hideChange ? (
-        <div style={{ fontSize: 12, color: "#999", marginTop: 2 }}>- <span style={{ fontSize: 10, opacity: 0.55 }}>(전월 대비)</span></div>
+      {hideImportChange ? (
+        <div style={{ fontSize: 12, color: "#999", marginTop: 2 }}>
+          - <span style={{ fontSize: 10, opacity: 0.55 }}>
+            {isIncompleteYear && !effectiveMonth ? "(전월 대비)" : periodLabel}
+          </span>
+        </div>
       ) : (
         <div className={iu ? "kpi-change-up" : "kpi-change-down"} style={{ color: impColor }}>
           <span className="kpi-change-icon">{iu ? "▲" : "▼"}</span>

@@ -55,41 +55,61 @@ function CustomContent({ x = 0, y = 0, width = 0, height = 0, name, value = 0, d
 
   const item = data.find((d) => d.name === name);
   const color = item?.color ?? "#3B82F6";
-  const baseFontSize = width > 120 ? 14 : width > 60 ? 11 : 9;
-  // 이름이 길면 폰트를 줄여서 여백 확보 (글자당 ~7px 기준, 양쪽 패딩 12px)
-  const nameLen = (name ?? "").length;
-  const maxFitSize = width > 80 ? Math.floor((width - 12) / (nameLen * 0.6)) : baseFontSize;
-  const fontSize = Math.max(8, Math.min(baseFontSize, maxFitSize));
+  const fontSize = width > 120 ? 14 : width > 60 ? 11 : 9;
   const cx = x + width / 2;
   const cy = y + height / 2;
+  const pad = 4;
 
   return (
     <g
       style={{
+        cursor: "pointer",
         transformOrigin: `${cx}px ${cy}px`,
         animation: `tcell-${animKey} 0.5s cubic-bezier(0.22, 1, 0.36, 1) both`,
       }}
     >
       <rect x={x} y={y} width={width} height={height} fill={color} stroke="#fff" strokeWidth={1} />
-      {width > 40 && height > 25 && (
-        <>
-          <text
-            x={x + width / 2} y={y + height / 2 - (width > 80 ? 8 : 4)}
-            textAnchor="middle" fill="white" fontSize={fontSize} fontWeight={600}
-            style={{ pointerEvents: "none" }}
+      {width > 36 && height > 22 && (
+        <foreignObject x={x + pad} y={y} width={width - pad * 2} height={height}>
+          <div
+            style={{
+              width: "100%",
+              height: "100%",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              overflow: "hidden",
+              pointerEvents: "none",
+              padding: `${pad}px 0`,
+            }}
           >
-            {width > 80 ? name : (name?.slice(0, 4) ?? "")}
-          </text>
-          {width > 50 && height > 40 && (
-            <text
-              x={x + width / 2} y={y + height / 2 + (width > 80 ? 10 : 8)}
-              textAnchor="middle" fill="rgba(255,255,255,0.85)" fontSize={Math.max(fontSize - 2, 8)}
-              style={{ pointerEvents: "none" }}
-            >
-              {formatAmount(value)}
-            </text>
-          )}
-        </>
+            <span style={{
+              color: "#fff",
+              fontSize,
+              fontWeight: 600,
+              lineHeight: 1.2,
+              textAlign: "center",
+              wordBreak: "break-all",
+              overflow: "hidden",
+              display: "-webkit-box",
+              WebkitLineClamp: height > 50 ? 3 : 2,
+              WebkitBoxOrient: "vertical",
+            }}>
+              {name}
+            </span>
+            {height > 38 && (
+              <span style={{
+                color: "rgba(255,255,255,0.85)",
+                fontSize: Math.max(fontSize - 2, 8),
+                marginTop: 2,
+                whiteSpace: "nowrap",
+              }}>
+                {formatAmount(value)}
+              </span>
+            )}
+          </div>
+        </foreignObject>
       )}
     </g>
   );
@@ -309,7 +329,7 @@ export default function TreemapChart({
             데이터가 없습니다.
           </div>
         ) : (
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height="100%" style={{ cursor: "pointer" }}>
             <Treemap
               data={chartData}
               dataKey="size"
