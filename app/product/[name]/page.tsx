@@ -5,6 +5,7 @@ import Header from "@/components/Header";
 import HeroBanner from "@/components/HeroBanner";
 import FilterBar from "@/components/FilterBar";
 import KPIBar from "@/components/KPIBar";
+import MacroSection from "@/components/MacroSection";
 import {
   getTreemapData,
   getCountryTreemapData,
@@ -277,9 +278,7 @@ function ProductDetailContent() {
 
         </div>
 
-        <div className="macro-section">
-          <div className="macro-title">거시경제 지표</div>
-        </div>
+        <MacroSection />
       </div>
     </div>
   );
