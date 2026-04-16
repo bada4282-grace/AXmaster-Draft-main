@@ -49,7 +49,7 @@ export default function FilterBar({
 
   // 해당 연도의 국가/품목 목록 (현재 tradeType 기준)
   const countryNames = getCountryData(year, tradeType).map((c) => c.name);
-  const productNames = getTreemapData(year, tradeType).map((p) => p.name);
+  const productNames = [...new Set(getTreemapData(year, tradeType).map((p) => p.name))];
 
   const handleMonth = (m: string) => {
     setMonth(m);
