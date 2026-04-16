@@ -210,14 +210,13 @@ export default function FilterBar({
             className="filter-select"
             value={mtiDepth}
             onChange={(e) => onMtiDepthChange(Number(e.target.value))}
-            style={{ width: 80 }}
+            style={{ width: 140 }}
           >
-            <option value={1}>1단위</option>
-            <option value={2}>2단위</option>
-            <option value={3}>3단위</option>
+            <option value={1}>1단위 (대분류)</option>
+            <option value={2}>2단위 (중분류)</option>
+            <option value={3}>3단위 (소분류)</option>
             <option value={4}>4단위</option>
-            <option value={5}>5단위</option>
-            <option value={6}>6단위</option>
+            <option value={6}>6단위 (최소분류)</option>
           </select>
         </div>
       )}

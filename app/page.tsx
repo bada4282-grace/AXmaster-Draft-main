@@ -26,7 +26,7 @@ function HomeContent() {
   const [tradeType, setTradeType] = useState<TradeType>("수출");
   const [month, setMonth] = useState("");
   const [, setPeriod] = useState("annual");
-  const [mtiDepth, setMtiDepth] = useState(6);
+  const [mtiDepth, setMtiDepth] = useState(3);
 
   return (
     <div style={{ minHeight: "100vh", background: "#f8f8f8" }}>

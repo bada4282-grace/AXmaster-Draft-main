@@ -143,7 +143,7 @@ export default function TreemapChart({
   year = DEFAULT_YEAR,
   month = "",
   tradeType = "수출",
-  mtiDepth = 6,
+  mtiDepth = 3,
 }: TreemapChartProps) {
   const router = useRouter();
 
@@ -288,7 +288,7 @@ export default function TreemapChart({
       `}</style>
 
       <div className="flex-1 min-h-0">
-        {noData ? (
+        {noData || displayData.filter((d) => d.value > 0).length === 0 ? (
           <div style={{
             display: "flex", alignItems: "center", justifyContent: "center",
             height: "100%", color: "#94a3b8", fontSize: 13,
