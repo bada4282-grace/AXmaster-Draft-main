@@ -210,6 +210,31 @@ function getKoreanName(alpha2?: string, fallback?: string): string {
   return fallback ?? "";
 }
 
+// ─── Point-in-polygon (ray casting) ─────────────────────────────────────────
+// 낮은 줌에서 queryRenderedFeatures의 simplified geometry 오차를 보정하기 위해
+// 원본 GeoJSON 좌표 기반으로 정확한 국가를 판별
+function pointInRing(lng: number, lat: number, ring: number[][]): boolean {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [xi, yi] = ring[i];
+    const [xj, yj] = ring[j];
+    if (((yi > lat) !== (yj > lat)) && (lng < (xj - xi) * (lat - yi) / (yj - yi) + xi)) {
+      inside = !inside;
+    }
+  }
+  return inside;
+}
+
+function pointInGeometry(lng: number, lat: number, geom: GeoJSON.Geometry): boolean {
+  if (geom.type === "Polygon") {
+    return pointInRing(lng, lat, geom.coordinates[0]);
+  }
+  if (geom.type === "MultiPolygon") {
+    return geom.coordinates.some((poly) => pointInRing(lng, lat, poly[0]));
+  }
+  return false;
+}
+
 // ─── 타입 ────────────────────────────────────────────────────────────────────
 interface Tooltip {
   x: number; y: number;
@@ -437,8 +462,7 @@ export default function WorldMap({
       map.setFeatureState({ source: "countries", id: hoverIdRef.current }, { hover: false });
       hoverIdRef.current = null;
     }
-    // 마커 위에 호버 중이면 툴팁 유지
-    if (!markerHoverRef.current) setTooltip(null);
+    setTooltip(null);
   }, []);
 
   const onMouseMove = useCallback((e: MapLayerMouseEvent) => {
@@ -446,14 +470,39 @@ export default function WorldMap({
     const map = mapRef.current?.getMap();
     if (!map) return;
 
-    const features = (e as any).features as any[] | undefined;
+    const features = map.queryRenderedFeatures(e.point, { layers: ["countries-fill"] });
     if (!features || features.length === 0) {
       clearHover();
       return;
     }
 
-    const f  = features[0];
-    const id = f.id as number | undefined;
+    // 커서의 실제 경위도를 [-180, 180] 범위로 정규화
+    let lng = e.lngLat.lng % 360;
+    if (lng > 180) lng -= 360;
+    if (lng < -180) lng += 360;
+    const lat = e.lngLat.lat;
+
+    // point-in-polygon으로 정확한 국가 판별 (낮은 줌에서 simplified geometry 오차 보정)
+    let p: Record<string, any> = features[0].properties ?? {};
+    let id: number | undefined = features[0].id as number | undefined;
+
+    if (coloredGeoJSON) {
+      const candidateAlphas = new Set(
+        features.map((feat) => feat.properties?.alpha2 as string).filter(Boolean)
+      );
+      // 1차: queryRenderedFeatures 후보 중 실제 포인트를 포함하는 피처
+      let matched = coloredGeoJSON.features.find(
+        (feat) => candidateAlphas.has(feat.properties?.alpha2) && pointInGeometry(lng, lat, feat.geometry)
+      );
+      // 2차: 후보에 없으면 전체 GeoJSON에서 검색
+      if (!matched) {
+        matched = coloredGeoJSON.features.find((feat) => pointInGeometry(lng, lat, feat.geometry));
+      }
+      if (matched) {
+        p = matched.properties ?? p;
+        id = typeof matched.id === "number" ? matched.id : id;
+      }
+    }
 
     // 이전 hover 해제
     if (hoverIdRef.current !== null && hoverIdRef.current !== id) {
@@ -464,7 +513,6 @@ export default function WorldMap({
       hoverIdRef.current = id;
     }
 
-    const p           = f.properties ?? {};
     const countryName = p.country_name || getKoreanName(p.alpha2 || undefined);
     const oe          = e.originalEvent as MouseEvent;
     setTooltip({
@@ -478,20 +526,41 @@ export default function WorldMap({
         : [],
       isTop30: !!p.is_top30,
     });
-  }, [clearHover]);
+  }, [clearHover, coloredGeoJSON]);
 
   const onMouseLeave = useCallback(() => clearHover(), [clearHover]);
 
   const onClick = useCallback((e: MapLayerMouseEvent) => {
     if (markerHoverRef.current) return;
-    const features = (e as any).features as any[] | undefined;
+    const map = mapRef.current?.getMap();
+    if (!map) return;
+    const features = map.queryRenderedFeatures(e.point, { layers: ["countries-fill"] });
     if (!features || features.length === 0) return;
-    const p = features[0].properties ?? {};
+
+    // point-in-polygon으로 정확한 국가 판별
+    let p: Record<string, any> = features[0].properties ?? {};
+    if (coloredGeoJSON) {
+      let lng = e.lngLat.lng % 360;
+      if (lng > 180) lng -= 360;
+      if (lng < -180) lng += 360;
+      const lat = e.lngLat.lat;
+      const candidateAlphas = new Set(
+        features.map((feat) => feat.properties?.alpha2 as string).filter(Boolean)
+      );
+      let matched = coloredGeoJSON.features.find(
+        (feat) => candidateAlphas.has(feat.properties?.alpha2) && pointInGeometry(lng, lat, feat.geometry)
+      );
+      if (!matched) {
+        matched = coloredGeoJSON.features.find((feat) => pointInGeometry(lng, lat, feat.geometry));
+      }
+      if (matched) p = matched.properties ?? p;
+    }
+
     if (p.is_top30 && p.country_name) {
       const mode = tradeType === "수입" ? "import" : "export";
       router.push(`/country/${encodeURIComponent(p.country_name as string)}?mode=${mode}`);
     }
-  }, [router, tradeType]);
+  }, [router, tradeType, coloredGeoJSON]);
 
   // ─ 로드 후 컨테이너 너비 기반 minZoom 동적 설정 ─
   // MapLibre 타일 기준: zoom z 에서 세계 너비 = 512 * 2^z px
@@ -512,7 +581,7 @@ export default function WorldMap({
   return (
     <div className="flex flex-col w-full h-full" style={{ minHeight: 340 }}>
       {/* 지도 영역 */}
-      <div className="relative flex-1 bg-[#F2FBFF]" onMouseLeave={() => { markerHoverRef.current = false; setTooltip(null); }}>
+      <div className="relative flex-1 bg-[#F2FBFF]" onMouseLeave={() => { markerHoverRef.current = false; clearHover(); setTooltip(null); }}>
         <ReactMap
           ref={mapRef}
           mapStyle={MAP_STYLE}

@@ -70,7 +70,7 @@ function HomeContent() {
               onCountryChange={setProductCountry}
             />
 
-            <KPIBar year={year} tradeType={tradeType} />
+            <KPIBar year={year} month={month} tradeType={tradeType} />
 
             {/* Main dashboard content */}
             <div className="split-panel" style={{ position: "relative" }}>

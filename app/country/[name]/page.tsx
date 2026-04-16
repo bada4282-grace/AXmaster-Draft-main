@@ -158,14 +158,20 @@ function CountryDetailContent() {
 
             {kpi ? (
               <KPIBar
+                year={year}
+                month={month}
                 tradeType={tradeType}
                 exportVal={kpi.export}
+                exportChange={kpi.exportChange}
+                exportUp={kpi.exportUp}
                 importVal={kpi.import}
+                importChange={kpi.importChange}
+                importUp={kpi.importUp}
                 balance={kpi.balance}
                 balancePositive={kpi.positive}
               />
             ) : (
-              <KPIBar year={year} tradeType={tradeType} />
+              <KPIBar year={year} month={month} tradeType={tradeType} />
             )}
 
             <div className="split-panel" style={{ position: "relative" }}>

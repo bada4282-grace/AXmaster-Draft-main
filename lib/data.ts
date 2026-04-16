@@ -264,6 +264,10 @@ export interface CountryKPI {
   import: string;
   balance: string;
   positive: boolean;
+  exportChange: number;
+  exportUp: boolean;
+  importChange: number;
+  importUp: boolean;
 }
 
 export function getCountryKpi(year: string, countryName: string): CountryKPI | undefined {
