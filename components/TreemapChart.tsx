@@ -8,8 +8,8 @@ import { rechartsTooltipSurfaceProps } from "@/components/RechartsTooltip";
 
 /** MTI 대분류별 SVG 아이콘 path */
 const MTI_ICON_PATHS: Record<number, React.ReactNode> = {
-  // 0 농림수산물 — 잎사귀
-  0: <path d="M12 3c-3 4-7 7-7 11a7 7 0 0 0 14 0c0-4-4-7-7-11z" />,
+  // 0 농림수산물 — 벼 이삭 (줄기 + 늘어진 낟알 + 잎)
+  0: <><path d="M9 2c0 0-1 2-2 3.5S4.5 8 5 9s2 0.5 3-0.5S10 5.5 9 2z" /><path d="M8 6c0 0-2 1.5-3 3S3 13 3.5 13.5s2-0.5 2.5-2S10 8 8 6z" /><path d="M7 10.5c0 0-2 2-2.5 3.5S4 17.5 4.5 18s1.5-0.5 2-2S9 12.5 7 10.5z" /><path d="M9 2c1 3 2 8 3 12s2 6 3 8" /><path d="M15 13c2-3 5-4 6-3s-1 3-3 4-3 0.5-3-1z" /><path d="M14 17c1.5-2 4-3 5-2s-0.5 2.5-2 3-3 0-3-1z" /><path d="M15 21h-6" /></>,
   // 1 광산물 — 다이아몬드
   1: <><path d="M6 3h12l4 6-10 12L2 9z" /><path d="M2 9h20" /></>,
   // 2 화학공업제품 — 플라스크
