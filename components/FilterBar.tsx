@@ -122,10 +122,10 @@ export default function FilterBar({
       <div className="filter-section filter-section-divider">
         <div className="filter-group-inline">
           <select
-            className="filter-select"
+            className={`filter-select${mode === "product" ? " filter-select-mid" : ""}`}
             value={year}
             onChange={(e) => handleYear(e.target.value)}
-            style={{ width: 140 }}
+            style={mode !== "product" ? { width: 140 } : undefined}
           >
             <option value="2026">2026</option>
             <option value="2025">2025</option>
@@ -137,19 +137,35 @@ export default function FilterBar({
           </select>
 
           <select
-            className="filter-select"
+            className={`filter-select${mode === "product" ? " filter-select-mid" : ""}`}
             value={month}
             onChange={(e) => handleMonth(e.target.value)}
             disabled={disableMonthPeriod}
-            style={{ width: 140, ...(disableMonthPeriod ? { opacity: 0.4, cursor: "not-allowed", pointerEvents: "none" as const } : {}) }}
+            style={mode !== "product"
+              ? { width: 140, ...(disableMonthPeriod ? { opacity: 0.4, cursor: "not-allowed", pointerEvents: "none" as const } : {}) }
+              : disableMonthPeriod ? { opacity: 0.4, cursor: "not-allowed", pointerEvents: "none" as const } : undefined}
           >
-            <option value="">연간 데이터</option>
+            <option value="">연간데이터</option>
             {Array.from({ length: 12 }, (_, i) => (
               <option key={i} value={String(i + 1).padStart(2, "0")}>
                 {i + 1}월
               </option>
             ))}
           </select>
+
+          {mtiDepth !== undefined && onMtiDepthChange && (
+            <select
+              className="filter-select filter-select-mid"
+              value={mtiDepth}
+              onChange={(e) => onMtiDepthChange(Number(e.target.value))}
+            >
+              <option value={1}>1단위(대분류)</option>
+              <option value={2}>2단위(중분류)</option>
+              <option value={3}>3단위(소분류)</option>
+              <option value={4}>4단위</option>
+              <option value={6}>6단위(최소)</option>
+            </select>
+          )}
         </div>
       </div>
 
@@ -202,23 +218,6 @@ export default function FilterBar({
           )}
         </div>
       </div>
-
-      {mtiDepth !== undefined && onMtiDepthChange && (
-        <div className="filter-section filter-section-divider">
-          <select
-            className="filter-select"
-            value={mtiDepth}
-            onChange={(e) => onMtiDepthChange(Number(e.target.value))}
-            style={{ width: 140 }}
-          >
-            <option value={1}>1단위 (대분류)</option>
-            <option value={2}>2단위 (중분류)</option>
-            <option value={3}>3단위 (소분류)</option>
-            <option value={4}>4단위</option>
-            <option value={6}>6단위 (최소분류)</option>
-          </select>
-        </div>
-      )}
     </div>
 
     {/* 데이터 없음 토스트 — 대시보드 영역 중앙에 표시 */}

@@ -204,6 +204,7 @@ header.w-full {
 }
 .filter-section {
   flex: 1 1 0;
+  min-width: 0;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -211,7 +212,7 @@ header.w-full {
   transition: flex 0.3s ease;
 }
 .filter-section-divider {
-  border-left: 1px solid #f0f0f0;
+  border-left: 1px solid #ddd;
 }
 .filter-group-inline {
   display: flex;
@@ -247,6 +248,13 @@ header.w-full {
   min-width: 72px;
 }
 .filter-select:focus { outline: none; border-color: #E02020; }
+
+/* 중앙 그룹(연도·기간·단위) — 버튼 크기 통일 & 축소 */
+.filter-select-mid {
+  width: 108px;
+  padding: 0 22px 0 8px;
+  font-size: 13px;
+}
 
 /* 수출/수입: 중앙 세로선 + 선택 구간만 회색 배경·진한 글자 */
 .toggle-btn-group {
@@ -292,7 +300,7 @@ header.w-full {
 .kpi-item {
   flex: 1;
   padding: 12px 20px;
-  border-right: 1px solid #f0f0f0;
+  border-right: 1px solid #ddd;
 }
 .kpi-item:last-child { border-right: none; }
 .kpi-label { font-size: 13px; color: #666; margin-bottom: 2px; }
