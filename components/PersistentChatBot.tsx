@@ -1,11 +1,20 @@
 "use client";
 import { useState, useCallback, useRef, useEffect, memo } from "react";
+import { usePathname } from "next/navigation";
 import ChatBot from "@/components/ChatBot";
 
 // props가 고정값이므로 페이지 이동 시 절대 re-render되지 않음
 const StableChatBot = memo(ChatBot);
 
+const HIDDEN_PATHS = ["/login", "/signup"];
+
 export default function PersistentChatBot() {
+  const pathname = usePathname();
+
+  // 로그인/회원가입 페이지에서는 챗봇 숨김
+  if (HIDDEN_PATHS.includes(pathname)) {
+    return null;
+  }
   const [chatOpen, setChatOpen] = useState(true);
   const asideRef = useRef<HTMLElement>(null);
 
