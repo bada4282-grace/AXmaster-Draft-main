@@ -77,6 +77,7 @@ export default function ChatBot({
   const [welcomeTrigger, setWelcomeTrigger] = useState(0);
   const currentUserIdRef = useRef<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const welcomeFetchedRef = useRef(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const increaseFontSize = () => setFontSize(prev => Math.min(prev + 1, 16));
@@ -166,7 +167,14 @@ export default function ChatBot({
   }, [open, user, welcomeTrigger]);
 
   useEffect(() => {
+<<<<<<< Updated upstream
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+=======
+    const container = messagesContainerRef.current;
+    if (container) {
+      container.scrollTop = container.scrollHeight;
+    }
+>>>>>>> Stashed changes
   }, [messages]);
 
   const send = async (overrideMsg?: string) => {
@@ -301,7 +309,7 @@ export default function ChatBot({
       </div>
 
       {/* Messages */}
-      <div className="chatbot-messages" style={{ minHeight: 0 }}>
+      <div ref={messagesContainerRef} className="chatbot-messages" style={{ minHeight: 0 }}>
         {messages.map((msg, i) => (
           <div key={i} style={{ display: "flex", justifyContent: msg.role === "user" ? "flex-end" : "flex-start", alignItems: "flex-start", gap: 4 }}>
             {msg.role === "bot" && (
