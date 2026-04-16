@@ -180,8 +180,6 @@ function normalizeGeometry(geom: GeoJSON.Geometry): GeoJSON.Geometry {
 }
 
 let _geoCache: GeoJSON.FeatureCollection | null = null;
-// 연간 집계 모듈 캐시 — 동일 year+tradeType 조합의 12회 Supabase 호출 방지
-const _annualRankCache = new Map<string, MonthlyCountryMapItem[]>();
 // 품목별 국가 순위 캐시
 const _productRankCache = new Map<string, MonthlyCountryMapItem[]>();
 
@@ -338,43 +336,12 @@ export default function WorldMap({
     return () => { mounted = false; };
   }, [year, month, tradeType]);
 
-  // ─ 연간 집계 (월 미선택 시 12개월 합산 → rank 1~30) ─
-  const [annualRanks, setAnnualRanks] = useState<MonthlyCountryMapItem[] | null>(null);
-  useEffect(() => {
-    if (month) { return; }
-    const cacheKey = `${year}-${tradeType}`;
-    if (_annualRankCache.has(cacheKey)) {
-      const cached = _annualRankCache.get(cacheKey)!;
-      Promise.resolve().then(() => setAnnualRanks(cached));
-      return;
-    }
-    let mounted = true;
-    const MONTHS = ["01","02","03","04","05","06","07","08","09","10","11","12"];
-    Promise.allSettled(
-      MONTHS.map((m) => getMonthlyCountryMapData(year, m, tradeType))
-    ).then((results) => {
-      if (!mounted) return;
-      const totals = new Map<string, number>();
-      results.forEach((r) => {
-        if (r.status === "fulfilled") {
-          r.value.forEach((item) => {
-            totals.set(item.ctr_name, (totals.get(item.ctr_name) ?? 0) + item.total_amt);
-          });
-        }
-      });
-      const sorted: MonthlyCountryMapItem[] = Array.from(totals.entries())
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 30)
-        .map(([ctr_name, total_amt], i) => ({ ctr_name, total_amt, rank: i + 1 }));
-      const result = sorted.length > 0 ? sorted : null;
-      if (result) _annualRankCache.set(cacheKey, result);
-      setAnnualRanks(result);
-    });
-    return () => { mounted = false; };
-  }, [year, tradeType, month]);
+  // ─ 연간 집계: 정적 데이터 사용 (Supabase 호출 불필요) ─
 
   const activeCountryData = useMemo((): CountryData[] => {
-    const effectiveRanks = month ? monthlyRanks : annualRanks;
+    // 월 미선택(연간) 시 정적 데이터를 그대로 사용 — Supabase 호출 없음
+    if (!month) return countryData;
+    const effectiveRanks = monthlyRanks;
     if (!effectiveRanks) return countryData;
 
     const rankByName = new Map<string, MonthlyCountryMapItem>();
@@ -409,7 +376,7 @@ export default function WorldMap({
     });
 
     return [...updated, ...extras];
-  }, [countryData, month, monthlyRanks, annualRanks]);
+  }, [countryData, month, monthlyRanks]);
 
   // 품목 국가 ISO 맵 (product rank → ISO alpha-2)
   // 동적 데이터 없으면 정적 topCountries + topProducts 역색인 fallback
@@ -467,10 +434,9 @@ export default function WorldMap({
 
     // 월별/연간 Supabase rank를 ISO alpha-2 기준으로 직접 맵핑
     // (static 20개국 리스트에 없는 22~30위 국가도 커버)
-    const effectiveRanks = month ? monthlyRanks : annualRanks;
     const monthlyByIso = new Map<string, MonthlyCountryMapItem>();
-    if (effectiveRanks) {
-      effectiveRanks.forEach((row) => {
+    if (month && monthlyRanks) {
+      monthlyRanks.forEach((row) => {
         const iso = KO_NAME_TO_ISO[row.ctr_name];
         if (iso) monthlyByIso.set(iso, row);
       });
@@ -524,7 +490,7 @@ export default function WorldMap({
         };
       }),
     };
-  }, [baseGeoJSON, activeCountryData, filterTier, month, monthlyRanks, annualRanks, productByIso]);
+  }, [baseGeoJSON, activeCountryData, filterTier, month, monthlyRanks, productTopIso]);
 
   // ─ 툴팁 ─
   const [tooltip, setTooltip] = useState<Tooltip | null>(null);
