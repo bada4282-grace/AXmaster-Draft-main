@@ -212,7 +212,7 @@ export default function ChatBot({
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: userMsg, history: [] }),
+        body: JSON.stringify({ message: userMsg, history }),
       });
 
       if (!res.body) throw new Error("No response body");
