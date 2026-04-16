@@ -73,7 +73,14 @@ export default function KPIBar({
   const urlMonth = useSearchParams().get("month") ?? "";
   const effectiveMonth = month || urlMonth;
 
+  // 불완전 연도 판별: 현재 연도이면서 12월 데이터가 아직 없는 경우
+  const currentYear = new Date().getFullYear();
+  const isIncompleteYear = parseInt(year, 10) >= currentYear;
+
   const [mom, setMom] = useState<MomState | null>(null);
+  // 불완전 연도 자동 전월대비용
+  const [incMom, setIncMom] = useState<MomState | null>(null);
+  const [incMonthLabel, setIncMonthLabel] = useState("");
 
   useEffect(() => {
     let mounted = true;
@@ -119,18 +126,85 @@ export default function KPIBar({
     return () => { mounted = false; };
   }, [year, effectiveMonth, hasCustom]);
 
+  // 불완전 연도 + 월 미선택 시: 마지막 월 자동 탐지 → 전월 대비 계산
+  useEffect(() => {
+    let mounted = true;
+    if (effectiveMonth || hasCustom || !isIncompleteYear) {
+      setIncMom(null);
+      return () => { mounted = false; };
+    }
+
+    // 12월부터 역순으로 데이터 있는 월 찾기
+    const findLastMonth = async () => {
+      for (let m = 12; m >= 1; m--) {
+        const mm = String(m).padStart(2, "0");
+        const expData = await getMonthlyCountryMapData(year, mm, "수출");
+        if (expData.length > 0) return mm;
+      }
+      return null;
+    };
+
+    findLastMonth().then(async (lastMonth) => {
+      if (!mounted || !lastMonth) return;
+      const { y: py, m: pm } = prevMonthInfo(year, lastMonth);
+
+      const [ce, pe, ci, pi] = await Promise.all([
+        getMonthlyCountryMapData(year, lastMonth, "수출"),
+        getMonthlyCountryMapData(py, pm, "수출"),
+        getMonthlyCountryMapData(year, lastMonth, "수입"),
+        getMonthlyCountryMapData(py, pm, "수입"),
+      ]);
+      if (!mounted) return;
+
+      const ceAmt = sumAmt(ce);
+      const peAmt = sumAmt(pe);
+      const ciAmt = sumAmt(ci);
+      const piAmt = sumAmt(pi);
+
+      const pct = (cur: number, prev: number) =>
+        prev === 0 ? 0 : parseFloat(Math.abs(((cur - prev) / prev) * 100).toFixed(1));
+
+      const ceBil = ceAmt / 1e8;
+      const ciBil = ciAmt / 1e8;
+
+      setIncMonthLabel(`${parseInt(lastMonth, 10)}월`);
+      setIncMom({
+        exportVal: fmtBillion(ceBil),
+        exportChange: pct(ceAmt, peAmt),
+        exportUp: ceAmt >= peAmt,
+        importVal: fmtBillion(ciBil),
+        importChange: pct(ciAmt, piAmt),
+        importUp: ciAmt >= piAmt,
+        balanceVal: fmtBillion(Math.abs(ceBil - ciBil)),
+        balancePositive: ceBil >= ciBil,
+      });
+    }).catch(() => {
+      if (mounted) setIncMom(null);
+    });
+
+    return () => { mounted = false; };
+  }, [year, effectiveMonth, hasCustom, isIncompleteYear]);
+
   const useMom = !!effectiveMonth && !hasCustom && !!mom;
+  const useIncMom = !effectiveMonth && !hasCustom && isIncompleteYear && !!incMom;
 
-  const periodLabel = effectiveMonth ? "(전월 대비)" : "(전년 대비)";
+  const periodLabel = effectiveMonth
+    ? "(전월 대비)"
+    : useIncMom
+      ? "(전월 대비)"
+      : "(전년 대비)";
 
-  const ev = pEv ?? (useMom ? mom!.exportVal  : kpi.export.value);
-  const ec = pEc ?? (useMom ? mom!.exportChange : kpi.export.change);
-  const eu = pEu ?? (useMom ? mom!.exportUp    : kpi.export.up);
-  const iv = pIv ?? (useMom ? mom!.importVal  : kpi.import.value);
-  const ic = pIc ?? (useMom ? mom!.importChange : kpi.import.change);
-  const iu = pIu ?? (useMom ? mom!.importUp    : kpi.import.up);
-  const bv = pBv ?? (useMom ? mom!.balanceVal  : kpi.balance.value);
-  const bp = pBp ?? (useMom ? mom!.balancePositive : kpi.balance.positive);
+  const ev = pEv ?? (useMom ? mom!.exportVal : useIncMom ? incMom!.exportVal : kpi.export.value);
+  const ec = pEc ?? (useMom ? mom!.exportChange : useIncMom ? incMom!.exportChange : kpi.export.change);
+  const eu = pEu ?? (useMom ? mom!.exportUp : useIncMom ? incMom!.exportUp : kpi.export.up);
+  const iv = pIv ?? (useMom ? mom!.importVal : useIncMom ? incMom!.importVal : kpi.import.value);
+  const ic = pIc ?? (useMom ? mom!.importChange : useIncMom ? incMom!.importChange : kpi.import.change);
+  const iu = pIu ?? (useMom ? mom!.importUp : useIncMom ? incMom!.importUp : kpi.import.up);
+  const bv = pBv ?? (useMom ? mom!.balanceVal : useIncMom ? incMom!.balanceVal : kpi.balance.value);
+  const bp = pBp ?? (useMom ? mom!.balancePositive : useIncMom ? incMom!.balancePositive : kpi.balance.positive);
+
+  // 불완전 연도 + 월 미선택이면 증감율 항상 숨김
+  const hideChange = !hasCustom && !effectiveMonth && isIncompleteYear;
 
   // 상승: 빨간색, 하락: 파란색 (한국 금융 관례)
   const expColor  = eu ? "#E02020" : "#185FA5";
@@ -140,13 +214,17 @@ export default function KPIBar({
     <div className="kpi-item">
       <div className="kpi-label">수출</div>
       <div className="kpi-value">$ {ev} 억</div>
-      <div className={eu ? "kpi-change-up" : "kpi-change-down"} style={{ color: expColor }}>
-        <span className="kpi-change-icon">{eu ? "▲" : "▼"}</span>
-        <span>{ec}%</span>
-        <span style={{ fontSize: 10, color: expColor, opacity: 0.55, marginLeft: 4, fontWeight: 400 }}>
-          {periodLabel}
-        </span>
-      </div>
+      {hideChange ? (
+        <div style={{ fontSize: 12, color: "#999", marginTop: 2 }}>- <span style={{ fontSize: 10, opacity: 0.55 }}>(전월 대비)</span></div>
+      ) : (
+        <div className={eu ? "kpi-change-up" : "kpi-change-down"} style={{ color: expColor }}>
+          <span className="kpi-change-icon">{eu ? "▲" : "▼"}</span>
+          <span>{ec}%</span>
+          <span style={{ fontSize: 10, color: expColor, opacity: 0.55, marginLeft: 4, fontWeight: 400 }}>
+            {periodLabel}
+          </span>
+        </div>
+      )}
     </div>
   );
 
@@ -154,13 +232,17 @@ export default function KPIBar({
     <div className="kpi-item">
       <div className="kpi-label">수입</div>
       <div className="kpi-value">$ {iv} 억</div>
-      <div className={iu ? "kpi-change-up" : "kpi-change-down"} style={{ color: impColor }}>
-        <span className="kpi-change-icon">{iu ? "▲" : "▼"}</span>
-        <span>{ic}%</span>
-        <span style={{ fontSize: 10, color: impColor, opacity: 0.55, marginLeft: 4, fontWeight: 400 }}>
-          {periodLabel}
-        </span>
-      </div>
+      {hideChange ? (
+        <div style={{ fontSize: 12, color: "#999", marginTop: 2 }}>- <span style={{ fontSize: 10, opacity: 0.55 }}>(전월 대비)</span></div>
+      ) : (
+        <div className={iu ? "kpi-change-up" : "kpi-change-down"} style={{ color: impColor }}>
+          <span className="kpi-change-icon">{iu ? "▲" : "▼"}</span>
+          <span>{ic}%</span>
+          <span style={{ fontSize: 10, color: impColor, opacity: 0.55, marginLeft: 4, fontWeight: 400 }}>
+            {periodLabel}
+          </span>
+        </div>
+      )}
     </div>
   );
 

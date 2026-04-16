@@ -73,10 +73,13 @@ function ProductDetailContent() {
       : getAggregatedProductTrend(productCode, tradeType)
     : [];
   // "2026(1-2월)" → "2026" 으로 정리, 괄호가 있으면 불완전 데이터로 표시
+  const currentFullYear = String(new Date().getFullYear());
   const incompleteYears = new Set<string>();
   const trend = rawTrend.map((d) => {
     const clean = d.year.replace(/\(.*\)/, "").trim();
     if (clean !== d.year) incompleteYears.add(clean);
+    // 현재 연도 이상은 불완전 연도로 처리
+    if (parseInt(clean, 10) >= parseInt(currentFullYear, 10)) incompleteYears.add(clean);
     return { ...d, year: clean };
   });
   const trendValues = trend.map((d) => d.value).filter((v) => v > 0);
@@ -120,7 +123,9 @@ function ProductDetailContent() {
   const prevYear = String(parseInt(year) - 1);
   const currentVal = trend.find((d) => d.year === year)?.value ?? 0;
   const prevVal = trend.find((d) => d.year === prevYear)?.value ?? 0;
-  const changeRate = prevVal ? ((currentVal - prevVal) / prevVal * 100).toFixed(1) : null;
+  // 불완전 연도(현재 연도 or 전년)가 포함되면 증감율 표시하지 않음
+  const isComplete = !incompleteYears.has(year) && !incompleteYears.has(prevYear);
+  const changeRate = (isComplete && prevVal) ? ((currentVal - prevVal) / prevVal * 100).toFixed(1) : null;
   const tradeLabel = tradeType === "수입" ? "수입" : "수출";
   const tooltipFollowProps = {
     ...rechartsTooltipSurfaceProps,
@@ -191,20 +196,27 @@ function ProductDetailContent() {
                   <div style={{ fontSize: 10, color: "#888", fontWeight: 500 }}>달러</div>
                 </div>
 
-                {changeRate !== null && (
-                  <div className="info-card">
-                    <div className="info-card-label">전년 대비</div>
-                    <div style={{
-                      fontSize: 18, fontWeight: 900,
-                      color: parseFloat(changeRate) >= 0 ? "#E02020" : "#185FA5",
-                    }}>
-                      {Math.abs(parseFloat(changeRate))}%
-                    </div>
-                    <div style={{ fontSize: 10, color: parseFloat(changeRate) >= 0 ? "#E02020" : "#185FA5", fontWeight: 500 }}>
-                      {parseFloat(changeRate) >= 0 ? "상승" : "하락"}
-                    </div>
-                  </div>
-                )}
+                <div className="info-card">
+                  <div className="info-card-label">전년 대비</div>
+                  {changeRate !== null ? (
+                    <>
+                      <div style={{
+                        fontSize: 18, fontWeight: 900,
+                        color: parseFloat(changeRate) >= 0 ? "#E02020" : "#185FA5",
+                      }}>
+                        {Math.abs(parseFloat(changeRate))}%
+                      </div>
+                      <div style={{ fontSize: 10, color: parseFloat(changeRate) >= 0 ? "#E02020" : "#185FA5", fontWeight: 500 }}>
+                        {parseFloat(changeRate) >= 0 ? "상승" : "하락"}
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div style={{ fontSize: 18, fontWeight: 900, color: "#999" }}>-</div>
+                      <div style={{ fontSize: 10, color: "#999", fontWeight: 500 }}>불완전 연도</div>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
 
