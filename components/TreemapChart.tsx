@@ -133,6 +133,7 @@ interface TreemapChartProps {
   month?: string;
   tradeType?: TradeType;
   mtiDepth?: number;
+  onLoadingChange?: (loading: boolean) => void;
 }
 
 export default function TreemapChart({
@@ -142,6 +143,7 @@ export default function TreemapChart({
   month = "",
   tradeType = "수출",
   mtiDepth = 3,
+  onLoadingChange,
 }: TreemapChartProps) {
   const router = useRouter();
 
@@ -174,6 +176,7 @@ export default function TreemapChart({
       startTreemapAnimation();
       return;
     }
+    onLoadingChange?.(true);
     const fetch = forCountry && countryName
       ? getCountryMonthlyTreemapData(year, month, countryName, tradeType)
       : getMonthlyTreemapData(year, month, tradeType);
@@ -192,7 +195,7 @@ export default function TreemapChart({
         setNoData(false);
         setTreemapData(annualData);
       })
-      .finally(() => startTreemapAnimation());
+      .finally(() => { startTreemapAnimation(); onLoadingChange?.(false); });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [year, month, tradeType, countryName, forCountry]);
 
@@ -205,8 +208,13 @@ export default function TreemapChart({
   }, []);
 
   const aggregatedData = aggregateTreemapByDepth(treemapData, mtiDepth);
+  // 카테고리 버튼 클릭 시: 전체 데이터에서 해당 카테고리 Top 30 표시
+  // 단위 셀렉터 변경 시: Top 100 기반 집계 데이터 표시
   const displayData = zoomedMti !== null
-    ? aggregatedData.filter((d) => d.mti === zoomedMti)
+    ? treemapData
+        .filter((d) => d.mti === zoomedMti)
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 30)
     : aggregatedData;
 
   const chartData = [{

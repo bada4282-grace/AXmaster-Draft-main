@@ -224,6 +224,7 @@ interface WorldMapProps {
   year?: string;
   month?: string;
   tradeType?: TradeType;
+  onLoadingChange?: (loading: boolean) => void;
 }
 
 // ─── 컴포넌트 ─────────────────────────────────────────────────────────────────
@@ -231,6 +232,7 @@ export default function WorldMap({
   year = DEFAULT_YEAR,
   month = "",
   tradeType = "수출",
+  onLoadingChange,
 }: WorldMapProps) {
   const router    = useRouter();
   const mapRef        = useRef<MapRef>(null);
@@ -272,9 +274,11 @@ export default function WorldMap({
   useEffect(() => {
     let mounted = true;
     if (!month) { return () => { mounted = false; }; }
+    onLoadingChange?.(true);
     getMonthlyCountryMapData(year, month, tradeType)
       .then((rows) => { if (mounted) setMonthlyRanks(rows); })
-      .catch(() => { if (mounted) setMonthlyRanks(null); });
+      .catch(() => { if (mounted) setMonthlyRanks(null); })
+      .finally(() => { if (mounted) onLoadingChange?.(false); });
     return () => { mounted = false; };
   }, [year, month, tradeType]);
 

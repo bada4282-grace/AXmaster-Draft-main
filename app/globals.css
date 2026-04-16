@@ -3,6 +3,10 @@
 @tailwind components;
 @tailwind utilities;
 
+@keyframes dash-spin {
+  to { transform: rotate(360deg); }
+}
+
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 /* ── 앱 전체 shell: 대시보드(좌) + 챗봇 사이드바(우) ── */

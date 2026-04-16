@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import Header from "@/components/Header";
@@ -34,6 +34,11 @@ function CountryDetailContent() {
   const [subTab, setSubTab] = useState<"품목별" | "시계열 추이">("품목별");
   const [mtiDepth, setMtiDepth] = useState(3);
 
+  const [loadingCount, setLoadingCount] = useState(0);
+  const isLoading = loadingCount > 0;
+  const handleLoadingChange = useCallback((loading: boolean) => {
+    setLoadingCount((c) => c + (loading ? 1 : -1));
+  }, []);
 
   // 연도·수출입 모드에 따라 순위·비중이 달라짐
   const country = getCountryByName(name, year, tradeType) ?? {
@@ -143,7 +148,7 @@ function CountryDetailContent() {
               <KPIBar year={year} tradeType={tradeType} />
             )}
 
-            <div className="split-panel">
+            <div className="split-panel" style={{ position: "relative" }}>
             {/* Left info cards */}
             <div className="left-cards">
               <div className="left-cards-stack">
@@ -215,7 +220,7 @@ function CountryDetailContent() {
 
               <div style={{ flex: 1, padding: 8, overflow: "hidden" }}>
                 {subTab === "품목별" ? (
-                  <TreemapChart forCountry countryName={country.name} year={year} month={month} tradeType={tradeType} mtiDepth={mtiDepth} />
+                  <TreemapChart forCountry countryName={country.name} year={year} month={month} tradeType={tradeType} mtiDepth={mtiDepth} onLoadingChange={handleLoadingChange} />
                 ) : timeseries.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={displayData} margin={{ top: 8, right: 44, left: 8, bottom: 4 }}>
@@ -268,6 +273,23 @@ function CountryDetailContent() {
               </div>
             </div>
 
+              {isLoading && (
+                <div style={{
+                  position: "absolute", inset: 0, zIndex: 50,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  background: "rgba(255,255,255,0.6)",
+                  backdropFilter: "blur(2px)",
+                  borderRadius: 12,
+                }}>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
+                    <svg width="36" height="36" viewBox="0 0 36 36" style={{ animation: "dash-spin 0.8s linear infinite" }}>
+                      <circle cx="18" cy="18" r="14" fill="none" stroke="#1A9088" strokeWidth="3"
+                        strokeDasharray="66 22" strokeLinecap="round" />
+                    </svg>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: "#475569" }}>로딩 중...</span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
