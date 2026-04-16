@@ -31,7 +31,7 @@ function CountryDetailContent() {
   const [month, setMonth] = useState("");
   const [tradeType, setTradeType] = useState<TradeType>(initialTradeType);
   const [subTab, setSubTab] = useState<"품목별" | "시계열 추이">("품목별");
-  const [mtiDepth, setMtiDepth] = useState(6);
+  const [mtiDepth, setMtiDepth] = useState(3);
 
 
   // 연도·수출입 모드에 따라 순위·비중이 달라짐
@@ -198,14 +198,13 @@ function CountryDetailContent() {
                       value={mtiDepth}
                       onChange={(e) => setMtiDepth(Number(e.target.value))}
                       className="filter-select"
-                      style={{ width: 80 }}
+                      style={{ width: 140 }}
                     >
-                      <option value={1}>1단위</option>
-                      <option value={2}>2단위</option>
-                      <option value={3}>3단위</option>
+                      <option value={1}>1단위 (대분류)</option>
+                      <option value={2}>2단위 (중분류)</option>
+                      <option value={3}>3단위 (소분류)</option>
                       <option value={4}>4단위</option>
-                      <option value={5}>5단위</option>
-                      <option value={6}>6단위</option>
+                      <option value={6}>6단위 (최소분류)</option>
                     </select>
                   )}
                   <button className="back-btn" onClick={() => router.push("/")}>← 돌아가기</button>

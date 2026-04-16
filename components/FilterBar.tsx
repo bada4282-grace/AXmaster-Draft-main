@@ -15,6 +15,8 @@ interface FilterBarProps {
   defaultYear?: string;
   /** 월·기간 셀렉트 비활성화 (연간 데이터만 사용하는 페이지용) */
   disableMonthPeriod?: boolean;
+  mtiDepth?: number;
+  onMtiDepthChange?: (depth: number) => void;
 }
 
 export default function FilterBar({
@@ -27,6 +29,8 @@ export default function FilterBar({
   onCountryChange,
   defaultYear = "2026",
   disableMonthPeriod = false,
+  mtiDepth,
+  onMtiDepthChange,
 }: FilterBarProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -62,7 +66,7 @@ export default function FilterBar({
 
   // 해당 연도의 국가/품목 목록 (현재 tradeType 기준)
   const countryNames = getCountryData(year, tradeType).map((c) => c.name);
-  const productNames = getTreemapData(year, tradeType).map((p) => p.name);
+  const productNames = [...new Set(getTreemapData(year, tradeType).map((p) => p.name))];
 
   const handleMonth = (m: string) => {
     // 2026년 3~12월은 데이터 미존재
@@ -204,6 +208,23 @@ export default function FilterBar({
           )}
         </div>
       </div>
+
+      {mtiDepth !== undefined && onMtiDepthChange && (
+        <div className="filter-section filter-section-divider">
+          <select
+            className="filter-select"
+            value={mtiDepth}
+            onChange={(e) => onMtiDepthChange(Number(e.target.value))}
+            style={{ width: 140 }}
+          >
+            <option value={1}>1단위 (대분류)</option>
+            <option value={2}>2단위 (중분류)</option>
+            <option value={3}>3단위 (소분류)</option>
+            <option value={4}>4단위</option>
+            <option value={6}>6단위 (최소분류)</option>
+          </select>
+        </div>
+      )}
     </div>
 
     {/* 데이터 없음 토스트 — .dashboard-area 중앙에 표시 */}

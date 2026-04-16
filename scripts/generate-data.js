@@ -5,9 +5,11 @@
  */
 const fs = require('fs');
 const path = require('path');
+const XLSX = require('xlsx');
 
 const CSV_PATH = path.join(__dirname, '..', 'tradedata_ctr_mti6.csv');
 const MTI_CSV_PATH = path.join(__dirname, '..', 'MTI-data.csv');
+const MACRO_XLSX_PATH = path.join(__dirname, '..', '거시경제지표.xlsx');
 const OUT_PATH = path.join(__dirname, '..', 'lib', 'tradeData.generated.ts');
 
 // ── 국가명 정규화 ─────────────────────────────────────────────────────────
@@ -405,6 +407,48 @@ for (const yr of YEARS) {
   }
 }
 
+// ─── 거시경제 지표 파싱 ──────────────────────────────────────────────────
+console.log('거시경제 지표 로드 중...');
+const macroIndicators = {};
+const macroMeta = [];
+try {
+  const wb = XLSX.readFile(MACRO_XLSX_PATH);
+  const metaWs = wb.Sheets['메타데이터'];
+  if (metaWs) {
+    const metaRows = XLSX.utils.sheet_to_json(metaWs, { header: 1 });
+    const META_KEYS = [
+      'KR_BASE_RATE', 'KR_BSI_MFG', 'KR_BSI_NON_MFG', 'KR_EBSI',
+      'KR_PROD_YOY', 'KR_CPI_YOY', 'US_BASE_RATE', 'US_PMI_MFG',
+      'CN_BASE_RATE', 'CN_PMI_MFG', 'BRENT_OIL', 'SCFI',
+    ];
+    for (let i = 1; i < metaRows.length; i++) {
+      const row = metaRows[i];
+      if (row.length >= 3 && META_KEYS[i - 1]) {
+        macroMeta.push({ key: META_KEYS[i - 1], label: String(row[0]).replace(/\r?\n/g, ' ').trim(), desc: String(row[2]).trim() });
+      }
+    }
+  }
+  const dataWs = wb.Sheets['데이터'];
+  if (dataWs) {
+    const dataRows = XLSX.utils.sheet_to_json(dataWs, { header: 1 });
+    for (let i = 1; i < dataRows.length; i++) {
+      const r = dataRows[i];
+      if (!r[0]) continue;
+      const yymm = String(r[0]);
+      macroIndicators[yymm] = {
+        KR_BASE_RATE: r[1] ?? null, KR_BSI_MFG: r[2] ?? null, KR_BSI_NON_MFG: r[3] ?? null,
+        KR_EBSI: r[4] ?? null, KR_PROD_YOY: r[5] ?? null, KR_CPI_YOY: r[6] ?? null,
+        US_BASE_RATE: r[7] ?? null, US_PMI_MFG: r[8] ?? null,
+        CN_BASE_RATE: r[9] ?? null, CN_PMI_MFG: r[10] ?? null,
+        BRENT_OIL: r[11] ?? null, SCFI: r[12] ?? null,
+      };
+    }
+  }
+  console.log(`거시경제 지표 ${Object.keys(macroIndicators).length}개월 로드 완료`);
+} catch (e) {
+  console.warn('거시경제 지표 파일 없음 또는 파싱 실패:', e.message);
+}
+
 // ─── TS 파일 생성 ─────────────────────────────────────────────────────────
 console.log('TypeScript 파일 생성 중...');
 
@@ -476,7 +520,17 @@ export const COUNTRY_TREEMAP_IMP_BY_YEAR: Record<string, Record<string, {
   code: string; name: string; value: number; mti: number; color: string;
 }[]>> = ${JSON.stringify(countryTreemapImpOut, null, 2)};
 
-export const MTI_LOOKUP: Record<string, string> = ${JSON.stringify(mtiLookup, null, 2)};
+export const MTI_LOOKUP: Record<string, string> = ${JSON.stringify(mtiLookup)};
+
+export const MACRO_INDICATORS: Record<string, {
+  KR_BASE_RATE: number | null; KR_BSI_MFG: number | null; KR_BSI_NON_MFG: number | null;
+  KR_EBSI: number | null; KR_PROD_YOY: number | null; KR_CPI_YOY: number | null;
+  US_BASE_RATE: number | null; US_PMI_MFG: number | null;
+  CN_BASE_RATE: number | null; CN_PMI_MFG: number | null;
+  BRENT_OIL: number | null; SCFI: number | null;
+}> = ${JSON.stringify(macroIndicators, null, 2)};
+
+export const MACRO_META: { key: string; label: string; desc: string }[] = ${JSON.stringify(macroMeta, null, 2)};
 `;
 
 fs.writeFileSync(OUT_PATH, ts, 'utf8');
