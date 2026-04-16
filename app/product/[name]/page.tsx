@@ -24,6 +24,7 @@ import {
   RechartsBarCountryTooltip,
   rechartsTooltipSurfaceProps,
 } from "@/components/RechartsTooltip";
+import { getAvailableMonths } from "@/lib/supabase";
 
 export default function ProductDetailPage() {
   return (
@@ -77,14 +78,51 @@ function ProductDetailContent() {
     : [];
   // "2026(1-2월)" → "2026" 으로 정리, 괄호가 있으면 불완전 데이터로 표시
   const currentFullYear = String(new Date().getFullYear());
-  const incompleteYears = new Set<string>();
+  const initialIncompleteYears = new Set<string>();
   const trend = rawTrend.map((d) => {
     const clean = d.year.replace(/\(.*\)/, "").trim();
-    if (clean !== d.year) incompleteYears.add(clean);
+    if (clean !== d.year) initialIncompleteYears.add(clean);
     // 현재 연도 이상은 불완전 연도로 처리
-    if (parseInt(clean, 10) >= parseInt(currentFullYear, 10)) incompleteYears.add(clean);
+    if (parseInt(clean, 10) >= parseInt(currentFullYear, 10)) initialIncompleteYears.add(clean);
     return { ...d, year: clean };
   });
+
+  // Supabase에서 불완전 연도별 실제 월 범위 조회 → 12개월 완전 시 경고 제거
+  const [resolvedIncompleteYears, setResolvedIncompleteYears] = useState<Set<string>>(initialIncompleteYears);
+  const [incompleteMonthRanges, setIncompleteMonthRanges] = useState<Record<string, string>>({});
+  useEffect(() => {
+    const yearsToCheck = Array.from(initialIncompleteYears);
+    if (yearsToCheck.length === 0) {
+      setResolvedIncompleteYears(new Set());
+      setIncompleteMonthRanges({});
+      return;
+    }
+    let cancelled = false;
+    Promise.all(
+      yearsToCheck.map(async (yr) => {
+        const months = await getAvailableMonths(yr);
+        return { yr, months };
+      })
+    ).then((results) => {
+      if (cancelled) return;
+      const ranges: Record<string, string> = {};
+      const resolved = new Set(initialIncompleteYears);
+      for (const { yr, months } of results) {
+        if (months.length >= 12) {
+          // 12개월 데이터 모두 존재 → 완전 연도 → 경고 제거
+          resolved.delete(yr);
+        } else if (months.length > 0) {
+          const minMonth = months[0];
+          const maxMonth = months[months.length - 1];
+          ranges[yr] = minMonth === maxMonth ? `${minMonth}월` : `${minMonth}~${maxMonth}월`;
+        }
+      }
+      setResolvedIncompleteYears(resolved);
+      setIncompleteMonthRanges(ranges);
+    });
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rawTrend.length, tradeType]);
   const trendValues = trend.map((d) => d.value).filter((v) => v > 0);
   const trendMin = trendValues.length ? Math.floor(Math.min(...trendValues) * 0.85) : 0;
   const trendMax = trendValues.length ? Math.ceil(Math.max(...trendValues) * 1.1) : 100;
@@ -127,7 +165,7 @@ function ProductDetailContent() {
   const currentVal = trend.find((d) => d.year === year)?.value ?? 0;
   const prevVal = trend.find((d) => d.year === prevYear)?.value ?? 0;
   // 불완전 연도(현재 연도 or 전년)가 포함되면 증감율 표시하지 않음
-  const isComplete = !incompleteYears.has(year) && !incompleteYears.has(prevYear);
+  const isComplete = !resolvedIncompleteYears.has(year) && !resolvedIncompleteYears.has(prevYear);
   const changeRate = (isComplete && prevVal) ? ((currentVal - prevVal) / prevVal * 100).toFixed(1) : null;
   const tradeLabel = tradeType === "수입" ? "수입" : "수출";
   const tooltipFollowProps = {
@@ -249,7 +287,7 @@ function ProductDetailContent() {
                         <YAxis domain={[trendMin, trendMax]} tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v}억`} />
                         <Tooltip
                           content={(props) => (
-                            <RechartsPayloadTooltip {...props} title={name} incompleteLabels={incompleteYears} />
+                            <RechartsPayloadTooltip {...props} title={name} incompleteLabels={resolvedIncompleteYears} incompleteMonthRanges={incompleteMonthRanges} />
                           )}
                           {...tooltipFollowProps}
                         />

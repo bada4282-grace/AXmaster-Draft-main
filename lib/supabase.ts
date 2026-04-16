@@ -116,6 +116,31 @@ export async function getMonthlyCountryMapData(
   return promise;
 }
 
+/**
+ * 특정 연도에 Supabase trade_mti6 테이블에 데이터가 존재하는 월 목록 조회
+ * 각 월별로 1건만 확인하여 존재 여부를 판단 (효율적 조회)
+ * 반환: 정렬된 월 번호 배열 (예: [1, 2, 3])
+ */
+export async function getAvailableMonths(year: string): Promise<number[]> {
+  const checks = Array.from({ length: 12 }, (_, i) => {
+    const mm = String(i + 1).padStart(2, "0");
+    return supabase
+      .from("trade_mti6")
+      .select("YYMM", { count: "exact", head: true })
+      .eq("YYMM", `${year}${mm}`);
+  });
+
+  const results = await Promise.all(checks);
+  const months: number[] = [];
+  for (let i = 0; i < 12; i++) {
+    const { count, error } = results[i];
+    if (!error && count && count > 0) {
+      months.push(i + 1);
+    }
+  }
+  return months;
+}
+
 // 월별 국가별 품목 트리맵 데이터 (get_country_treemap_mti6 RPC)
 export async function getCountryMonthlyTreemapData(
   year: string,
