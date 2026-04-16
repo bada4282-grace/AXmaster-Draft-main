@@ -75,6 +75,10 @@ export async function getMonthlyTreemapData(
 }
 
 // 월별 국가 지도 색상용 순위 데이터 (get_country_map_mti6 RPC)
+// 동일 파라미터 요청 중복 제거 + 결과 캐싱으로 DB 부하 및 타임아웃 방지
+const _countryMapCache = new Map<string, MonthlyCountryMapItem[]>();
+const _countryMapInflight = new Map<string, Promise<MonthlyCountryMapItem[]>>();
+
 export async function getMonthlyCountryMapData(
   year: string,
   month: string,
@@ -82,16 +86,34 @@ export async function getMonthlyCountryMapData(
 ): Promise<MonthlyCountryMapItem[]> {
   const yymm = `${year}${month}`;
   const p_mode = tradeType === "수입" ? "import" : "export";
+  const cacheKey = `${yymm}_${p_mode}`;
 
-  const { data, error } = await supabase.rpc("get_country_map_mti6", {
-    p_yymm: yymm,
-    p_mode,
-  });
-  if (error) {
-    console.error("[getMonthlyCountryMapData] RPC error:", error.message ?? error);
-    throw error;
+  if (_countryMapCache.has(cacheKey)) {
+    return _countryMapCache.get(cacheKey)!;
   }
-  return (data ?? []) as MonthlyCountryMapItem[];
+
+  if (_countryMapInflight.has(cacheKey)) {
+    return _countryMapInflight.get(cacheKey)!;
+  }
+
+  const promise = Promise.resolve(
+    supabase.rpc("get_country_map_mti6", { p_yymm: yymm, p_mode })
+  ).then((response) => {
+    _countryMapInflight.delete(cacheKey);
+    if (response.error) {
+      console.error("[getMonthlyCountryMapData] RPC error:", response.error.message ?? response.error);
+      throw response.error;
+    }
+    const result = (response.data ?? []) as MonthlyCountryMapItem[];
+    _countryMapCache.set(cacheKey, result);
+    return result;
+  }).catch((err) => {
+    _countryMapInflight.delete(cacheKey);
+    throw err;
+  });
+
+  _countryMapInflight.set(cacheKey, promise);
+  return promise;
 }
 
 // 월별 국가별 품목 트리맵 데이터 (get_country_treemap_mti6 RPC)

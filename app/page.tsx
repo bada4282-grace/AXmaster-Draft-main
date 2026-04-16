@@ -7,16 +7,10 @@ import HeroBanner from "@/components/HeroBanner";
 import FilterBar from "@/components/FilterBar";
 import KPIBar from "@/components/KPIBar";
 import { DEFAULT_YEAR, type TradeType } from "@/lib/data";
+import MacroSection from "@/components/MacroSection";
 
 const WorldMap = dynamic(() => import("@/components/WorldMap"), { ssr: false });
 const TreemapChart = dynamic(() => import("@/components/TreemapChart"), { ssr: false });
-
-const MACRO_DATA = [
-  { label: "USD/KRW", value: "1,372.5", change: "+0.3%", up: true },
-  { label: "BDI (발틱지수)", value: "1,842", change: "-1.2%", up: false },
-  { label: "두바이유 ($/bbl)", value: "82.4", change: "+0.8%", up: true },
-  { label: "WTI ($/bbl)", value: "78.9", change: "+0.5%", up: true },
-];
 
 function HomeContent() {
   const searchParams = useSearchParams();
@@ -84,23 +78,7 @@ function HomeContent() {
         </div>
 
         {/* Macro section */}
-        <div className="macro-section">
-          <div className="macro-title">거시경제 지표</div>
-          <div className="macro-grid">
-            {MACRO_DATA.map((item) => (
-              <div key={item.label} className="macro-card">
-                <div className="macro-card-label">{item.label}</div>
-                <div className="macro-card-value">{item.value}</div>
-                <div
-                  className="macro-card-change"
-                  style={{ color: item.up ? "#E02020" : "#185FA5" }}
-                >
-                  {item.change}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+        <MacroSection />
       </div>
     </div>
   );

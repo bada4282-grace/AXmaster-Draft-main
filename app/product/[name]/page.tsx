@@ -1,6 +1,6 @@
 "use client";
-import { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { Suspense, useState, useEffect } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Header from "@/components/Header";
 import HeroBanner from "@/components/HeroBanner";
 import FilterBar from "@/components/FilterBar";
@@ -8,8 +8,9 @@ import KPIBar from "@/components/KPIBar";
 import {
   getTreemapData,
   getCountryTreemapData,
-  getProductTrend,
-  getProductTopCountries,
+  getAggregatedProductTrend,
+  getAggregatedTopCountries,
+  aggregateTreemapByDepth,
   DEFAULT_YEAR,
   type TradeType,
 } from "@/lib/data";
@@ -24,35 +25,65 @@ import {
 } from "@/components/RechartsTooltip";
 
 export default function ProductDetailPage() {
+  return (
+    <Suspense>
+      <ProductDetailContent />
+    </Suspense>
+  );
+}
+
+function ProductDetailContent() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const name = decodeURIComponent(params.name as string);
+  const codeParam = searchParams.get("code") ?? "";
 
   const [year, setYear] = useState(DEFAULT_YEAR);
   const [tradeType, setTradeType] = useState<TradeType>("수출");
   const [country, setCountry] = useState("");
   const [subTab, setSubTab] = useState<"금액 추이" | "상위 국가">("금액 추이");
 
-  // 해당 품목 정보 찾기 (기본 연도 + 현재 tradeType 기준)
+  // 해당 품목 정보 찾기 (6단위 또는 집계 코드)
   const treemapData = getTreemapData(DEFAULT_YEAR, tradeType);
-  const product = treemapData.find((p) => p.name === name)
-    ?? getTreemapData(DEFAULT_YEAR, "수출").find((p) => p.name === name);
+  const isAggregated = codeParam.length > 0 && codeParam.length < 6;
+
+  // 6단위: 기존 방식으로 찾기 / 집계: aggregateTreemapByDepth로 찾기
+  const product = isAggregated
+    ? aggregateTreemapByDepth(treemapData, codeParam.length).find((p) => p.code === codeParam)
+      ?? aggregateTreemapByDepth(getTreemapData(DEFAULT_YEAR, "수출"), codeParam.length).find((p) => p.code === codeParam)
+    : treemapData.find((p) => p.name === name)
+      ?? getTreemapData(DEFAULT_YEAR, "수출").find((p) => p.name === name);
+
+  const productCode = codeParam || (product?.code ?? "");
 
   // 해당 품목의 연간 추이 (tradeType 반영, 국가 선택 시 국가별 데이터)
-  const trend = product
+  const rawTrend = productCode
     ? country
       ? ["2020", "2021", "2022", "2023", "2024", "2025", "2026"].map((y) => {
-          const d = getCountryTreemapData(y, country, tradeType).find((p) => p.name === name);
+          const base = getCountryTreemapData(y, country, tradeType);
+          if (isAggregated) {
+            const agg = aggregateTreemapByDepth(base, codeParam.length).find((p) => p.code === codeParam);
+            return { year: y, value: agg?.value ?? 0 };
+          }
+          const d = base.find((p) => p.name === name);
           return { year: y, value: d?.value ?? 0 };
         })
-      : getProductTrend(product.code, tradeType)
+      : getAggregatedProductTrend(productCode, tradeType)
     : [];
+  // "2026(1-2월)" → "2026" 으로 정리, 괄호가 있으면 불완전 데이터로 표시
+  const incompleteYears = new Set<string>();
+  const trend = rawTrend.map((d) => {
+    const clean = d.year.replace(/\(.*\)/, "").trim();
+    if (clean !== d.year) incompleteYears.add(clean);
+    return { ...d, year: clean };
+  });
   const trendValues = trend.map((d) => d.value).filter((v) => v > 0);
   const trendMin = trendValues.length ? Math.floor(Math.min(...trendValues) * 0.85) : 0;
   const trendMax = trendValues.length ? Math.ceil(Math.max(...trendValues) * 1.1) : 100;
 
   // 상위 국가 (tradeType 반영)
-  const topCountries = product ? getProductTopCountries(product.code, year, tradeType).slice(0, 10) : [];
+  const topCountries = productCode ? getAggregatedTopCountries(productCode, year, tradeType).slice(0, 10) : [];
 
   // ── 애니메이션: 국가 상세 페이지와 동일한 패턴 ──
   const flatTrend = trend.map((d) => ({ ...d, value: trendMin }));
@@ -85,8 +116,12 @@ export default function ProductDetailPage() {
   }, [subTab, year, tradeType]);
 
   // 현재 연도 금액 & 전년 대비 증감 (tradeType 반영)
-  const currentYearData = getTreemapData(year, tradeType).find((p) => p.name === name);
-  const prevYearData = getTreemapData(String(parseInt(year) - 1), tradeType).find((p) => p.name === name);
+  const currentYearData = isAggregated
+    ? aggregateTreemapByDepth(getTreemapData(year, tradeType), codeParam.length).find((p) => p.code === codeParam)
+    : getTreemapData(year, tradeType).find((p) => p.name === name);
+  const prevYearData = isAggregated
+    ? aggregateTreemapByDepth(getTreemapData(String(parseInt(year) - 1), tradeType), codeParam.length).find((p) => p.code === codeParam)
+    : getTreemapData(String(parseInt(year) - 1), tradeType).find((p) => p.name === name);
   const currentVal = currentYearData?.value ?? 0;
   const prevVal = prevYearData?.value ?? 0;
   const changeRate = prevVal ? ((currentVal - prevVal) / prevVal * 100).toFixed(1) : null;
@@ -121,7 +156,7 @@ export default function ProductDetailPage() {
         <div className="main-content-layout">
           {/* Dashboard card */}
           <div className="dashboard-card dashboard-main-card">
-            <FilterBar mode="product" defaultYear={DEFAULT_YEAR} onYearChange={setYear} onTradeTypeChange={setTradeType} onCountryChange={setCountry} />
+            <FilterBar mode="product" defaultYear={DEFAULT_YEAR} onYearChange={setYear} onTradeTypeChange={setTradeType} onCountryChange={setCountry} disableMonthPeriod />
             <KPIBar year={year} />
 
             <div className="split-panel" style={{ height: 380 }}>
@@ -131,9 +166,9 @@ export default function ProductDetailPage() {
                 <div className="info-card">
                   <div className="info-card-label">품목명</div>
                   <div style={{ fontSize: 18, fontWeight: 900 }}>{name}</div>
-                  {product && (
+                  {productCode && (
                     <div style={{ fontSize: 10, color: "#888", marginTop: 2 }}>
-                      MTI {product.code}
+                      MTI {productCode}{isAggregated && " (집계)"}
                     </div>
                   )}
                 </div>
@@ -192,7 +227,7 @@ export default function ProductDetailPage() {
                         <YAxis domain={[trendMin, trendMax]} tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v}억`} />
                         <Tooltip
                           content={(props) => (
-                            <RechartsPayloadTooltip {...props} title={name} />
+                            <RechartsPayloadTooltip {...props} title={name} incompleteLabels={incompleteYears} />
                           )}
                           {...tooltipFollowProps}
                         />

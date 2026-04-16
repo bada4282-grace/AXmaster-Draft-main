@@ -119,11 +119,9 @@ function CustomTooltip({
           </ul>
         </>
       )}
-      {item.code.length >= 6 && (
-        <p className="tooltip-shell-hint" style={{ marginTop: 10 }}>
-          클릭하면 상세 페이지로 이동
-        </p>
-      )}
+      <p className="tooltip-shell-hint" style={{ marginTop: 10 }}>
+        클릭하면 상세 페이지로 이동
+      </p>
     </div>
   );
 }
@@ -221,9 +219,8 @@ export default function TreemapChart({
     const item = aggregatedData.find((d) => d.name === data.name);
     if (!item) return;
     if (forCountry) return;
-    // 6단위가 아닌 집계 항목은 상세 페이지가 없으므로 이동하지 않음
-    if (mtiDepth < 6) return;
-    router.push(`/product/${encodeURIComponent(item.name)}`);
+    const params = new URLSearchParams({ code: item.code });
+    router.push(`/product/${encodeURIComponent(item.name)}?${params.toString()}`);
   };
 
   return (

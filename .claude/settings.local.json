@@ -9,7 +9,9 @@
       "Bash(npx next *)",
       "Bash(npx tsc *)",
       "Bash(cat app/api/macro/route.ts)",
-      "Bash(cat app/api/macro/route.tsx)"
+      "Bash(cat app/api/macro/route.tsx)",
+      "Bash(wc -l components/*.tsx lib/*.ts)",
+      "Bash(git checkout *)"
     ]
   }
 }
