@@ -29,10 +29,10 @@ CREATE TABLE trade_mti6 (
   "IMP_QTY"  NUMERIC DEFAULT 0
 );
 
-CREATE INDEX idx_trade_mti6_yymm ON trade_mti6 ("YYMM");
-CREATE INDEX idx_trade_mti6_ctr ON trade_mti6 ("CTR_NAME");
-CREATE INDEX idx_trade_mti6_mti ON trade_mti6 ("MTI_CD");
-CREATE INDEX idx_trade_mti6_yymm_mti ON trade_mti6 ("YYMM", "MTI_CD");
+-- 커버링 인덱스 (RPC 함수별 Index-Only Scan 최적화)
+CREATE INDEX idx_trade_mti6_yymm_ctr_amt ON trade_mti6 ("YYMM", "CTR_NAME", "EXP_AMT", "IMP_AMT");
+CREATE INDEX idx_trade_mti6_yymm_mti_amt ON trade_mti6 ("YYMM", "MTI_CD", "EXP_AMT", "IMP_AMT");
+CREATE INDEX idx_trade_mti6_yymm_ctr_mti_amt ON trade_mti6 ("YYMM", "CTR_NAME", "MTI_CD", "EXP_AMT", "IMP_AMT");
 
 -- 3. RPC: 품목별 집계 (MTI 깊이 지정 가능)
 -- ══════════════════════════════════════════════════════════════
