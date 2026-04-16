@@ -55,7 +55,11 @@ function CustomContent({ x = 0, y = 0, width = 0, height = 0, name, value = 0, d
 
   const item = data.find((d) => d.name === name);
   const color = item?.color ?? "#3B82F6";
-  const fontSize = width > 120 ? 14 : width > 60 ? 11 : 9;
+  const baseFontSize = width > 120 ? 14 : width > 60 ? 11 : 9;
+  // 이름이 길면 폰트를 줄여서 여백 확보 (글자당 ~7px 기준, 양쪽 패딩 12px)
+  const nameLen = (name ?? "").length;
+  const maxFitSize = width > 80 ? Math.floor((width - 12) / (nameLen * 0.6)) : baseFontSize;
+  const fontSize = Math.max(8, Math.min(baseFontSize, maxFitSize));
   const cx = x + width / 2;
   const cy = y + height / 2;
 
@@ -92,9 +96,9 @@ function CustomContent({ x = 0, y = 0, width = 0, height = 0, name, value = 0, d
 }
 
 function CustomTooltip({
-  active, payload, data, tradeType,
+  active, payload, data, tradeType, forCountry,
 }: {
-  active?: boolean; payload?: { payload?: { name?: string } }[]; data: ProductNode[]; tradeType: TradeType;
+  active?: boolean; payload?: { payload?: { name?: string } }[]; data: ProductNode[]; tradeType: TradeType; forCountry?: boolean;
 }) {
   if (!active || !payload?.length) return null;
   const item = data.find((d) => d.name === payload[0]?.payload?.name);
@@ -119,9 +123,11 @@ function CustomTooltip({
           </ul>
         </>
       )}
-      <p className="tooltip-shell-hint" style={{ marginTop: 10 }}>
-        클릭하면 상세 페이지로 이동
-      </p>
+      {!forCountry && (
+        <p className="tooltip-shell-hint" style={{ marginTop: 10 }}>
+          클릭하면 상세 페이지로 이동
+        </p>
+      )}
     </div>
   );
 }
@@ -304,7 +310,7 @@ export default function TreemapChart({
               content={<CustomContent data={aggregatedData} animKey={animating ? animKey : -1} />}
             >
               <Tooltip
-                content={<CustomTooltip data={aggregatedData} tradeType={tradeType} />}
+                content={<CustomTooltip data={aggregatedData} tradeType={tradeType} forCountry={forCountry} />}
                 {...rechartsTooltipSurfaceProps}
               />
             </Treemap>

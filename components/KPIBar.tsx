@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, usePathname } from "next/navigation";
 import { KPI_BY_YEAR, DEFAULT_YEAR } from "@/lib/data";
 import { getMonthlyCountryMapData, type MonthlyCountryMapItem } from "@/lib/supabase";
 
@@ -43,7 +43,12 @@ function prevMonthInfo(year: string, month: string): { y: string; m: string } {
   return { y: year, m: String(m - 1).padStart(2, "0") };
 }
 
-function sumAmt(items: MonthlyCountryMapItem[]) {
+function sumAmt(items: MonthlyCountryMapItem[], countryName?: string) {
+  if (countryName) {
+    return items
+      .filter((i) => i.ctr_name === countryName)
+      .reduce((s, i) => s + i.total_amt, 0);
+  }
   return items.reduce((s, i) => s + i.total_amt, 0);
 }
 
@@ -65,36 +70,45 @@ export default function KPIBar({
   balance: pBv,
   balancePositive: pBp,
 }: KPIBarProps) {
-  const kpi = KPI[year] ?? KPI[DEFAULT_YEAR];
-  // 상세 페이지에서 값을 직접 주입하면 월별 계산 스킵
-  const hasCustom = pEv !== undefined;
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
 
-  // page.tsx가 month prop을 넘기지 않으므로 URL에서 직접 읽음
-  const urlMonth = useSearchParams().get("month") ?? "";
-  const effectiveMonth = month || urlMonth;
+  // page.tsx가 year/month prop을 넘기지 않으므로 URL에서 직접 읽음
+  const effectiveYear = searchParams.get("year") ?? year;
+  const effectiveMonth = month || (searchParams.get("month") ?? "");
+
+  const kpi = KPI[effectiveYear] ?? KPI[DEFAULT_YEAR];
+
+  // 국가 상세 페이지 감지 (/country/{name}) → 해당 국가만 필터링
+  const countryMatch = pathname.match(/^\/country\/([^?/]+)/);
+  const currentCountry = countryMatch ? decodeURIComponent(countryMatch[1]) : undefined;
 
   const [mom, setMom] = useState<MomState | null>(null);
 
   useEffect(() => {
-    let mounted = true;
-
-    if (!effectiveMonth || hasCustom) {
-      return () => { mounted = false; };
+    if (!effectiveMonth) {
+      setMom(null);
+      return;
     }
-    const { y: py, m: pm } = prevMonthInfo(year, effectiveMonth);
+
+    let cancelled = false;
+    const { y: py, m: pm } = prevMonthInfo(effectiveYear, effectiveMonth);
 
     Promise.all([
-      getMonthlyCountryMapData(year, effectiveMonth, "수출"),
+      getMonthlyCountryMapData(effectiveYear, effectiveMonth, "수출"),
       getMonthlyCountryMapData(py, pm, "수출"),
-      getMonthlyCountryMapData(year, effectiveMonth, "수입"),
+      getMonthlyCountryMapData(effectiveYear, effectiveMonth, "수입"),
       getMonthlyCountryMapData(py, pm, "수입"),
     ]).then(([ce, pe, ci, pi]) => {
-      if (!mounted) return;
+      if (cancelled) return;
 
-      const ceAmt = sumAmt(ce);
-      const peAmt = sumAmt(pe);
-      const ciAmt = sumAmt(ci);
-      const piAmt = sumAmt(pi);
+      const ceAmt = sumAmt(ce, currentCountry);
+      const peAmt = sumAmt(pe, currentCountry);
+      const ciAmt = sumAmt(ci, currentCountry);
+      const piAmt = sumAmt(pi, currentCountry);
+
+      // 국가 상세: 국가 매칭이 안 되면 (데이터 없으면) 이전 상태 유지
+      if (currentCountry && ceAmt === 0 && ciAmt === 0) return;
 
       const pct = (cur: number, prev: number) =>
         prev === 0 ? 0 : parseFloat(Math.abs(((cur - prev) / prev) * 100).toFixed(1));
@@ -112,25 +126,24 @@ export default function KPIBar({
         balanceVal: fmtBillion(Math.abs(ceBil - ciBil)),
         balancePositive: ceBil >= ciBil,
       });
-    }).catch(() => {
-      if (mounted) setMom(null);
-    });
+    }).catch(() => { /* 에러 시 이전 상태 유지 */ });
 
-    return () => { mounted = false; };
-  }, [year, effectiveMonth, hasCustom]);
+    return () => { cancelled = true; };
+  }, [effectiveYear, effectiveMonth, currentCountry]);
 
-  const useMom = !!effectiveMonth && !hasCustom && !!mom;
+  // 월 선택 시 → 월별 Supabase 데이터 우선, 미선택 시 → 커스텀 props 또는 연간 KPI
+  const useMom = !!effectiveMonth && !!mom;
 
   const periodLabel = effectiveMonth ? "(전월 대비)" : "(전년 대비)";
 
-  const ev = pEv ?? (useMom ? mom!.exportVal  : kpi.export.value);
-  const ec = pEc ?? (useMom ? mom!.exportChange : kpi.export.change);
-  const eu = pEu ?? (useMom ? mom!.exportUp    : kpi.export.up);
-  const iv = pIv ?? (useMom ? mom!.importVal  : kpi.import.value);
-  const ic = pIc ?? (useMom ? mom!.importChange : kpi.import.change);
-  const iu = pIu ?? (useMom ? mom!.importUp    : kpi.import.up);
-  const bv = pBv ?? (useMom ? mom!.balanceVal  : kpi.balance.value);
-  const bp = pBp ?? (useMom ? mom!.balancePositive : kpi.balance.positive);
+  const ev = useMom ? mom!.exportVal    : (pEv ?? kpi.export.value);
+  const ec = useMom ? mom!.exportChange : (pEc ?? kpi.export.change);
+  const eu = useMom ? mom!.exportUp     : (pEu ?? kpi.export.up);
+  const iv = useMom ? mom!.importVal    : (pIv ?? kpi.import.value);
+  const ic = useMom ? mom!.importChange : (pIc ?? kpi.import.change);
+  const iu = useMom ? mom!.importUp     : (pIu ?? kpi.import.up);
+  const bv = useMom ? mom!.balanceVal   : (pBv ?? kpi.balance.value);
+  const bp = useMom ? mom!.balancePositive : (pBp ?? kpi.balance.positive);
 
   // 상승: 빨간색, 하락: 파란색 (한국 금융 관례)
   const expColor  = eu ? "#E02020" : "#185FA5";

@@ -438,6 +438,7 @@ export default function WorldMap({
   }, []);
 
   const onMouseMove = useCallback((e: MapLayerMouseEvent) => {
+    if (markerHoverRef.current) return;
     const map = mapRef.current?.getMap();
     if (!map) return;
 
@@ -478,6 +479,7 @@ export default function WorldMap({
   const onMouseLeave = useCallback(() => clearHover(), [clearHover]);
 
   const onClick = useCallback((e: MapLayerMouseEvent) => {
+    if (markerHoverRef.current) return;
     const features = (e as any).features as any[] | undefined;
     if (!features || features.length === 0) return;
     const p = features[0].properties ?? {};
@@ -506,7 +508,7 @@ export default function WorldMap({
   return (
     <div className="flex flex-col w-full h-full" style={{ minHeight: 340 }}>
       {/* 지도 영역 */}
-      <div className="relative flex-1 bg-[#F2FBFF]">
+      <div className="relative flex-1 bg-[#F2FBFF]" onMouseLeave={() => { markerHoverRef.current = false; setTooltip(null); }}>
         <ReactMap
           ref={mapRef}
           mapStyle={MAP_STYLE}
@@ -609,6 +611,9 @@ export default function WorldMap({
                     whiteSpace:    "nowrap",
                     userSelect:    "none",
                     cursor:        "pointer",
+                    padding:       "30px 40px",
+                    margin:        "-30px -40px",
+                    zIndex:        10,
                   }}
                   onMouseEnter={(e) => {
                     markerHoverRef.current = true;

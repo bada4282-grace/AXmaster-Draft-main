@@ -11,7 +11,13 @@
       "Bash(cat app/api/macro/route.ts)",
       "Bash(cat app/api/macro/route.tsx)",
       "Bash(wc -l components/*.tsx lib/*.ts)",
-      "Bash(git checkout *)"
+      "Bash(git checkout *)",
+      "Bash(taskkill //F //IM node.exe)",
+      "Bash(rm -rf .next)",
+      "Bash(curl -s https://lqelfxkjcdyskjervbqp.supabase.co/rest/v1/rpc/get_country_map_mti6 -H 'apikey: sb_publishable_Qr9gc_PsCWDhH4M_iGzEyw_X-rnsgfH' -H 'Content-Type: application/json' -d '{\"p_yymm\":\"202501\",\"p_mode\":\"export\"}')",
+      "Bash(curl -s https://lqelfxkjcdyskjervbqp.supabase.co/rest/v1/rpc/get_country_map_mti6 -H 'apikey: sb_publishable_Qr9gc_PsCWDhH4M_iGzEyw_X-rnsgfH' -H 'Content-Type: application/json' -d '{\"p_yymm\":\"202401\",\"p_mode\":\"export\"}')",
+      "Bash(curl -s https://lqelfxkjcdyskjervbqp.supabase.co/rest/v1/rpc/get_country_map_mti6 -H 'apikey: sb_publishable_Qr9gc_PsCWDhH4M_iGzEyw_X-rnsgfH' -H 'Content-Type: application/json' -d '{\"p_yymm\":\"202503\",\"p_mode\":\"export\"}')",
+      "Bash(curl -s https://lqelfxkjcdyskjervbqp.supabase.co/rest/v1/rpc/get_country_map_mti6 -H 'apikey: sb_publishable_Qr9gc_PsCWDhH4M_iGzEyw_X-rnsgfH' -H 'Content-Type: application/json' -d '{\"p_yymm\":\"__TRACKED_VAR__\",\"p_mode\":\"export\"}')"
     ]
   }
 }
