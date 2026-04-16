@@ -92,13 +92,20 @@ export function resolveRouteButtons(question: string): RouteButton[] {
   const { countries, productNames } = extractKeywords(question);
   const buttons: RouteButton[] = [];
 
-  // 국가 버튼 (정확 매칭, 수입/수출 반영)
+  // 탭 키워드 감지
+  const isTimeseriesQuery = /추이|시계열|연도별|트렌드|변화|증감/.test(question);
+  const isCountriesQuery = /상위 국가|국가별|나라별|어느 나라|어떤 나라/.test(question);
+
+  // 국가 버튼 (정확 매칭, 수입/수출 + 탭 반영)
   if (countries.length > 0) {
     const tradeType = detectTradeType(question);
-    const modeQuery = tradeType === "수입" ? "?mode=import" : "";
+    const params = new URLSearchParams();
+    if (tradeType === "수입") params.set("mode", "import");
+    if (isTimeseriesQuery) params.set("tab", "timeseries");
+    const queryString = params.toString() ? `?${params.toString()}` : "";
     buttons.push({
       label: `${countries[0]} ${tradeType} 데이터 확인하기`,
-      href: `/country/${encodeURIComponent(countries[0])}${modeQuery}`,
+      href: `/country/${encodeURIComponent(countries[0])}${queryString}`,
       type: "exact",
     });
   }
@@ -117,17 +124,21 @@ export function resolveRouteButtons(question: string): RouteButton[] {
     // 가장 짧은 코드(상위 카테고리) 선택
     exactMtiMatches.sort((a, b) => a.code.length - b.code.length);
     const best = exactMtiMatches[0];
-    const codeQuery = best.code.length < 6 ? `?code=${best.code}` : "";
+    const params = new URLSearchParams();
+    if (best.code.length < 6) params.set("code", best.code);
+    if (isCountriesQuery) params.set("tab", "countries");
+    const queryString = params.toString() ? `?${params.toString()}` : "";
     buttons.push({
       label: `${best.name} 데이터 확인하기`,
-      href: `/product/${encodeURIComponent(best.name)}${codeQuery}`,
+      href: `/product/${encodeURIComponent(best.name)}${queryString}`,
       type: "exact",
     });
   } else if (productNames.length > 0) {
     // TREEMAP 품목명 정확 매칭
+    const tabQuery = isCountriesQuery ? "?tab=countries" : "";
     buttons.push({
       label: `${productNames[0]} 데이터 확인하기`,
-      href: `/product/${encodeURIComponent(productNames[0])}`,
+      href: `/product/${encodeURIComponent(productNames[0])}${tabQuery}`,
       type: "exact",
     });
   } else {

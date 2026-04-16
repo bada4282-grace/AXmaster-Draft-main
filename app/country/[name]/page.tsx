@@ -31,7 +31,9 @@ function CountryDetailContent() {
   const [year, setYear] = useState(DEFAULT_YEAR);
   const [month, setMonth] = useState("");
   const [tradeType, setTradeType] = useState<TradeType>(initialTradeType);
-  const [subTab, setSubTab] = useState<"품목별" | "시계열 추이">("품목별");
+  const [subTab, setSubTab] = useState<"품목별" | "시계열 추이">(
+    searchParams.get("tab") === "timeseries" ? "시계열 추이" : "품목별"
+  );
   const [mtiDepth, setMtiDepth] = useState(3);
 
 
