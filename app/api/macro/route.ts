@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { MACRO_INDICATORS } from "@/lib/tradeData.generated";
 
 export interface MacroItem {
   label: string;
@@ -7,70 +8,114 @@ export interface MacroItem {
   up: boolean;
 }
 
-interface ExchangeRateResponse {
-  result: string;
-  conversion_rates?: Record<string, number>;
+/** 최신 YYMM 찾기 */
+function getLatestYymm(): string {
+  return Object.keys(MACRO_INDICATORS).sort().reverse()[0] ?? "";
 }
 
-/** 캐시: 1시간마다 재요청 */
-let cache: { data: MacroItem[]; fetchedAt: number } | null = null;
-const CACHE_TTL_MS = 60 * 60 * 1000;
+/** 전월 YYMM */
+function getPrevYymm(yymm: string): string {
+  const y = parseInt(yymm.slice(0, 4));
+  const m = parseInt(yymm.slice(4, 6));
+  if (m === 1) return `${y - 1}12`;
+  return `${y}${String(m - 1).padStart(2, "0")}`;
+}
 
-/** 숫자를 천 단위 콤마 포맷 */
-function fmt(n: number, decimals = 1): string {
-  return n.toLocaleString("en-US", {
+function fmtPct(v: number | null): string {
+  if (v == null) return "—";
+  return `${(v * 100).toFixed(1)}%`;
+}
+
+function fmtNum(v: number | null, decimals = 1): string {
+  if (v == null) return "—";
+  return v.toLocaleString("en-US", {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
   });
 }
 
+function calcChange(cur: number | null, prev: number | null): { change: string; up: boolean } {
+  if (cur == null || prev == null || prev === 0) return { change: "—", up: true };
+  const diff = cur - prev;
+  const up = diff >= 0;
+  return {
+    change: `${up ? "+" : ""}${diff >= 1 || diff <= -1 ? fmtNum(diff, 1) : (diff * 100).toFixed(1) + "%p"}`,
+    up,
+  };
+}
+
 export async function GET() {
-  if (cache && Date.now() - cache.fetchedAt < CACHE_TTL_MS) {
-    return NextResponse.json(cache.data);
-  }
+  const indicators = MACRO_INDICATORS as Record<string, Record<string, number | null>>;
+  const latest = getLatestYymm();
+  const prev = getPrevYymm(latest);
 
-  const exchangeKey = process.env.EXCHANGE_RATE_API_KEY;
-  if (!exchangeKey) {
+  if (!latest || !indicators[latest]) {
     return NextResponse.json(
-      { error: "EXCHANGE_RATE_API_KEY가 설정되지 않았습니다." },
-      { status: 500 },
+      { error: "거시경제 지표 데이터가 없습니다." },
+      { status: 404 },
     );
   }
 
+  const cur = indicators[latest];
+  const prv = indicators[prev] ?? {};
+
+  // USD/KRW 환율 (ExchangeRate API)
+  let usdKrw: MacroItem = { label: "USD/KRW", value: "—", change: "—", up: true };
   try {
-    // 1) USD/KRW 환율 — ExchangeRate API
-    let usdKrw: MacroItem = { label: "USD/KRW", value: "—", change: "N/A", up: true };
-    const res = await fetch(
-      `https://v6.exchangerate-api.com/v6/${exchangeKey}/latest/USD`,
-      { next: { revalidate: 3600 } },
-    );
-    if (res.ok) {
-      const json = (await res.json()) as ExchangeRateResponse;
-      if (json.result === "success" && json.conversion_rates) {
-        const krw = json.conversion_rates["KRW"] ?? 0;
-        usdKrw = { label: "USD/KRW", value: fmt(krw, 1), change: "실시간", up: true };
+    const exchangeKey = process.env.EXCHANGE_RATE_API_KEY;
+    if (exchangeKey) {
+      const res = await fetch(
+        `https://v6.exchangerate-api.com/v6/${exchangeKey}/latest/USD`,
+        { next: { revalidate: 3600 } },
+      );
+      if (res.ok) {
+        const json = await res.json();
+        if (json.result === "success" && json.conversion_rates) {
+          const krw = json.conversion_rates["KRW"] ?? 0;
+          usdKrw = { label: "USD/KRW", value: fmtNum(krw, 1), change: "실시간", up: true };
+        }
       }
     }
+  } catch { /* 환율 조회 실패 시 기본값 유지 */ }
 
-    // 2) 나머지 지표 — 추후 Supabase에서 조회 예정
-    const placeholder: MacroItem[] = [
-      { label: "한국 기준금리", value: "—", change: "—", up: true },
-      { label: "산업생산증감률", value: "—", change: "—", up: true },
-      { label: "CPI 증감률", value: "—", change: "—", up: true },
-      { label: "EBSI", value: "—", change: "—", up: true },
-      { label: "제조업 BSI", value: "—", change: "—", up: true },
-      { label: "비제조업 BSI", value: "—", change: "—", up: true },
-    ];
+  const data: MacroItem[] = [
+    usdKrw,
+    {
+      label: "한국 기준금리",
+      value: fmtPct(cur.KR_BASE_RATE),
+      ...calcChange(cur.KR_BASE_RATE, prv.KR_BASE_RATE),
+    },
+    {
+      label: "제조업 BSI",
+      value: fmtNum(cur.KR_BSI_MFG, 0),
+      ...calcChange(cur.KR_BSI_MFG, prv.KR_BSI_MFG),
+    },
+    {
+      label: "EBSI",
+      value: fmtNum(cur.KR_EBSI, 1),
+      ...calcChange(cur.KR_EBSI, prv.KR_EBSI),
+    },
+    {
+      label: "산업생산 증감률",
+      value: fmtPct(cur.KR_PROD_YOY),
+      ...calcChange(cur.KR_PROD_YOY, prv.KR_PROD_YOY),
+    },
+    {
+      label: "CPI 증감률",
+      value: fmtPct(cur.KR_CPI_YOY),
+      ...calcChange(cur.KR_CPI_YOY, prv.KR_CPI_YOY),
+    },
+    {
+      label: "브렌트유",
+      value: `$${fmtNum(cur.BRENT_OIL, 1)}`,
+      ...calcChange(cur.BRENT_OIL, prv.BRENT_OIL),
+    },
+    {
+      label: "SCFI",
+      value: fmtNum(cur.SCFI, 0),
+      ...calcChange(cur.SCFI, prv.SCFI),
+    },
+  ];
 
-    const data: MacroItem[] = [usdKrw, ...placeholder];
-    cache = { data, fetchedAt: Date.now() };
-
-    return NextResponse.json(data);
-  } catch (e) {
-    console.error("[api/macro] fetch error:", e instanceof Error ? e.message : e);
-    return NextResponse.json(
-      { error: "거시경제 데이터를 불러오지 못했습니다." },
-      { status: 502 },
-    );
-  }
+  return NextResponse.json(data);
 }

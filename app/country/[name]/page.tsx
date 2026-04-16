@@ -19,6 +19,7 @@ import {
 import { RechartsPayloadTooltip, rechartsTooltipSurfaceProps } from "@/components/RechartsTooltip";
 
 const TreemapChart = dynamic(() => import("@/components/TreemapChart"), { ssr: false });
+import MacroSection from "@/components/MacroSection";
 
 function CountryDetailContent() {
   const params = useParams();
@@ -271,9 +272,7 @@ function CountryDetailContent() {
 
         </div>
 
-        <div className="macro-section">
-          <div className="macro-title">거시경제 지표</div>
-        </div>
+        <MacroSection />
       </div>
     </div>
   );

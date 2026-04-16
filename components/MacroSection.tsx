@@ -5,11 +5,12 @@ import type { MacroItem } from "@/app/api/macro/route";
 const FALLBACK: MacroItem[] = [
   { label: "USD/KRW", value: "—", change: "로딩중", up: true },
   { label: "한국 기준금리", value: "—", change: "로딩중", up: true },
-  { label: "산업생산증감률", value: "—", change: "로딩중", up: true },
-  { label: "CPI 증감률", value: "—", change: "로딩중", up: true },
-  { label: "EBSI", value: "—", change: "로딩중", up: true },
   { label: "제조업 BSI", value: "—", change: "로딩중", up: true },
-  { label: "비제조업 BSI", value: "—", change: "로딩중", up: true },
+  { label: "EBSI", value: "—", change: "로딩중", up: true },
+  { label: "산업생산 증감률", value: "—", change: "로딩중", up: true },
+  { label: "CPI 증감률", value: "—", change: "로딩중", up: true },
+  { label: "브렌트유", value: "—", change: "로딩중", up: true },
+  { label: "SCFI", value: "—", change: "로딩중", up: true },
 ];
 
 export default function MacroSection() {
@@ -34,7 +35,11 @@ export default function MacroSection() {
             <div className="macro-card-value">{item.value}</div>
             <div
               className="macro-card-change"
-              style={{ color: item.up ? "#E02020" : "#185FA5" }}
+              style={{
+                color: item.change === "—" || item.change === "실시간" || /^\+?0(\.0+)?(%p?)?$/.test(item.change)
+                  ? "#999"
+                  : item.up ? "#E02020" : "#185FA5"
+              }}
             >
               {item.change}
             </div>
