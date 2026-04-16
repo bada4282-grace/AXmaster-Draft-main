@@ -1,5 +1,6 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getCountryData, getTreemapData } from "@/lib/data";
 
@@ -33,6 +34,19 @@ export default function FilterBar({
   const [month, setMonth] = useState(searchParams.get("month") ?? "");
   const [period, setPeriod] = useState("annual");
 
+  // 데이터 없음 토스트
+  const [noDataToast, setNoDataToast] = useState(false);
+  const [toastFading, setToastFading] = useState(false);
+  useEffect(() => {
+    if (!noDataToast) return;
+    // .dashboard-area에 position:relative 보장 (absolute 자식 배치용)
+    const el = document.querySelector<HTMLElement>(".dashboard-area");
+    if (el && getComputedStyle(el).position === "static") el.style.position = "relative";
+    const fadeTimer = setTimeout(() => setToastFading(true), 1800);
+    const hideTimer = setTimeout(() => { setNoDataToast(false); setToastFading(false); }, 2400);
+    return () => { clearTimeout(fadeTimer); clearTimeout(hideTimer); };
+  }, [noDataToast]);
+
   const handleTradeType = (t: "수출" | "수입") => {
     setTradeType(t);
     onTradeTypeChange?.(t);
@@ -48,6 +62,12 @@ export default function FilterBar({
   const productNames = getTreemapData(year, tradeType).map((p) => p.name);
 
   const handleMonth = (m: string) => {
+    // 2026년 3~12월은 데이터 미존재
+    if (year === "2026" && m && parseInt(m, 10) >= 3) {
+      setNoDataToast(true);
+      setToastFading(false);
+      return;
+    }
     setMonth(m);
     onMonthChange?.(m);
     // KPIBar가 URL에서 month를 읽으므로 URL 동기화
@@ -71,6 +91,7 @@ export default function FilterBar({
   };
 
   return (
+    <>
     <div className="filter-bar">
       <div className="filter-section">
         <div className="toggle-btn-group">
@@ -166,24 +187,89 @@ export default function FilterBar({
               <select
                 className="filter-select"
                 style={{ width: 140 }}
-                defaultValue={showCountrySelect ?? ""}
+                value={showCountrySelect ?? ""}
                 onChange={(e) => handleCountry(e.target.value)}
               >
-                {showCountrySelect ? (
-                  <option value={showCountrySelect}>{showCountrySelect}</option>
-                ) : (
-                  <>
-                    <option value="">수입국 (전체)</option>
-                    {countryNames.map((n) => (
-                      <option key={n} value={n}>{n}</option>
-                    ))}
-                  </>
-                )}
+                <option value="">수입국 (전체)</option>
+                {countryNames.map((n) => (
+                  <option key={n} value={n}>{n}</option>
+                ))}
               </select>
             </>
           )}
         </div>
       </div>
     </div>
+
+    {/* 데이터 없음 토스트 — .dashboard-area 중앙에 표시 */}
+    {noDataToast && typeof document !== "undefined" && (() => {
+      const target = document.querySelector(".dashboard-area");
+      if (!target) return null;
+      return createPortal(
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 50,
+            pointerEvents: "none",
+            opacity: toastFading ? 0 : 1,
+            transition: "opacity 0.5s ease-out",
+          }}
+        >
+          <div
+            style={{
+              background: "#fff",
+              border: "1px solid #e8ecef",
+              borderRadius: 12,
+              padding: "24px 32px",
+              boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
+              display: "flex",
+              alignItems: "center",
+              gap: 14,
+              fontFamily: "'Noto Sans KR', sans-serif",
+              animation: "nodata-slide-up 0.3s ease-out",
+            }}
+          >
+            <div
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: "50%",
+                background: "#F0FAF8",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+              }}
+            >
+              <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+                <circle cx="10" cy="10" r="9" stroke="#1A9088" strokeWidth="1.8"/>
+                <line x1="10" y1="6" x2="10" y2="11" stroke="#1A9088" strokeWidth="1.8" strokeLinecap="round"/>
+                <circle cx="10" cy="14" r="1" fill="#1A9088"/>
+              </svg>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              <span style={{ fontSize: 14, fontWeight: 600, color: "#1e293b" }}>
+                해당 기간의 데이터가 없습니다
+              </span>
+              <span style={{ fontSize: 12, fontWeight: 400, color: "#94a3b8" }}>
+                2026년 2월까지 조회 가능합니다
+              </span>
+            </div>
+          </div>
+          <style>{`
+            @keyframes nodata-slide-up {
+              0% { transform: translateY(10px); opacity: 0; }
+              100% { transform: translateY(0); opacity: 1; }
+            }
+          `}</style>
+        </div>,
+        target,
+      );
+    })()}
+    </>
   );
 }
