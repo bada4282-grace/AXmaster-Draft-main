@@ -16,7 +16,6 @@ function TypingIndicator() {
 }
 
 function renderBotText(text: string): React.ReactNode {
-  // ==토픽== → <mark>토픽</mark> 변환
   const processed = text.replace(/==([^=]+)==/g, "<mark>$1</mark>");
   return (
     <ReactMarkdown
@@ -57,11 +56,6 @@ interface ChatBotProps {
   showInternalToggle?: boolean;
 }
 
-// ─────────────────────────────────────────────────────────────
-// FAQ_QUESTIONS: 현재는 하드코딩된 질문 목록입니다.
-// 추후 Supabase DB 연동 시, 실제 사용자 질문 빈도 데이터를
-// 기반으로 상위 N개를 동적으로 불러오는 방식으로 교체 예정입니다.
-// ─────────────────────────────────────────────────────────────
 const FAQ_QUESTIONS = [
   "올해 수출 1위 국가는?",
   "반도체 수출 현황 알려줘",
@@ -80,9 +74,7 @@ export default function ChatBot({
   const [fontSize, setFontSize] = useState(12);
   const [isStreaming, setIsStreaming] = useState(false);
   const [welcomeLoading, setWelcomeLoading] = useState(false);
-  // SIGNED_IN이 발생할 때마다 증가 — user 참조가 동일해도 welcome effect 재실행 보장
   const [welcomeTrigger, setWelcomeTrigger] = useState(0);
-  // onAuthStateChange 클로저에서 현재 user id를 참조하기 위한 ref
   const currentUserIdRef = useRef<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const welcomeFetchedRef = useRef(false);
@@ -90,7 +82,6 @@ export default function ChatBot({
   const increaseFontSize = () => setFontSize(prev => Math.min(prev + 1, 16));
   const decreaseFontSize = () => setFontSize(prev => Math.max(prev - 1, 10));
 
-  // 입력 내용에 따라 textarea 높이 자동 조절
   useEffect(() => {
     const el = textareaRef.current;
     if (!el) return;
@@ -98,13 +89,10 @@ export default function ChatBot({
     el.style.height = `${el.scrollHeight}px`;
   }, [input]);
 
-  // initialMessage는 항상 최신 값을 참조하도록 ref 유지
   const initialMessageRef = useRef(initialMessage);
   useEffect(() => { initialMessageRef.current = initialMessage; });
 
-  // 로그인 상태 감지 — 이벤트 종류에 따라 메시지 처리 분기
   useEffect(() => {
-    // getSession()은 로컬 스토리지에서 즉시 읽음 → 네트워크 없이 초기 user 확보
     supabase.auth.getSession().then(({ data: { session } }) => {
       currentUserIdRef.current = session?.user?.id ?? null;
       setUser(session?.user ?? null);
@@ -115,12 +103,10 @@ export default function ChatBot({
       const newUser = session?.user ?? null;
       const prevUserId = currentUserIdRef.current;
 
-      // ref는 항상 최신 상태 유지 (state 변경 없이 타이밍 이슈 방지)
       currentUserIdRef.current = newUserId;
 
       if (event === "SIGNED_IN") {
         setUser(newUser);
-        // userId가 실제로 바뀐 경우만 welcome 리셋 (토큰 갱신·Alt+Tab 복귀 제외)
         if (newUserId !== prevUserId) {
           welcomeFetchedRef.current = false;
           setMessages([]);
@@ -131,31 +117,24 @@ export default function ChatBot({
         welcomeFetchedRef.current = true;
         setMessages([{ role: "bot", text: initialMessageRef.current }]);
       }
-      // TOKEN_REFRESHED, INITIAL_SESSION, USER_UPDATED 등:
-      // user 정보 변경 없으므로 setUser 호출하지 않음 → welcome effect 재실행 없음
     });
     return () => subscription.unsubscribe();
   }, []);
 
-  // 챗봇이 열릴 때 또는 로그인 시 welcome message 생성
   useEffect(() => {
     if (!open || welcomeFetchedRef.current) return;
     welcomeFetchedRef.current = true;
 
-    const currentUser = user; // effect 실행 시점의 user를 고정
+    const currentUser = user;
     const fallback = initialMessageRef.current;
 
-    // 비로그인 상태: 기본 메시지 표시 후 ref를 false로 되돌려
-    // 로그인 시 이 effect가 다시 실행될 수 있도록 허용
     if (!currentUser) {
       setMessages([{ role: "bot", text: fallback }]);
       welcomeFetchedRef.current = false;
       return;
     }
 
-    // 로그인 상태: 개인화 welcome 로드
     const loadWelcome = async () => {
-      // 로딩 중 타이핑 인디케이터 표시
       setMessages([{ role: "bot", text: "" }]);
       setWelcomeLoading(true);
 
@@ -167,7 +146,6 @@ export default function ChatBot({
           return;
         }
 
-        // 최신 5개 로그를 컨텍스트로 사용 — 화면에 복원하지 않음
         const recentLogs = logs;
         const res = await fetch("/api/welcome", {
           method: "POST",
@@ -199,7 +177,6 @@ export default function ChatBot({
     if (!overrideMsg) setInput("");
     setIsStreaming(true);
 
-    // 최근 10개 메시지를 히스토리로 전달 (빈 메시지·연속 같은 role 제거, user로 시작 보장)
     type HistoryMsg = { role: "user" | "assistant"; content: string };
     const rawHistory = messages.slice(-10)
       .filter(m => m.text.trim().length > 0)
@@ -215,7 +192,6 @@ export default function ChatBot({
     const firstUserIdx = rawHistory.findIndex(m => m.role === "user");
     const history = firstUserIdx > 0 ? rawHistory.slice(firstUserIdx) : rawHistory;
 
-    // 사용자 메시지 + 빈 봇 메시지 추가
     setMessages(prev => [
       ...prev,
       { role: "user", text: userMsg },
@@ -242,14 +218,12 @@ export default function ChatBot({
         if (done) break;
         const chunk = decoder.decode(value, { stream: true });
         fullResponse += chunk;
-        // 마지막 봇 메시지를 실시간으로 업데이트
         setMessages(prev => [
           ...prev.slice(0, -1),
           { role: "bot", text: fullResponse },
         ]);
       }
 
-      // flush remaining bytes in decoder buffer
       const finalChunk = decoder.decode();
       if (finalChunk) {
         fullResponse += finalChunk;
