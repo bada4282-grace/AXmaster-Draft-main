@@ -9,7 +9,10 @@
       "Bash(npx next *)",
       "Bash(npx tsc *)",
       "Bash(cat app/api/macro/route.ts)",
-      "Bash(cat app/api/macro/route.tsx)"
+      "Bash(cat app/api/macro/route.tsx)",
+      "Bash(taskkill /PID 9504 /F)",
+      "Bash(rm -rf .next)",
+      "Bash(taskkill //PID 9504 //F)"
     ]
   }
 }

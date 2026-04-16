@@ -77,6 +77,7 @@ export default function ChatBot({
   const [welcomeTrigger, setWelcomeTrigger] = useState(0);
   const currentUserIdRef = useRef<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const welcomeFetchedRef = useRef(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const increaseFontSize = () => setFontSize(prev => Math.min(prev + 1, 16));
@@ -163,11 +164,17 @@ export default function ChatBot({
     };
 
     loadWelcome();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, user, welcomeTrigger]);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+<<<<<<< Updated upstream
+    bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+=======
+    const container = messagesContainerRef.current;
+    if (container) {
+      container.scrollTop = container.scrollHeight;
+    }
+>>>>>>> Stashed changes
   }, [messages]);
 
   const send = async (overrideMsg?: string) => {
@@ -277,32 +284,32 @@ export default function ChatBot({
             </div>
           )}
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
-          <span style={{ fontSize: 11, color: "#999", marginRight: 2 }}>Aa</span>
-          <button onClick={decreaseFontSize} style={{ width: 22, height: 22, borderRadius: "50%", border: "1px solid #ddd", background: "#fff", cursor: "pointer", fontSize: 14, color: "#555", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>−</button>
-          <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 3, flexShrink: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <span style={{ fontSize: 11, color: "#999", marginRight: 2 }}>Aa</span>
+            <button onClick={decreaseFontSize} style={{ width: 22, height: 22, borderRadius: "50%", border: "1px solid #ddd", background: "#fff", cursor: "pointer", fontSize: 14, color: "#555", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>−</button>
             <button onClick={increaseFontSize} style={{ width: 22, height: 22, borderRadius: "50%", border: "1px solid #ddd", background: "#fff", cursor: "pointer", fontSize: 14, color: "#555", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>+</button>
-            <button
-              onClick={() => setMessages([{ role: "bot", text: initialMessage }])}
-              title="대화 내용 지우기"
-              style={{ width: 22, height: 22, borderRadius: "50%", border: "1px solid #ddd", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
-              onMouseEnter={e => (e.currentTarget.style.background = "#fde8e8")}
-              onMouseLeave={e => (e.currentTarget.style.background = "#fff")}
-            >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="3 6 5 6 21 6" />
-                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-                <path d="M10 11v6" />
-                <path d="M14 11v6" />
-                <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
-              </svg>
-            </button>
           </div>
+          <button
+            onClick={() => setMessages([{ role: "bot", text: initialMessage }])}
+            title="대화 내용 지우기"
+            style={{ width: 22, height: 22, borderRadius: "50%", border: "1px solid #ddd", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+            onMouseEnter={e => (e.currentTarget.style.background = "#fde8e8")}
+            onMouseLeave={e => (e.currentTarget.style.background = "#fff")}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="3 6 5 6 21 6" />
+              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+              <path d="M10 11v6" />
+              <path d="M14 11v6" />
+              <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+            </svg>
+          </button>
         </div>
       </div>
 
       {/* Messages */}
-      <div className="chatbot-messages" style={{ minHeight: 0 }}>
+      <div ref={messagesContainerRef} className="chatbot-messages" style={{ minHeight: 0 }}>
         {messages.map((msg, i) => (
           <div key={i} style={{ display: "flex", justifyContent: msg.role === "user" ? "flex-end" : "flex-start", alignItems: "flex-start", gap: 4 }}>
             {msg.role === "bot" && (

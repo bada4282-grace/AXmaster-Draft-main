@@ -41,7 +41,7 @@ export default function ProductDetailPage() {
   // 해당 품목의 연간 추이 (tradeType 반영, 국가 선택 시 국가별 데이터)
   const trend = product
     ? country
-      ? ["2023", "2024", "2025", "2026"].map((y) => {
+      ? ["2020", "2021", "2022", "2023", "2024", "2025", "2026"].map((y) => {
           const d = getCountryTreemapData(y, country, tradeType).find((p) => p.name === name);
           return { year: y, value: d?.value ?? 0 };
         })
