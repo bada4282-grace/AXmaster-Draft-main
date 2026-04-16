@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 /**
  * 무역통계 CSV → lib/tradeData.generated.ts 변환 스크립트
  * 실행: node scripts/generate-data.js
@@ -5,7 +6,8 @@
 const fs = require('fs');
 const path = require('path');
 
-const CSV_PATH = path.join(__dirname, '..', 'trade_by_country_mti3.csv');
+const CSV_PATH = path.join(__dirname, '..', 'tradedata_ctr_mti6.csv');
+const MTI_CSV_PATH = path.join(__dirname, '..', 'MTI-data.csv');
 const OUT_PATH = path.join(__dirname, '..', 'lib', 'tradeData.generated.ts');
 
 // ── 국가명 정규화 ─────────────────────────────────────────────────────────
@@ -44,10 +46,26 @@ const ISO2_REGION = {
   BR: '남아메리카',
 };
 
-const YEARS = ['2023', '2024', '2025', '2026'];
+const YEARS = ['2020', '2021', '2022', '2023', '2024', '2025', '2026'];
 const TOP_N_COUNTRIES = 20;
-const TOP_N_PRODUCTS = 28;
+const TOP_N_PRODUCTS = 30;
 const TOP_N_PRODUCT_COUNTRIES = 5;
+
+// ─── MTI 룩업 로드 ────────────────────────────────────────────────────────
+console.log('MTI 데이터 로드 중...');
+const mtiLookup = {};
+{
+  const mtiRaw = fs.readFileSync(MTI_CSV_PATH, 'utf8').split('\n');
+  for (let i = 1; i < mtiRaw.length; i++) {
+    const line = mtiRaw[i].trim();
+    if (!line) continue;
+    const cols = line.split(',').map(c => c.replace(/^"|"$/g, ''));
+    if (cols.length >= 2) {
+      mtiLookup[cols[0]] = cols[1];
+    }
+  }
+  console.log(`MTI 룩업 ${Object.keys(mtiLookup).length}개 로드 완료`);
+}
 
 // ─── 파싱 ─────────────────────────────────────────────────────────────────
 console.log('CSV 파싱 중...');
@@ -85,10 +103,10 @@ for (let i = 1; i < raw.length; i++) {
   const mm = yymm.slice(4, 6);
   const ctr = normCtr(cols[1]);
   const mtiCd = cols[2];
-  const mtiName = cols[3];
+  const mtiName = mtiLookup[mtiCd] || mtiCd;
   const mti1 = mtiCd ? mtiCd.slice(0, 1) : '';
-  const exp = parseFloat(cols[4]) || 0;
-  const imp = parseFloat(cols[7]) || 0;
+  const exp = parseFloat(cols[3]) || 0;
+  const imp = parseFloat(cols[6]) || 0;
 
   if (!mtiCd || !/^\d/.test(mtiCd)) continue;
 
@@ -392,7 +410,7 @@ console.log('TypeScript 파일 생성 중...');
 
 const ts = `// !! 자동 생성된 파일입니다. 수정하지 마세요 !!
 // 생성: scripts/generate-data.js
-// 원본: trade_by_country_mti3.csv
+// 원본: tradedata_ctr_mti6.csv + MTI-data.csv
 
 export const KPI_BY_YEAR = ${JSON.stringify(kpiOut, null, 2)} as const;
 
@@ -457,6 +475,8 @@ export const COUNTRY_TREEMAP_EXP_BY_YEAR: Record<string, Record<string, {
 export const COUNTRY_TREEMAP_IMP_BY_YEAR: Record<string, Record<string, {
   code: string; name: string; value: number; mti: number; color: string;
 }[]>> = ${JSON.stringify(countryTreemapImpOut, null, 2)};
+
+export const MTI_LOOKUP: Record<string, string> = ${JSON.stringify(mtiLookup, null, 2)};
 `;
 
 fs.writeFileSync(OUT_PATH, ts, 'utf8');
