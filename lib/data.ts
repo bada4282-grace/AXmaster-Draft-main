@@ -190,6 +190,26 @@ export function getProductTrend(productCode: string, tradeType: TradeType = "수
   return (dict as Record<string, YearlyTrend[]>)[productCode] ?? [];
 }
 
+/** prefix(집계 코드)에 해당하는 모든 6단위 품목의 트렌드를 합산 */
+export function getAggregatedProductTrend(codePrefix: string, tradeType: TradeType = "수출"): YearlyTrend[] {
+  if (codePrefix.length >= 6) return getProductTrend(codePrefix, tradeType);
+  const dict = tradeType === "수입" ? PRODUCT_IMP_TREND_BY_CODE : PRODUCT_EXP_TREND_BY_CODE;
+  const allCodes = Object.keys(dict as Record<string, YearlyTrend[]>);
+  const matchingCodes = allCodes.filter((c) => c.startsWith(codePrefix));
+  if (matchingCodes.length === 0) return [];
+
+  const yearMap = new Map<string, number>();
+  for (const code of matchingCodes) {
+    const trend = (dict as Record<string, YearlyTrend[]>)[code] ?? [];
+    for (const { year, value } of trend) {
+      yearMap.set(year, (yearMap.get(year) ?? 0) + value);
+    }
+  }
+  return Array.from(yearMap.entries())
+    .map(([year, value]) => ({ year, value: Math.round(value * 10) / 10 }))
+    .sort((a, b) => a.year.localeCompare(b.year));
+}
+
 export const SEMICONDUCTOR_TREND: YearlyTrend[] = getProductTrend("831110", "수출");
 
 // ─── 품목별 상위 국가 ─────────────────────────────────────────────────────
@@ -207,6 +227,32 @@ export function getProductTopCountries(
     ? PRODUCT_IMP_TOP_COUNTRIES_BY_CODE
     : PRODUCT_EXP_TOP_COUNTRIES_BY_CODE;
   return (dict as Record<string, Record<string, CountryValue[]>>)[productCode]?.[year] ?? [];
+}
+
+/** prefix(집계 코드)에 해당하는 모든 6단위 품목의 상위 국가를 합산 */
+export function getAggregatedTopCountries(
+  codePrefix: string,
+  year = DEFAULT_YEAR,
+  tradeType: TradeType = "수출"
+): CountryValue[] {
+  if (codePrefix.length >= 6) return getProductTopCountries(codePrefix, year, tradeType);
+  const dict = tradeType === "수입"
+    ? PRODUCT_IMP_TOP_COUNTRIES_BY_CODE
+    : PRODUCT_EXP_TOP_COUNTRIES_BY_CODE;
+  const allCodes = Object.keys(dict as Record<string, Record<string, CountryValue[]>>);
+  const matchingCodes = allCodes.filter((c) => c.startsWith(codePrefix));
+  if (matchingCodes.length === 0) return [];
+
+  const countryMap = new Map<string, number>();
+  for (const code of matchingCodes) {
+    const countries = (dict as Record<string, Record<string, CountryValue[]>>)[code]?.[year] ?? [];
+    for (const { country, value } of countries) {
+      countryMap.set(country, (countryMap.get(country) ?? 0) + value);
+    }
+  }
+  return Array.from(countryMap.entries())
+    .map(([country, value]) => ({ country, value: Math.round(value * 10) / 10 }))
+    .sort((a, b) => b.value - a.value);
 }
 
 export const TOP5_COUNTRIES_SEMICONDUCTOR: CountryValue[] =

@@ -167,7 +167,10 @@ export default function ChatBot({
   }, [open, user, welcomeTrigger]);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    const container = messagesContainerRef.current;
+    if (container) {
+      container.scrollTop = container.scrollHeight;
+    }
   }, [messages]);
 
   const send = async (overrideMsg?: string) => {

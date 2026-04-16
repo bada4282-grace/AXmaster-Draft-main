@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import PersistentChatBot from "@/components/PersistentChatBot";
 
 export const metadata: Metadata = {
   title: "K-stat 글로벌 무역통계",
@@ -16,7 +17,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet" />
       </head>
       <body style={{ fontFamily: "'Noto Sans KR', sans-serif" }} suppressHydrationWarning>
-        {children}
+        <div className="app-shell">
+          <div className="app-main">
+            {children}
+          </div>
+          <PersistentChatBot />
+        </div>
       </body>
     </html>
   );
