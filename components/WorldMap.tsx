@@ -30,7 +30,7 @@ function getFilterColor(rank: number): string {
   if (rank <= 30) return "#6DC4B5"; // #A8E0D4 → 더 진하게
   return "#DCF3EF";
 }
-import { getMonthlyCountryMapData, queryTrade, type MonthlyCountryMapItem } from "@/lib/supabase";
+import { getMonthlyCountryMapData, type MonthlyCountryMapItem } from "@/lib/supabase";
 
 // ─── 상수 ────────────────────────────────────────────────────────────────────
 const GEO_URL = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
@@ -180,8 +180,6 @@ function normalizeGeometry(geom: GeoJSON.Geometry): GeoJSON.Geometry {
 }
 
 let _geoCache: GeoJSON.FeatureCollection | null = null;
-// 품목별 국가 순위 캐시
-const _productRankCache = new Map<string, MonthlyCountryMapItem[]>();
 
 async function loadBaseGeoJSON(): Promise<GeoJSON.FeatureCollection> {
   if (_geoCache) return _geoCache;
@@ -244,75 +242,19 @@ export default function WorldMap({
 
   const countryData = getCountryData(year, tradeType);
 
-  // ─ 품목별 국가 순위 (Supabase 실시간 조회) ─
-  const [productCountryRanks, setProductCountryRanks] = useState<MonthlyCountryMapItem[] | null>(null);
-
-  useEffect(() => {
-    if (!selectedProduct) { setProductCountryRanks(null); return; }
-
-    const cacheKey = `${year}-${month}-${selectedProduct}-${tradeType}`;
-    if (_productRankCache.has(cacheKey)) {
-      setProductCountryRanks(_productRankCache.get(cacheKey)!);
-      return;
-    }
-
-    let mounted = true;
-    const MONTHS = ["01","02","03","04","05","06","07","08","09","10","11","12"];
-    const monthsToFetch = month
-      ? [`${year}${month}`]
-      : MONTHS.map((m) => `${year}${m}`);
-
-    const totals = new Map<string, number>();
-    let _amtCol: string | null = null;
-
-    // 금액 컬럼 다단계 탐지 (컬럼명이 DB마다 다를 수 있음)
-    const detectAmtCol = (row: any): string | null => {
-      const keys = Object.keys(row);
-      const isExport = tradeType !== "수입";
-      // 1순위: 모드 접두사 + amt/amnt/amount/hamnt 패턴
-      const modeRe = isExport ? /exp/i : /imp/i;
-      for (const re of [/amt$/i, /amnt$/i, /amount$/i, /hamnt$/i, /amt/i, /amnt/i]) {
-        const col = keys.find((k) => modeRe.test(k) && re.test(k));
-        if (col) return col;
-      }
-      // 2순위: amt/amnt/amount 패턴 (모드 무관)
-      for (const re of [/amt/i, /amnt/i, /amount/i, /금액/i]) {
-        const col = keys.find((k) => re.test(k) && typeof row[k] === "number" && row[k] > 0);
-        if (col) return col;
-      }
-      // 3순위: 큰 숫자 컬럼 (무역금액은 수만 이상, MTI 코드나 ID는 작음)
-      const bigCols = keys
-        .filter((k) => typeof row[k] === "number" && row[k] > 10000 && !/id$|^id|_cd$|_code$/i.test(k))
-        .sort((a, b) => Number(row[b]) - Number(row[a]));
-      return bigCols[0] ?? null;
-    };
-
-    Promise.allSettled(
-      monthsToFetch.map(async (yymm) => {
-        const rows = await queryTrade({ mtiName: selectedProduct, yymm });
-        if (!rows?.length) return;
-        if (!_amtCol) _amtCol = detectAmtCol(rows[0] as any);
-        if (!_amtCol) return;
-        const col = _amtCol;
-        rows.forEach((row: any) => {
-          const ctr = (row["CTR_NAME"] ?? row["ctr_name"] ?? "").trim();
-          const amt = Number(row[col] ?? 0);
-          if (ctr && amt > 0) totals.set(ctr, (totals.get(ctr) ?? 0) + amt);
-        });
-      })
-    ).then(() => {
-      if (!mounted) return;
-      const sorted: MonthlyCountryMapItem[] = Array.from(totals.entries())
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 30)
-        .map(([ctr_name, total_amt], i) => ({ ctr_name, total_amt, rank: i + 1 }));
-      const result = sorted.length > 0 ? sorted : null;
-      if (result) _productRankCache.set(cacheKey, result);
-      setProductCountryRanks(result);
+  // ─ 품목별 국가 순위 (정적 데이터 사용) ─
+  const productTopIso = useMemo(() => {
+    if (!selectedProduct) return null;
+    const treemap = getTreemapData(year, tradeType);
+    const product = treemap.find((p) => p.name === selectedProduct);
+    if (!product?.topCountries?.length) return null;
+    const isoSet = new Set<string>();
+    product.topCountries.forEach((name) => {
+      const iso = KO_NAME_TO_ISO[name];
+      if (iso) isoSet.add(iso);
     });
-
-    return () => { mounted = false; };
-  }, [selectedProduct, year, month, tradeType]);
+    return isoSet.size > 0 ? isoSet : null;
+  }, [selectedProduct, year, tradeType]);
 
   // ─ Pretendard 폰트 로드 ─
   useEffect(() => {
@@ -378,19 +320,9 @@ export default function WorldMap({
     return [...updated, ...extras];
   }, [countryData, month, monthlyRanks]);
 
-  // 품목 국가 ISO 맵 (product rank → ISO alpha-2)
-  // 동적 데이터 없으면 정적 topCountries + topProducts 역색인 fallback
+  // 품목 국가 ISO 맵 (정적 topCountries + topProducts 역색인)
   const productByIso = useMemo((): Map<string, number> | null => {
     if (!selectedProduct) return null;
-    if (productCountryRanks?.length) {
-      const m = new Map<string, number>();
-      productCountryRanks.forEach((row) => {
-        const iso = KO_NAME_TO_ISO[row.ctr_name];
-        if (iso) m.set(iso, row.rank);
-      });
-      if (m.size > 0) return m;
-    }
-    // Fallback: topCountries(상품 정적) + topProducts 역색인(국가 정적)
     const productIsoSet = new Set<string>();
 
     const found = getTreemapData(year, tradeType).find((p) => p.name === selectedProduct);
@@ -414,7 +346,7 @@ export default function WorldMap({
       if (iso && !m.has(iso)) m.set(iso, i + 1);
     });
     return m.size > 0 ? m : null;
-  }, [selectedProduct, productCountryRanks, year, tradeType, activeCountryData]);
+  }, [selectedProduct, year, tradeType, activeCountryData]);
 
   const top5Countries = useMemo(
     () => activeCountryData.filter((c) => c.rank <= 5).sort((a, b) => a.rank - b.rank),
