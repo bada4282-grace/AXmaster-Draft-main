@@ -181,17 +181,18 @@ body {
 .filter-bar {
   display: flex;
   align-items: center;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
+  row-gap: 8px;
   padding: 10px 0;
   border-bottom: 1px solid #f0f0f0;
-  overflow-x: auto;
 }
 .filter-section {
-  flex-shrink: 0;
+  flex: 1 1 auto;
   display: flex;
   justify-content: center;
   align-items: center;
   padding: 0 14px;
+  transition: flex 0.3s ease;
 }
 .filter-section-divider {
   border-left: 1px solid #f0f0f0;

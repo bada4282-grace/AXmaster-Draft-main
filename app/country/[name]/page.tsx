@@ -198,7 +198,7 @@ function CountryDetailContent() {
                       value={mtiDepth}
                       onChange={(e) => setMtiDepth(Number(e.target.value))}
                       className="filter-select"
-                      style={{ width: 80 }}
+                      style={{ width: 140 }}
                     >
                       <option value={1}>1단위 (대분류)</option>
                       <option value={2}>2단위 (중분류)</option>

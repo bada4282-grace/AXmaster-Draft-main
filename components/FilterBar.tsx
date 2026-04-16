@@ -49,7 +49,7 @@ export default function FilterBar({
 
   // 해당 연도의 국가/품목 목록 (현재 tradeType 기준)
   const countryNames = getCountryData(year, tradeType).map((c) => c.name);
-  const productNames = getTreemapData(year, tradeType).map((p) => p.name);
+  const productNames = [...new Set(getTreemapData(year, tradeType).map((p) => p.name))];
 
   const handleMonth = (m: string) => {
     setMonth(m);
@@ -195,7 +195,7 @@ export default function FilterBar({
             className="filter-select"
             value={mtiDepth}
             onChange={(e) => onMtiDepthChange(Number(e.target.value))}
-            style={{ width: 80 }}
+            style={{ width: 140 }}
           >
             <option value={1}>1단위 (대분류)</option>
             <option value={2}>2단위 (중분류)</option>
