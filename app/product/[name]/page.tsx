@@ -43,7 +43,9 @@ function ProductDetailContent() {
   const [year, setYear] = useState(DEFAULT_YEAR);
   const [tradeType, setTradeType] = useState<TradeType>("수출");
   const [country, setCountry] = useState("");
-  const [subTab, setSubTab] = useState<"금액 추이" | "상위 국가">("금액 추이");
+  const [subTab, setSubTab] = useState<"금액 추이" | "상위 국가">(
+    searchParams.get("tab") === "countries" ? "상위 국가" : "금액 추이"
+  );
 
   // 해당 품목 정보 찾기 (6단위 또는 집계 코드)
   const treemapData = getTreemapData(DEFAULT_YEAR, tradeType);
