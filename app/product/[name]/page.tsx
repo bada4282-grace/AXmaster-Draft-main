@@ -99,7 +99,7 @@ export default function ProductDetailPage() {
         <div className="main-content-layout">
           {/* Dashboard card */}
           <div className="dashboard-card dashboard-main-card">
-            <FilterBar mode="product" defaultYear={DEFAULT_YEAR} onYearChange={setYear} onTradeTypeChange={setTradeType} onCountryChange={setCountry} />
+            <FilterBar mode="product" defaultYear={DEFAULT_YEAR} onYearChange={setYear} onTradeTypeChange={setTradeType} onCountryChange={setCountry} disableMonthPeriod />
             <KPIBar year={year} />
 
             <div style={{ display: "flex", height: 380 }}>
