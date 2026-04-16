@@ -40,7 +40,12 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    storage: typeof window !== "undefined" ? window.sessionStorage : undefined,
+    persistSession: true,
+  },
+});
 
 // 국가 + 품목 기준 교역 데이터 조회
 export async function queryTrade({
@@ -80,10 +85,11 @@ export async function getMonthlyTreemapData(
     console.error("[getMonthlyTreemapData] RPC error:", error.message ?? error);
     throw error;
   }
-  return (data ?? [])
+  const rows = (data ?? []) as RpcTreemapRow[];
+  return rows
     .map(mapToProductNode)
-    .filter((n): n is ProductNode => n !== null)
-    .sort((a, b) => b.value - a.value)
+    .filter((n: ProductNode | null): n is ProductNode => n !== null)
+    .sort((a: ProductNode, b: ProductNode) => b.value - a.value)
     .slice(0, 30);
 }
 
@@ -126,9 +132,10 @@ export async function getCountryMonthlyTreemapData(
     console.error("[getCountryMonthlyTreemapData] RPC error:", error.message ?? error);
     throw error;
   }
-  return (data ?? [])
+  const rows = (data ?? []) as RpcTreemapRow[];
+  return rows
     .map(mapToProductNode)
-    .filter((n): n is ProductNode => n !== null)
-    .sort((a, b) => b.value - a.value)
+    .filter((n: ProductNode | null): n is ProductNode => n !== null)
+    .sort((a: ProductNode, b: ProductNode) => b.value - a.value)
     .slice(0, 30);
 }
