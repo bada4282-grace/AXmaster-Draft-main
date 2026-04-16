@@ -35,6 +35,7 @@ function CountryDetailContent() {
     searchParams.get("tab") === "timeseries" ? "시계열 추이" : "품목별"
   );
   const [mtiDepth, setMtiDepth] = useState(3);
+  const [mtiCategoryActive, setMtiCategoryActive] = useState(false);
 
   const [loadingCount, setLoadingCount] = useState(0);
   const isLoading = loadingCount > 0;
@@ -211,7 +212,8 @@ function CountryDetailContent() {
                       value={mtiDepth}
                       onChange={(e) => setMtiDepth(Number(e.target.value))}
                       className="filter-select"
-                      style={{ width: 140 }}
+                      style={{ width: 140, ...(mtiCategoryActive ? { opacity: 0.45, cursor: "not-allowed" } : {}) }}
+                      disabled={mtiCategoryActive}
                     >
                       <option value={1}>1단위 (대분류)</option>
                       <option value={2}>2단위 (중분류)</option>
@@ -225,7 +227,7 @@ function CountryDetailContent() {
 
               <div style={{ flex: 1, padding: 8, overflow: "hidden" }}>
                 {subTab === "품목별" ? (
-                  <TreemapChart forCountry countryName={country.name} year={year} month={month} tradeType={tradeType} mtiDepth={mtiDepth} onLoadingChange={handleLoadingChange} />
+                  <TreemapChart forCountry countryName={country.name} year={year} month={month} tradeType={tradeType} mtiDepth={mtiDepth} onLoadingChange={handleLoadingChange} onCategoryChange={(mti) => setMtiCategoryActive(mti !== null)} />
                 ) : timeseries.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={displayData} margin={{ top: 8, right: 44, left: 8, bottom: 4 }}>
