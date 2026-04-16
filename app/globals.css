@@ -203,7 +203,7 @@ header.w-full {
   border-bottom: 1px solid #f0f0f0;
 }
 .filter-section {
-  flex: 1 1 auto;
+  flex: 1 1 0;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -601,3 +601,53 @@ header.w-full {
 }
 .back-btn:hover { border-color: #E02020; color: #E02020; }
 .back-btn:focus { outline: none; border-color: #E02020; }
+
+/* Breadcrumb navigation bar */
+.breadcrumb-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 0 14px;
+  margin: 8px 0 0;
+}
+.breadcrumb-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #333;
+  background: #fff;
+  border: 1px solid #d0d0d0;
+  border-radius: 16px;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.breadcrumb-back-btn:hover {
+  border-color: #E02020;
+  color: #E02020;
+}
+.breadcrumb-sep {
+  margin: 0 6px;
+  font-size: 12px;
+  color: #c0c0c0;
+  user-select: none;
+}
+.breadcrumb-text {
+  font-size: 12px;
+  color: #888;
+  white-space: nowrap;
+}
+.breadcrumb-current {
+  font-size: 12px;
+  font-weight: 700;
+  color: #E02020;
+  white-space: nowrap;
+}

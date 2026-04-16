@@ -118,6 +118,20 @@ function CountryDetailContent() {
           <button className="main-tab-inactive" onClick={() => router.push("/?tab=product")}>품목별</button>
         </div>
 
+        {/* Breadcrumb bar — 드릴다운 페이지에서만 표시 */}
+        <div className="breadcrumb-bar">
+          <button className="breadcrumb-back-btn" onClick={() => router.push("/?tab=country")}>
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ flexShrink: 0 }}>
+              <path d="M7.5 2.5L4 6l3.5 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            돌아가기
+          </button>
+          <span className="breadcrumb-sep">/</span>
+          <span className="breadcrumb-text">국가별</span>
+          <span className="breadcrumb-sep">/</span>
+          <span className="breadcrumb-current">{country.name}</span>
+        </div>
+
         <div className="main-content-layout">
           {/* Dashboard card */}
           <div className="dashboard-card dashboard-main-card">
@@ -166,16 +180,6 @@ function CountryDetailContent() {
 
             {/* Main viz */}
             <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-              {/* Breadcrumb */}
-              <div style={{ fontSize: 11, color: "#94a3b8", padding: "4px 8px 0" }}>
-                <span
-                  style={{ cursor: "pointer", textDecoration: "underline" }}
-                  onClick={() => router.push("/?tab=country")}
-                >전체</span>
-                <span style={{ margin: "0 4px" }}>›</span>
-                <span style={{ color: "#475569", fontWeight: 600 }}>{country.name}</span>
-              </div>
-
               {/* Sub tabs */}
               <div className="subtab-bar">
                 {(["품목별", "시계열 추이"] as const).map((tab) => (
@@ -209,7 +213,6 @@ function CountryDetailContent() {
                       <option value={6}>6단위 (최소분류)</option>
                     </select>
                   )}
-                  <button className="back-btn" onClick={() => router.push("/")}>← 돌아가기</button>
                 </div>
               </div>
 

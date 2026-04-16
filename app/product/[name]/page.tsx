@@ -149,6 +149,20 @@ function ProductDetailContent() {
           <button className="main-tab-active">품목별</button>
         </div>
 
+        {/* Breadcrumb bar — 드릴다운 페이지에서만 표시 */}
+        <div className="breadcrumb-bar">
+          <button className="breadcrumb-back-btn" onClick={() => router.push("/?tab=product")}>
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ flexShrink: 0 }}>
+              <path d="M7.5 2.5L4 6l3.5 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            돌아가기
+          </button>
+          <span className="breadcrumb-sep">/</span>
+          <span className="breadcrumb-text">품목별</span>
+          <span className="breadcrumb-sep">/</span>
+          <span className="breadcrumb-current">{name}</span>
+        </div>
+
         <div className="main-content-layout">
           {/* Dashboard card */}
           <div className="dashboard-card dashboard-main-card">
@@ -208,9 +222,6 @@ function ProductDetailContent() {
                 <span style={{ fontSize: 11, color: "#94a3b8", marginLeft: 4, alignSelf: "center" }}>
                   * 연간 기준 (월 선택과 무관)
                 </span>
-                <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6 }}>
-                  <button className="back-btn" onClick={() => router.push("/?tab=product")}>← 돌아가기</button>
-                </div>
               </div>
 
               <div style={{ flex: 1, padding: 12, overflow: "hidden" }}>
