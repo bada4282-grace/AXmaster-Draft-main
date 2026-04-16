@@ -140,6 +140,7 @@ interface TreemapChartProps {
   tradeType?: TradeType;
   mtiDepth?: number;
   onLoadingChange?: (loading: boolean) => void;
+  onCategoryChange?: (mti: number | null) => void;
 }
 
 export default function TreemapChart({
@@ -150,6 +151,7 @@ export default function TreemapChart({
   tradeType = "수출",
   mtiDepth = 3,
   onLoadingChange,
+  onCategoryChange,
 }: TreemapChartProps) {
   const router = useRouter();
 
@@ -230,7 +232,7 @@ export default function TreemapChart({
 
   const handleClick = (data: { name?: string } | null) => {
     if (!data?.name) return;
-    const item = aggregatedData.find((d) => d.name === data.name);
+    const item = displayData.find((d) => d.name === data.name);
     if (!item) return;
     const params = new URLSearchParams({ code: item.code });
     router.push(`/product/${encodeURIComponent(item.name)}?${params.toString()}`);
@@ -314,10 +316,10 @@ export default function TreemapChart({
               aspectRatio={4 / 3}
               isAnimationActive={false}
               onClick={handleClick}
-              content={<CustomContent data={aggregatedData} animKey={animating ? animKey : -1} />}
+              content={<CustomContent data={displayData} animKey={animating ? animKey : -1} />}
             >
               <Tooltip
-                content={<CustomTooltip data={aggregatedData} tradeType={tradeType} forCountry={forCountry} />}
+                content={<CustomTooltip data={displayData} tradeType={tradeType} forCountry={forCountry} />}
                 {...rechartsTooltipSurfaceProps}
               />
             </Treemap>
@@ -334,7 +336,7 @@ export default function TreemapChart({
             <button
               key={mti}
               data-tooltip={MTI_NAMES[n]}
-              onClick={() => { setZoomedMti(isActive ? null : n); startTreemapAnimation(); }}
+              onClick={() => { const next = isActive ? null : n; setZoomedMti(next); onCategoryChange?.(next); startTreemapAnimation(); }}
               className={`mti-icon-btn${isActive ? " mti-icon-btn--active" : ""}`}
               style={{
                 "--mti-color": color as string,
@@ -350,7 +352,7 @@ export default function TreemapChart({
         })}
         <button
           data-tooltip="전체 보기"
-          onClick={() => { setZoomedMti(null); startTreemapAnimation(); }}
+          onClick={() => { setZoomedMti(null); onCategoryChange?.(null); startTreemapAnimation(); }}
           className={`mti-icon-btn${zoomedMti === null ? " mti-icon-btn--active" : ""}`}
           style={{
             "--mti-color": "#475569",

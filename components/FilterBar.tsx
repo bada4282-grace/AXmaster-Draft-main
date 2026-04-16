@@ -18,6 +18,7 @@ interface FilterBarProps {
   disableMonthPeriod?: boolean;
   mtiDepth?: number;
   onMtiDepthChange?: (depth: number) => void;
+  mtiDisabled?: boolean;
 }
 
 export default function FilterBar({
@@ -31,6 +32,7 @@ export default function FilterBar({
   disableMonthPeriod = false,
   mtiDepth,
   onMtiDepthChange,
+  mtiDisabled = false,
 }: FilterBarProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -158,6 +160,8 @@ export default function FilterBar({
               className="filter-select filter-select-mid"
               value={mtiDepth}
               onChange={(e) => onMtiDepthChange(Number(e.target.value))}
+              disabled={mtiDisabled}
+              style={mtiDisabled ? { opacity: 0.45, cursor: "not-allowed" } : undefined}
             >
               <option value={1}>1단위(대분류)</option>
               <option value={2}>2단위(중분류)</option>

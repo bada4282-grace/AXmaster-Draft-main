@@ -28,6 +28,7 @@ function HomeContent() {
   const [, setPeriod] = useState("annual");
   const [mtiDepth, setMtiDepth] = useState(3);
   const [productCountry, setProductCountry] = useState("");
+  const [mtiCategoryActive, setMtiCategoryActive] = useState(false);
 
   // 로딩 상태 관리 (WorldMap / TreemapChart)
   const [loadingCount, setLoadingCount] = useState(0);
@@ -65,6 +66,7 @@ function HomeContent() {
               onTradeTypeChange={setTradeType}
               mtiDepth={mainTab === "품목별" ? mtiDepth : undefined}
               onMtiDepthChange={setMtiDepth}
+              mtiDisabled={mtiCategoryActive}
               onCountryChange={setProductCountry}
             />
 
@@ -77,7 +79,7 @@ function HomeContent() {
                 <WorldMap year={year} month={month} tradeType={tradeType} onLoadingChange={handleLoadingChange} />
                 ) : (
                   <div style={{ width: "100%", height: "100%", padding: 8 }}>
-                    <TreemapChart year={year} month={month} tradeType={tradeType} mtiDepth={mtiDepth} forCountry={!!productCountry} countryName={productCountry || undefined} onLoadingChange={handleLoadingChange} />
+                    <TreemapChart year={year} month={month} tradeType={tradeType} mtiDepth={mtiDepth} forCountry={!!productCountry} countryName={productCountry || undefined} onLoadingChange={handleLoadingChange} onCategoryChange={(mti) => setMtiCategoryActive(mti !== null)} />
                   </div>
                 )}
               </div>
