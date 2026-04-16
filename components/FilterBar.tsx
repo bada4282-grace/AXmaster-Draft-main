@@ -15,6 +15,8 @@ interface FilterBarProps {
   defaultYear?: string;
   /** 월·기간 셀렉트 비활성화 (연간 데이터만 사용하는 페이지용) */
   disableMonthPeriod?: boolean;
+  mtiDepth?: number;
+  onMtiDepthChange?: (depth: number) => void;
 }
 
 export default function FilterBar({
@@ -27,6 +29,8 @@ export default function FilterBar({
   onCountryChange,
   defaultYear = "2026",
   disableMonthPeriod = false,
+  mtiDepth,
+  onMtiDepthChange,
 }: FilterBarProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
