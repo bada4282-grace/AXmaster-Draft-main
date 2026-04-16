@@ -337,8 +337,9 @@ export default function ChatBot({
               </div>
             </div>
             {msg.role === "bot" && msg.routeButtons && msg.routeButtons.length > 0 && (
-              <div style={{ display: "flex", flexDirection: "column", gap: 4, paddingLeft: 24 }}>
-                {msg.routeButtons.map((btn, j) => (
+              <div style={{ display: "flex", flexDirection: "column", gap: 6, paddingLeft: 24 }}>
+                {/* 정확 매칭 버튼 */}
+                {msg.routeButtons.filter(btn => btn.type !== "candidate").map((btn, j) => (
                   <button
                     key={j}
                     onClick={() => router.push(btn.href)}
@@ -359,6 +360,34 @@ export default function ChatBot({
                     📊 {btn.label}
                   </button>
                 ))}
+                {/* 유사 후보 버튼 */}
+                {msg.routeButtons.some(btn => btn.type === "candidate") && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                    <div style={{ fontSize: 10, color: "#888" }}>혹시 이 품목을 찾으시나요?</div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                      {msg.routeButtons.filter(btn => btn.type === "candidate").map((btn, j) => (
+                        <button
+                          key={j}
+                          onClick={() => router.push(btn.href)}
+                          style={{
+                            background: "#fff",
+                            border: "1px solid #94a3b8",
+                            borderRadius: 12,
+                            padding: "3px 8px",
+                            fontSize: 10,
+                            color: "#475569",
+                            cursor: "pointer",
+                            fontWeight: 500,
+                          }}
+                          onMouseEnter={e => { e.currentTarget.style.background = "#f1f5f9"; }}
+                          onMouseLeave={e => { e.currentTarget.style.background = "#fff"; }}
+                        >
+                          {btn.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
