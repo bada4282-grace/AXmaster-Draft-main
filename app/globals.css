@@ -15,7 +15,6 @@
 .app-main {
   flex: 1;
   min-width: 0;
-  overflow-x: hidden;
 }
 
 /* 레이아웃 레벨 영구 챗봇 사이드바 */
@@ -29,6 +28,8 @@
   overflow: visible;
   display: flex;
   flex-direction: column;
+  align-self: flex-start;
+  margin-top: clamp(200px, calc(100px + 10vw), 250px);
 }
 
 .app-chatbot-sidebar.collapsed {
@@ -81,9 +82,18 @@ body {
   color: #1a1a1a;
   background: #f8f8f8;
   -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
 }
 
-/* Header */
+/* Header — 뷰포트 전체 너비 (챗봇 사이드바와 무관) */
+header.w-full {
+  width: 100vw;
+  position: sticky;
+  top: 0;
+  left: 0;
+  margin-left: 0;
+  z-index: 50;
+}
 .header-top {
   background: #fff;
   border-bottom: 1px solid #e8e8e8;
@@ -112,9 +122,12 @@ body {
 }
 .gnb-item:hover { color: #E02020; }
 
-/* Hero */
+/* Hero — 뷰포트 전체 너비 (챗봇 사이드바와 무관) */
 .hero-banner {
-  width: 100%;
+  width: 100vw;
+  position: relative;
+  left: 0;
+  margin-left: 0;
   min-height: 100px;
   height: clamp(100px, 10vw, 150px);
   background: linear-gradient(160deg, #0d1b35 0%, #0a2040 40%, #0c3060 70%, #0d1b35 100%);
@@ -122,10 +135,10 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  position: relative;
   overflow: hidden;
   box-sizing: border-box;
   flex-shrink: 0;
+  z-index: 10;
 }
 
 /* Main tab pills */
