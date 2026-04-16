@@ -215,7 +215,7 @@ function ProductDetailContent() {
                   ) : (
                     <>
                       <div style={{ fontSize: 18, fontWeight: 900, color: "#999" }}>-</div>
-                      <div style={{ fontSize: 10, color: "#999", fontWeight: 500 }}>불완전 연도</div>
+                      <div style={{ fontSize: 10, color: "#999", fontWeight: 500 }}>⚠️데이터 불충분</div>
                     </>
                   )}
                 </div>
