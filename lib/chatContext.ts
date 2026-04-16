@@ -15,6 +15,7 @@ import {
   COUNTRY_DATA_BY_YEAR,
   MACRO_INDICATORS,
   MACRO_META,
+  MTI_LOOKUP,
 } from "@/lib/tradeData.generated";
 
 interface ExtractedKeywords {
@@ -46,53 +47,128 @@ function buildCountryList(): string[] {
   return Array.from(names);
 }
 
+// 실제 트리맵 데이터가 있는 코드 접두사 세트 (1~6자리)
+function buildValidCodePrefixes(): Set<string> {
+  const prefixes = new Set<string>();
+  for (const yearData of Object.values(TREEMAP_EXP_DATA_BY_YEAR)) {
+    for (const item of yearData) {
+      for (let len = 1; len <= item.code.length; len++) {
+        prefixes.add(item.code.slice(0, len));
+      }
+    }
+  }
+  return prefixes;
+}
+
 const PRODUCT_LOOKUP = buildProductLookup();
 const COUNTRY_LIST = buildCountryList();
-
-// 사용자 입력 별칭 → 실제 품목명 매핑 (부분 일치 보완)
-const PRODUCT_ALIAS_MAP: Record<string, string> = {
-  "반도체": "메모리반도체",
-  "자동차": "승용차",
-  "배터리": "리튬이온전지",
-  "디스플레이": "평판디스플레이",
-  "석유": "석유제품",
-  "화학": "합성수지",
-};
+const VALID_CODE_PREFIXES = buildValidCodePrefixes();
 
 // 대시보드 라우팅 버튼 타입
 export interface RouteButton {
   label: string;
   href: string;
+  type?: "exact" | "candidate"; // exact: 정확 매칭, candidate: 유사 후보
 }
 
-// 질문에서 라우팅 가능한 버튼 목록 반환 (국가/품목 각 최대 1개)
+// 한국어 조사 목록 (단어 경계 판별용)
+const KR_PARTICLES = ["이", "가", "은", "는", "을", "를", "의", "에", "에서", "로", "으로", "와", "과", "도", "만", "이고", "이며", "인", "까지", "부터", "한테", "에게"];
+
+// 질문에서 품목명이 독립된 단어로 포함되어 있는지 확인 (조사 허용)
+function isExactWordMatch(question: string, name: string): boolean {
+  const tokens = question.split(/\s+/);
+  return tokens.some(token => {
+    if (token === name) return true;
+    if (token.startsWith(name)) {
+      const suffix = token.slice(name.length);
+      return KR_PARTICLES.some(p => suffix === p || suffix.startsWith(p));
+    }
+    return false;
+  });
+}
+
+// 질문에서 라우팅 가능한 버튼 목록 반환
 export function resolveRouteButtons(question: string): RouteButton[] {
   const { countries, productNames } = extractKeywords(question);
   const buttons: RouteButton[] = [];
 
+  // 국가 버튼 (정확 매칭, 수입/수출 반영)
   if (countries.length > 0) {
+    const tradeType = detectTradeType(question);
+    const modeQuery = tradeType === "수입" ? "?mode=import" : "";
     buttons.push({
-      label: `${countries[0]} 데이터 확인하기`,
-      href: `/country/${encodeURIComponent(countries[0])}`,
+      label: `${countries[0]} ${tradeType} 데이터 확인하기`,
+      href: `/country/${encodeURIComponent(countries[0])}${modeQuery}`,
+      type: "exact",
     });
   }
 
-  // 정확히 매칭된 품목명 우선, 없으면 별칭으로 탐색
-  let productName = productNames[0];
-  if (!productName) {
-    for (const [alias, realName] of Object.entries(PRODUCT_ALIAS_MAP)) {
-      if (question.includes(alias)) {
-        productName = realName;
-        break;
-      }
+  const mtiLookup = MTI_LOOKUP as Record<string, string>;
+
+  // 1단계: MTI_LOOKUP value에서 정확 매칭 (단어 단위로만 매칭)
+  const exactMtiMatches: { code: string; name: string }[] = [];
+  for (const [code, name] of Object.entries(mtiLookup)) {
+    if (name.length >= 2 && isExactWordMatch(question, name)) {
+      exactMtiMatches.push({ code, name });
     }
   }
 
-  if (productName) {
+  if (exactMtiMatches.length > 0) {
+    // 가장 짧은 코드(상위 카테고리) 선택
+    exactMtiMatches.sort((a, b) => a.code.length - b.code.length);
+    const best = exactMtiMatches[0];
+    const codeQuery = best.code.length < 6 ? `?code=${best.code}` : "";
     buttons.push({
-      label: `${productName} 데이터 확인하기`,
-      href: `/product/${encodeURIComponent(productName)}`,
+      label: `${best.name} 데이터 확인하기`,
+      href: `/product/${encodeURIComponent(best.name)}${codeQuery}`,
+      type: "exact",
     });
+  } else if (productNames.length > 0) {
+    // TREEMAP 품목명 정확 매칭
+    buttons.push({
+      label: `${productNames[0]} 데이터 확인하기`,
+      href: `/product/${encodeURIComponent(productNames[0])}`,
+      type: "exact",
+    });
+  } else {
+    // 2단계: 유사 후보 탐색 (질문 단어 안에 MTI값이 포함된 경우)
+    const tokens = question.split(/[\s,·.?!、。]+/).filter(t => t.length >= 2);
+    const candidateMap = new Map<string, string>(); // code → name
+
+    for (const [code, name] of Object.entries(mtiLookup)) {
+      if (name.length < 2) continue;
+      for (const token of tokens) {
+        if (token.includes(name)) {
+          candidateMap.set(code, name);
+          break;
+        }
+      }
+    }
+
+    // 찾은 후보의 하위 카테고리도 포함 (코드가 후보코드로 시작하는 것)
+    for (const [parentCode] of Array.from(candidateMap.entries())) {
+      for (const [code, name] of Object.entries(mtiLookup)) {
+        if (code !== parentCode && code.startsWith(parentCode) && code.length <= parentCode.length + 2) {
+          candidateMap.set(code, name);
+        }
+      }
+    }
+
+    // 실제 데이터가 있는 코드만 필터링 후 코드 길이 순 정렬, 최대 4개
+    const candidates = Array.from(candidateMap.entries())
+      .map(([code, name]) => ({ code, name }))
+      .filter(({ code }) => VALID_CODE_PREFIXES.has(code))
+      .sort((a, b) => a.code.length - b.code.length)
+      .slice(0, 4);
+
+    for (const c of candidates) {
+      const codeQuery = c.code.length < 6 ? `?code=${c.code}` : "";
+      buttons.push({
+        label: `${c.name}(${c.code})`,
+        href: `/product/${encodeURIComponent(c.name)}${codeQuery}`,
+        type: "candidate",
+      });
+    }
   }
 
   return buttons;
