@@ -50,7 +50,7 @@ const ISO2_REGION = {
 
 const YEARS = ['2020', '2021', '2022', '2023', '2024', '2025', '2026'];
 const TOP_N_COUNTRIES = 20;
-const TOP_N_PRODUCTS = 30;
+const TOP_N_PRODUCTS = 100;
 const TOP_N_PRODUCT_COUNTRIES = 5;
 
 // ─── MTI 룩업 로드 ────────────────────────────────────────────────────────
@@ -254,12 +254,12 @@ const treemapExpOut = {};
 for (const yr of YEARS) {
   const sorted = Object.entries(prodExp[yr]).sort((a, b) => b[1] - a[1]).slice(0, TOP_N_PRODUCTS);
   treemapExpOut[yr] = sorted.map(([cd, expAmt]) => {
-    const mti1 = prodMti1[cd] || '9';
+    const mti1 = prodMti1[cd] ?? '9';
     const top3 = Object.entries(prodCtrExp[yr][cd] || {})
       .sort((a, b) => b[1] - a[1]).slice(0, 3).map(e => e[0]);
     return {
       code: cd, name: prodName[cd] || cd,
-      value: fmt1(expAmt), mti: parseInt(mti1) || 9,
+      value: fmt1(expAmt), mti: parseInt(mti1, 10),
       color: MTI_COLORS[mti1] || '#9CA3AF', topCountries: top3,
     };
   });
@@ -270,12 +270,12 @@ const treemapImpOut = {};
 for (const yr of YEARS) {
   const sorted = Object.entries(prodImp[yr]).sort((a, b) => b[1] - a[1]).slice(0, TOP_N_PRODUCTS);
   treemapImpOut[yr] = sorted.map(([cd, impAmt]) => {
-    const mti1 = prodMti1[cd] || '9';
+    const mti1 = prodMti1[cd] ?? '9';
     const top3 = Object.entries(prodCtrImp[yr][cd] || {})
       .sort((a, b) => b[1] - a[1]).slice(0, 3).map(e => e[0]);
     return {
       code: cd, name: prodName[cd] || cd,
-      value: fmt1(impAmt), mti: parseInt(mti1) || 9,
+      value: fmt1(impAmt), mti: parseInt(mti1, 10),
       color: MTI_COLORS[mti1] || '#9CA3AF', topCountries: top3,
     };
   });
@@ -307,7 +307,7 @@ for (const yr of YEARS) {
 }
 
 // ─── 품목별 연간 추이 (수출 & 수입) ─────────────────────────────────────
-// 모든 연도의 Top N 품목 합집합 — 어떤 연도에서든 Top N에 들면 추이 데이터 생성
+// 모든 연도의 Top 100 품목 합집합
 const allProdCodes = [...new Set(
   YEARS.flatMap(yr => [
     ...Object.entries(prodExp[yr]).sort((a, b) => b[1] - a[1]).slice(0, TOP_N_PRODUCTS).map(e => e[0]),
@@ -381,12 +381,12 @@ for (const yr of YEARS) {
     const expEntries = Object.entries(ctrProdCodeExp[yr][ctr] || {})
       .sort((a, b) => b[1] - a[1]).slice(0, TOP_N_PRODUCTS);
     countryTreemapExpOut[yr][ctr] = expEntries.map(([cd, amt]) => {
-      const mti1 = prodMti1[cd] || '9';
+      const mti1 = prodMti1[cd] ?? '9';
       return {
         code: cd,
         name: prodName[cd] || cd,
         value: fmt1(amt),
-        mti: parseInt(mti1) || 9,
+        mti: parseInt(mti1, 10),
         color: MTI_COLORS[mti1] || '#9CA3AF',
       };
     });
@@ -395,12 +395,12 @@ for (const yr of YEARS) {
     const impEntries = Object.entries(ctrProdCodeImp[yr][ctr] || {})
       .sort((a, b) => b[1] - a[1]).slice(0, TOP_N_PRODUCTS);
     countryTreemapImpOut[yr][ctr] = impEntries.map(([cd, amt]) => {
-      const mti1 = prodMti1[cd] || '9';
+      const mti1 = prodMti1[cd] ?? '9';
       return {
         code: cd,
         name: prodName[cd] || cd,
         value: fmt1(amt),
-        mti: parseInt(mti1) || 9,
+        mti: parseInt(mti1, 10),
         color: MTI_COLORS[mti1] || '#9CA3AF',
       };
     });
