@@ -1,11 +1,10 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Header from "@/components/Header";
 import HeroBanner from "@/components/HeroBanner";
 import FilterBar from "@/components/FilterBar";
 import KPIBar from "@/components/KPIBar";
-import ChatBot from "@/components/ChatBot";
 import {
   getTreemapData,
   getCountryTreemapData,
@@ -33,18 +32,16 @@ export default function ProductDetailPage() {
   const [tradeType, setTradeType] = useState<TradeType>("수출");
   const [country, setCountry] = useState("");
   const [subTab, setSubTab] = useState<"금액 추이" | "상위 국가">("금액 추이");
-  const [chatOpen, setChatOpen] = useState(true);
 
   // 해당 품목 정보 찾기 (기본 연도 + 현재 tradeType 기준)
   const treemapData = getTreemapData(DEFAULT_YEAR, tradeType);
   const product = treemapData.find((p) => p.name === name)
-    // 수입 전환 후 목록에 없으면 수출 목록에서 코드만 가져옴
     ?? getTreemapData(DEFAULT_YEAR, "수출").find((p) => p.name === name);
 
   // 해당 품목의 연간 추이 (tradeType 반영, 국가 선택 시 국가별 데이터)
   const rawTrend = product
     ? country
-      ? ["2023", "2024", "2025", "2026"].map((y) => {
+      ? ["2020", "2021", "2022", "2023", "2024", "2025", "2026"].map((y) => {
           const d = getCountryTreemapData(y, country, tradeType).find((p) => p.name === name);
           return { year: y, value: d?.value ?? 0 };
         })
@@ -64,13 +61,39 @@ export default function ProductDetailPage() {
   // 상위 국가 (tradeType 반영)
   const topCountries = product ? getProductTopCountries(product.code, year, tradeType).slice(0, 10) : [];
 
-  // 현재 연도 금액 & 전년 대비 증감 (tradeType 반영, 국가 선택 시 국가별 데이터)
-  const getProductData = (y: string) =>
-    country
-      ? getCountryTreemapData(y, country, tradeType).find((p) => p.name === name)
-      : getTreemapData(y, tradeType).find((p) => p.name === name);
-  const currentYearData = getProductData(year);
-  const prevYearData = getProductData(String(parseInt(year) - 1));
+  // ── 애니메이션: 국가 상세 페이지와 동일한 패턴 ──
+  const flatTrend = trend.map((d) => ({ ...d, value: trendMin }));
+  const flatCountries = topCountries.map((d) => ({ ...d, value: 0 }));
+
+  const [displayTrend, setDisplayTrend] = useState(flatTrend);
+  const [displayCountries, setDisplayCountries] = useState(flatCountries);
+  const [animActive, setAnimActive] = useState(false);
+
+  useEffect(() => {
+    setAnimActive(false);
+    setDisplayTrend(flatTrend);
+    setDisplayCountries(flatCountries);
+
+    const startId = setTimeout(() => {
+      setAnimActive(true);
+      setDisplayTrend(trend);
+      setDisplayCountries(topCountries);
+    }, 50);
+
+    const stopId = setTimeout(() => {
+      setAnimActive(false);
+    }, 850);
+
+    return () => {
+      clearTimeout(startId);
+      clearTimeout(stopId);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subTab, year, tradeType]);
+
+  // 현재 연도 금액 & 전년 대비 증감 (tradeType 반영)
+  const currentYearData = getTreemapData(year, tradeType).find((p) => p.name === name);
+  const prevYearData = getTreemapData(String(parseInt(year) - 1), tradeType).find((p) => p.name === name);
   const currentVal = currentYearData?.value ?? 0;
   const prevVal = prevYearData?.value ?? 0;
   const changeRate = prevVal ? ((currentVal - prevVal) / prevVal * 100).toFixed(1) : null;
@@ -80,7 +103,6 @@ export default function ProductDetailPage() {
     isAnimationActive: false,
     cursor: false,
     offset: 18,
-    // 기본은 우측 상단, 공간이 부족하면 차트 내부에서 방향을 바꿔 잘림을 방지한다.
     position: undefined,
     reverseDirection: { x: true, y: true },
     allowEscapeViewBox: { x: false, y: false },
@@ -109,7 +131,7 @@ export default function ProductDetailPage() {
             <FilterBar mode="product" defaultYear={DEFAULT_YEAR} onYearChange={setYear} onTradeTypeChange={setTradeType} onCountryChange={setCountry} disableMonthPeriod />
             <KPIBar year={year} />
 
-            <div style={{ display: "flex", height: 380 }}>
+            <div className="split-panel" style={{ height: 380 }}>
             {/* Left info cards */}
             <div className="left-cards">
               <div className="left-cards-stack">
@@ -149,7 +171,7 @@ export default function ProductDetailPage() {
             </div>
 
             {/* Main viz */}
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+            <div className="dashboard-area" style={{ display: "flex", flexDirection: "column" }}>
               {/* Sub tabs */}
               <div className="subtab-bar">
                 {(["금액 추이", "상위 국가"] as const).map((tab) => (
@@ -171,7 +193,7 @@ export default function ProductDetailPage() {
                 {subTab === "금액 추이" ? (
                   trend.length > 0 ? (
                     <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={trend} margin={{ top: 8, right: 24, left: 8, bottom: 4 }}>
+                      <LineChart data={displayTrend} margin={{ top: 8, right: 24, left: 8, bottom: 4 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                         <XAxis dataKey="year" tick={{ fontSize: 11 }} />
                         <YAxis domain={[trendMin, trendMax]} tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v}억`} />
@@ -183,7 +205,9 @@ export default function ProductDetailPage() {
                         />
                         <Line
                           type="monotone" dataKey="value" stroke="#14B8A6" strokeWidth={2.5}
-                          dot={{ r: 4, fill: "#14B8A6" }} activeDot={{ r: 6 }} name={`${tradeLabel}액($억)`}
+                          dot={{ r: 4, fill: "#14B8A6" }} activeDot={{ r: 6 }} name={`${tradeLabel}액(억$)`}
+                          isAnimationActive={animActive}
+                          animationDuration={700} animationEasing="ease-out"
                         />
                       </LineChart>
                     </ResponsiveContainer>
@@ -196,7 +220,7 @@ export default function ProductDetailPage() {
                 ) : (
                   topCountries.length > 0 ? (
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={topCountries} margin={{ top: 8, right: 16, left: 8, bottom: 4 }}>
+                      <BarChart data={displayCountries} margin={{ top: 8, right: 16, left: 8, bottom: 4 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                         <XAxis dataKey="country" tick={{ fontSize: 12 }} />
                         <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v}억`} />
@@ -209,7 +233,9 @@ export default function ProductDetailPage() {
                           fill="#14B8A6"
                           radius={[4, 4, 0, 0]}
                           barSize={42}
-                          name={`${tradeLabel}액($억)`}
+                          name={`${tradeLabel}액(억$)`}
+                          isAnimationActive={animActive}
+                          animationDuration={700} animationEasing="ease-out"
                         />
                       </BarChart>
                     </ResponsiveContainer>
@@ -226,25 +252,6 @@ export default function ProductDetailPage() {
             </div>
           </div>
 
-          <div className={`chatbot-section ${chatOpen ? "expanded" : "collapsed"}`}>
-            <button
-              className="chatbot-slider-btn"
-              onClick={() => setChatOpen((prev) => !prev)}
-              title={chatOpen ? "챗봇 접기" : "챗봇 펼치기"}
-              aria-label={chatOpen ? "챗봇 접기" : "챗봇 펼치기"}
-            >
-              {chatOpen ? "〉" : "〈"}
-            </button>
-            <div className="chatbot-card-shell">
-              <div className="dashboard-card chatbot-card">
-                <ChatBot
-                  open={true}
-                  showInternalToggle={false}
-                  initialMessage={`${name} 수출 현황입니다. 궁금한 점을 질문해주세요.`}
-                />
-              </div>
-            </div>
-          </div>
         </div>
 
         <div className="macro-section">

@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { Treemap, ResponsiveContainer, Tooltip } from "recharts";
-import { getTreemapData, getCountryTreemapData, MTI_COLORS, MTI_NAMES, ProductNode, DEFAULT_YEAR, type TradeType } from "@/lib/data";
+import { getTreemapData, getCountryTreemapData, aggregateTreemapByDepth, MTI_COLORS, MTI_NAMES, ProductNode, DEFAULT_YEAR, type TradeType } from "@/lib/data";
 import { getMonthlyTreemapData, getCountryMonthlyTreemapData } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import { rechartsTooltipSurfaceProps } from "@/components/RechartsTooltip";
@@ -94,7 +94,7 @@ function CustomContent({ x = 0, y = 0, width = 0, height = 0, name, value = 0, d
 function CustomTooltip({
   active, payload, data, tradeType,
 }: {
-  active?: boolean; payload?: any[]; data: ProductNode[]; tradeType: TradeType;
+  active?: boolean; payload?: { payload?: { name?: string } }[]; data: ProductNode[]; tradeType: TradeType;
 }) {
   if (!active || !payload?.length) return null;
   const item = data.find((d) => d.name === payload[0]?.payload?.name);
@@ -119,9 +119,11 @@ function CustomTooltip({
           </ul>
         </>
       )}
-      <p className="tooltip-shell-hint" style={{ marginTop: 10 }}>
-        클릭하면 상세 페이지로 이동
-      </p>
+      {item.code.length >= 6 && (
+        <p className="tooltip-shell-hint" style={{ marginTop: 10 }}>
+          클릭하면 상세 페이지로 이동
+        </p>
+      )}
     </div>
   );
 }
@@ -132,6 +134,7 @@ interface TreemapChartProps {
   year?: string;
   month?: string;
   tradeType?: TradeType;
+  mtiDepth?: number;
 }
 
 export default function TreemapChart({
@@ -140,6 +143,7 @@ export default function TreemapChart({
   year = DEFAULT_YEAR,
   month = "",
   tradeType = "수출",
+  mtiDepth = 6,
 }: TreemapChartProps) {
   const router = useRouter();
 
@@ -202,20 +206,23 @@ export default function TreemapChart({
     };
   }, []);
 
+  const aggregatedData = aggregateTreemapByDepth(treemapData, mtiDepth);
   const displayData = zoomedMti !== null
-    ? treemapData.filter((d) => d.mti === zoomedMti)
-    : treemapData;
+    ? aggregatedData.filter((d) => d.mti === zoomedMti)
+    : aggregatedData;
 
   const chartData = [{
     name: "root",
     children: displayData.filter((d) => d.value > 0).map((d) => ({ name: d.name, size: d.value })),
   }];
 
-  const handleClick = (data: any) => {
+  const handleClick = (data: { name?: string } | null) => {
     if (!data?.name) return;
-    const item = treemapData.find((d) => d.name === data.name);
+    const item = aggregatedData.find((d) => d.name === data.name);
     if (!item) return;
     if (forCountry) return;
+    // 6단위가 아닌 집계 항목은 상세 페이지가 없으므로 이동하지 않음
+    if (mtiDepth < 6) return;
     router.push(`/product/${encodeURIComponent(item.name)}`);
   };
 
@@ -297,10 +304,10 @@ export default function TreemapChart({
               aspectRatio={4 / 3}
               isAnimationActive={false}
               onClick={handleClick}
-              content={<CustomContent data={treemapData} animKey={animating ? animKey : -1} />}
+              content={<CustomContent data={aggregatedData} animKey={animating ? animKey : -1} />}
             >
               <Tooltip
-                content={<CustomTooltip data={treemapData} tradeType={tradeType} />}
+                content={<CustomTooltip data={aggregatedData} tradeType={tradeType} />}
                 {...rechartsTooltipSurfaceProps}
               />
             </Treemap>

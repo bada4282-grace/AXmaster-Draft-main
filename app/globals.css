@@ -5,15 +5,95 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* ── 앱 전체 shell: 대시보드(좌) + 챗봇 사이드바(우) ── */
+.app-shell {
+  display: flex;
+  align-items: stretch;
+  min-height: 100vh;
+}
+
+.app-main {
+  flex: 1;
+  min-width: 0;
+}
+
+/* 레이아웃 레벨 영구 챗봇 사이드바 */
+.app-chatbot-sidebar {
+  position: sticky;
+  top: 230px;
+  height: calc(100vh - 230px);
+  width: clamp(280px, 22vw, 360px);
+  flex-shrink: 0;
+  transition: width 0.3s ease;
+  overflow: visible;
+  display: flex;
+  flex-direction: column;
+  align-self: flex-start;
+  margin-top: clamp(200px, calc(100px + 10vw), 250px);
+}
+
+.app-chatbot-sidebar.collapsed {
+  width: 0;
+}
+
+.app-chatbot-inner {
+  width: clamp(280px, 22vw, 360px);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.3s ease, opacity 0.2s ease;
+}
+
+.app-chatbot-sidebar.collapsed .app-chatbot-inner {
+  transform: translateX(100%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.app-chatbot-sidebar .chatbot-slider-btn {
+  position: absolute;
+  left: -14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 64px;
+  border: 1px solid #E02020;
+  border-right: none;
+  border-radius: 12px 0 0 12px;
+  background: #E02020;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  box-shadow: -2px 2px 8px rgba(0, 0, 0, 0.08);
+  z-index: 20;
+}
+
+.app-chatbot-sidebar .chatbot-slider-btn:hover {
+  background: #c91c1c;
+  border-color: #c91c1c;
+}
+
 body {
   font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: 14px;
   color: #1a1a1a;
   background: #f8f8f8;
   -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
 }
 
-/* Header */
+/* Header — 뷰포트 전체 너비 (챗봇 사이드바와 무관) */
+header.w-full {
+  width: 100vw;
+  position: sticky;
+  top: 0;
+  left: 0;
+  margin-left: 0;
+  z-index: 50;
+}
 .header-top {
   background: #fff;
   border-bottom: 1px solid #e8e8e8;
@@ -42,17 +122,23 @@ body {
 }
 .gnb-item:hover { color: #E02020; }
 
-/* Hero */
+/* Hero — 뷰포트 전체 너비 (챗봇 사이드바와 무관) */
 .hero-banner {
-  width: 100%;
-  height: 130px;
+  width: 100vw;
+  position: relative;
+  left: 0;
+  margin-left: 0;
+  min-height: 100px;
+  height: clamp(100px, 10vw, 150px);
   background: linear-gradient(160deg, #0d1b35 0%, #0a2040 40%, #0c3060 70%, #0d1b35 100%);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  position: relative;
   overflow: hidden;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  z-index: 10;
 }
 
 /* Main tab pills */
@@ -78,12 +164,12 @@ body {
 }
 .main-tab-inactive:hover { border-color: #E02020; color: #E02020; }
 
-/* Dashboard card: overflow는 visible — 내부 가로 넘침 시 챗봇이 잘리지 않도록 */
+/* Dashboard card */
 .dashboard-card {
   background: #fff;
   border: 1px solid #e0e0e0;
   border-radius: 8px;
-  overflow: visible;
+  overflow: hidden;
 }
 .dashboard-card > .filter-bar {
   border-radius: 8px 8px 0 0;
@@ -111,15 +197,13 @@ body {
 .filter-bar {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  row-gap: 8px;
+  flex-wrap: nowrap;
   padding: 10px 0;
   border-bottom: 1px solid #f0f0f0;
+  overflow-x: auto;
 }
 .filter-section {
-  flex: 1;
-  flex-basis: 220px;
-  min-width: 0;
+  flex-shrink: 0;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -387,6 +471,14 @@ body {
 .chatbot-header { padding: 10px 12px; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 8px; background: #fafafa; }
 .chatbot-messages { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
 .chatbot-msg-bot { background: #f3f4f6; border-radius: 8px; padding: 8px 10px; font-size: 12px; color: #333; line-height: 1.5; max-width: 90%; word-break: break-word; }
+.chatbot-msg-bot > :first-child { margin-top: 0; }
+.chatbot-msg-bot > :last-child { margin-bottom: 0; }
+.chatbot-highlight {
+  background: linear-gradient(transparent 40%, #FFF176 40%);
+  padding: 0 2px;
+  font-weight: 600;
+  color: #333;
+}
 .chatbot-typing { display: flex; gap: 4px; align-items: center; padding: 2px 0; }
 .chatbot-typing span { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #aaa; animation: chatbot-bounce 1.2s ease-in-out infinite; }
 .chatbot-typing span:nth-child(2) { animation-delay: 0.2s; }
@@ -397,7 +489,7 @@ body {
 }
 .chatbot-msg-user { background: #E02020; border-radius: 8px; padding: 8px 10px; font-size: 12px; color: #fff; line-height: 1.5; max-width: 90%; align-self: flex-end; }
 .chatbot-input-area { padding: 8px; border-top: 1px solid #f0f0f0; display: flex; gap: 6px; align-items: center; }
-.chatbot-input { flex: 1; min-width: 0; height: 32px; padding: 0 10px; border: 1px solid #e0e0e0; border-radius: 16px; font-size: 12px; outline: none; }
+.chatbot-input { flex: 1; min-width: 0; min-height: 32px; padding: 7px 10px; border: 1px solid #e0e0e0; border-radius: 16px; font-size: 12px; outline: none; }
 .chatbot-input:focus { border-color: #E02020; }
 .chatbot-send-btn { width: 32px; height: 32px; border-radius: 50%; background: #E02020; color: #fff; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; font-size: 12px; }
 .chatbot-close-btn { position: absolute; bottom: 52px; right: 8px; width: 28px; height: 28px; border-radius: 50%; background: #E02020; color: #fff; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; box-shadow: 0 2px 6px rgba(224,32,32,0.4); z-index: 10; }
@@ -483,10 +575,10 @@ body {
 /* Macro section */
 .macro-section { margin-top: 16px; background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px 20px; }
 .macro-title { font-size: 13px; font-weight: 600; color: #555; margin-bottom: 12px; }
-.macro-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
-.macro-card { background: #fafafa; border-radius: 6px; padding: 12px; border: 1px solid #f0f0f0; }
-.macro-card-label { font-size: 11px; color: #888; }
-.macro-card-value { font-size: 18px; font-weight: 700; margin-top: 4px; }
+.macro-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 12px; }
+.macro-card { background: #fafafa; border-radius: 6px; padding: 12px; border: 1px solid #f0f0f0; text-align: center; }
+.macro-card-label { font-size: 11px; color: #888; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.macro-card-value { font-size: 16px; font-weight: 700; margin-top: 4px; }
 .macro-card-change { font-size: 11px; margin-top: 2px; }
 
 /* Back button: 셀렉트박스 톤과 동일한 테두리/라운드 */

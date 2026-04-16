@@ -35,17 +35,6 @@ export async function POST(request: NextRequest) {
 
   const model = process.env.ANTHROPIC_MODEL ?? "claude-haiku-4-5-20251001";
 
-  const systemPrompt = `당신은 한국 무역통계 전문 AI 어시스턴트입니다. 아래 데이터를 기반으로 사용자 질문에 한국어로 자연스럽게 답변하세요.
-
-답변 규칙:
-- 수치는 아래 데이터에서 정확히 인용하세요.
-- 데이터에서 직접 확인되지 않아도, 제공된 수치를 바탕으로 합리적으로 추론하여 답변할 수 있습니다.
-- "제공된 데이터에 따르면", "참고 데이터에 의하면" 같은 표현은 쓰지 마세요. 자연스럽게 답변하세요.
-- 무역통계와 전혀 무관한 질문(예: 날씨, 요리 등)에만 "답변하기 어렵습니다"라고 하세요.
-- 데이터가 부분적으로 있으면 있는 것을 바탕으로 최대한 답변하세요.
-
-${context ? `[데이터]\n${context}` : "[데이터 없음]"}`;
-
   // Anthropic API는 user로 시작하고 content가 비어있지 않은 메시지만 허용합니다
   const validHistory = history
     .filter(m => m.content.trim().length > 0)
@@ -56,14 +45,36 @@ ${context ? `[데이터]\n${context}` : "[데이터 없음]"}`;
       return acc;
     }, []);
 
-  // 첫 메시지는 반드시 user여야 합니다
+  // 히스토리 앞부분의 assistant 메시지(웰컴 메시지 등)를 시스템 프롬프트에
+  // 맥락으로 포함시켜 사용자의 후속 응답("네!" 등)이 맥락을 유지하도록 함
   const firstUserIdx = validHistory.findIndex(m => m.role === "user");
-  const cleanHistory = firstUserIdx > 0 ? validHistory.slice(firstUserIdx) : validHistory;
+  let priorContext = "";
+  let userStartHistory = validHistory;
+  if (firstUserIdx > 0) {
+    priorContext = validHistory.slice(0, firstUserIdx)
+      .map(m => m.content).join("\n");
+    userStartHistory = validHistory.slice(firstUserIdx);
+  } else if (firstUserIdx < 0) {
+    priorContext = validHistory.map(m => m.content).join("\n");
+    userStartHistory = [];
+  }
 
   // cleanHistory가 assistant로 끝나면 마지막 assistant 제거 (user가 뒤에 추가됨)
-  const finalHistory = cleanHistory.length > 0 && cleanHistory[cleanHistory.length - 1].role === "assistant"
-    ? cleanHistory.slice(0, -1)
-    : cleanHistory;
+  const finalHistory = userStartHistory.length > 0 && userStartHistory[userStartHistory.length - 1].role === "assistant"
+    ? userStartHistory.slice(0, -1)
+    : userStartHistory;
+
+  const systemPrompt = `당신은 한국 무역통계 전문 AI 어시스턴트입니다. 아래 데이터를 기반으로 사용자 질문에 한국어로 자연스럽게 답변하세요.
+
+답변 규칙:
+- 수치는 아래 데이터에서 정확히 인용하세요.
+- 데이터에서 직접 확인되지 않아도, 제공된 수치를 바탕으로 합리적으로 추론하여 답변할 수 있습니다.
+- "제공된 데이터에 따르면", "참고 데이터에 의하면" 같은 표현은 쓰지 마세요. 자연스럽게 답변하세요.
+- 무역통계와 전혀 무관한 질문(예: 날씨, 요리 등)에만 "답변하기 어렵습니다"라고 하세요.
+- 데이터가 부분적으로 있으면 있는 것을 바탕으로 최대한 답변하세요.
+- 답변 첫 부분에 사용자 질문의 핵심 토픽을 ==토픽== 형식으로 감싸세요. 예: ==반도체 수출 현황==. 토픽 하이라이트는 답변당 1~2개만 사용하세요.
+${priorContext ? `\n[이전 대화 맥락]\n당신이 사용자에게 먼저 한 말:\n${priorContext}\n사용자가 이에 대해 이어서 대답하고 있습니다. 이 맥락을 반영하여 답변하세요.` : ""}
+${context ? `\n[데이터]\n${context}` : "\n[데이터 없음]"}`;
 
   let stream;
   try {

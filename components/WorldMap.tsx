@@ -30,7 +30,7 @@ function getFilterColor(rank: number): string {
   if (rank <= 30) return "#6DC4B5"; // #A8E0D4 → 더 진하게
   return "#DCF3EF";
 }
-import { getMonthlyCountryMapData, type MonthlyCountryMapItem } from "@/lib/supabase";
+import { getMonthlyCountryMapData, queryTrade, type MonthlyCountryMapItem } from "@/lib/supabase";
 
 // ─── 상수 ────────────────────────────────────────────────────────────────────
 const GEO_URL = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
@@ -47,6 +47,42 @@ const ISO_NUM_TO_ALPHA2: Record<string, string> = {
   "246": "FI", "203": "CZ", "642": "RO", "710": "ZA", "032": "AR",
   "152": "CL", "170": "CO", "586": "PK", "050": "BD", "818": "EG",
   "566": "NG", "398": "KZ", "860": "UZ",
+  // 추가 국가 ISO 숫자 코드
+  "364": "IR", "368": "IQ", "414": "KW", "634": "QA", "512": "OM",
+  "400": "JO", "048": "BH", "422": "LB",
+  "116": "KH", "104": "MM", "418": "LA", "144": "LK", "524": "NP",
+  "554": "NZ",
+  "604": "PE", "218": "EC", "858": "UY",
+  "804": "UA", "620": "PT", "300": "GR", "100": "BG",
+  "191": "HR", "703": "SK", "705": "SI",
+  "440": "LT", "428": "LV", "233": "EE",
+  "688": "RS", "031": "AZ",
+  "404": "KE", "288": "GH", "834": "TZ", "231": "ET",
+  "504": "MA", "788": "TN", "012": "DZ",
+  // 아프리카
+  "024": "AO", "072": "BW", "108": "BI", "120": "CM", "140": "CF",
+  "148": "TD", "174": "KM", "178": "CG", "180": "CD", "262": "DJ",
+  "226": "GQ", "232": "ER", "266": "GA", "270": "GM", "324": "GN",
+  "384": "CI", "426": "LS", "430": "LR", "434": "LY", "450": "MG",
+  "454": "MW", "466": "ML", "478": "MR", "508": "MZ", "516": "NA",
+  "562": "NE", "646": "RW", "686": "SN", "694": "SL", "706": "SO",
+  "716": "ZW", "728": "SS", "736": "SD", "748": "SZ", "768": "TG",
+  "800": "UG", "894": "ZM",
+  // 유럽
+  "008": "AL", "070": "BA", "112": "BY", "196": "CY", "352": "IS",
+  "372": "IE", "438": "LI", "442": "LU", "470": "MT", "498": "MD",
+  "499": "ME", "807": "MK",
+  // 아시아
+  "004": "AF", "064": "BT", "096": "BN", "268": "GE",
+  "496": "MN", "408": "KP", "410": "KR", "417": "KG", "762": "TJ",
+  "795": "TM", "760": "SY", "887": "YE",
+  // 아메리카
+  "068": "BO", "188": "CR", "192": "CU", "214": "DO", "222": "SV",
+  "320": "GT", "328": "GY", "332": "HT", "340": "HN", "388": "JM",
+  "558": "NI", "591": "PA", "600": "PY", "740": "SR", "780": "TT",
+  "862": "VE",
+  // 오세아니아
+  "090": "SB", "242": "FJ", "540": "NC", "548": "VU", "598": "PG",
 };
 
 // 한국어 국가명 → ISO alpha-2 (Supabase monthly 데이터의 ctr_name 매핑용)
@@ -70,6 +106,18 @@ const KO_NAME_TO_ISO: Record<string, string> = {
   "파키스탄": "PK", "방글라데시": "BD",
   "이집트": "EG", "나이지리아": "NG",
   "카자흐스탄": "KZ", "우즈베키스탄": "UZ",
+  // 추가 국가 (Supabase CTR_NAME 기준)
+  "이란": "IR", "이라크": "IQ", "쿠웨이트": "KW", "카타르": "QA", "오만": "OM",
+  "요르단": "JO", "바레인": "BH", "레바논": "LB",
+  "캄보디아": "KH", "미얀마": "MM", "라오스": "LA", "스리랑카": "LK", "네팔": "NP",
+  "뉴질랜드": "NZ",
+  "페루": "PE", "에콰도르": "EC", "우루과이": "UY",
+  "우크라이나": "UA", "포르투갈": "PT", "그리스": "GR", "불가리아": "BG",
+  "크로아티아": "HR", "슬로바키아": "SK", "슬로베니아": "SI",
+  "리투아니아": "LT", "라트비아": "LV", "에스토니아": "EE",
+  "세르비아": "RS", "아제르바이잔": "AZ",
+  "케냐": "KE", "가나": "GH", "탄자니아": "TZ", "에티오피아": "ET",
+  "모로코": "MA", "튀니지": "TN", "알제리": "DZ",
 };
 
 // TOP5 레이블 위치 (지리적 중심 좌표)
@@ -83,22 +131,6 @@ const COUNTRY_CENTROIDS: Record<string, [number, number]> = {
   "CA": [-96,   60  ], "SA": [45,    24  ], "TR": [35,    39  ],
   "IT": [12,    42  ], "FR": [2.5,   46  ], "ES": [-4,    40  ],
   "BR": [-52,  -10  ],
-};
-
-const COUNTRY_NAME_ALIAS_TO_KO: Record<string, string> = {
-  "united states of america": "미국",
-  "russian federation": "러시아",
-  "korea, republic of": "대한민국",
-  "korea, democratic people's republic of": "북한",
-  "lao people's democratic republic": "라오스",
-  "viet nam": "베트남",
-  "iran, islamic republic of": "이란",
-  "syrian arab republic": "시리아",
-  "venezuela, bolivarian republic of": "베네수엘라",
-  "bolivia, plurinational state of": "볼리비아",
-  "tanzania, united republic of": "탄자니아",
-  "moldova, republic of": "몰도바",
-  "brunei darussalam": "브루나이",
 };
 
 // MapLibre 최소 스타일 (배경색만 — 타일 서버 필요 없음)
@@ -149,7 +181,9 @@ function normalizeGeometry(geom: GeoJSON.Geometry): GeoJSON.Geometry {
 
 let _geoCache: GeoJSON.FeatureCollection | null = null;
 // 연간 집계 모듈 캐시 — 동일 year+tradeType 조합의 12회 Supabase 호출 방지
-const _annualRankCache = new Map<string, import("@/lib/supabase").MonthlyCountryMapItem[]>();
+const _annualRankCache = new Map<string, MonthlyCountryMapItem[]>();
+// 품목별 국가 순위 캐시
+const _productRankCache = new Map<string, MonthlyCountryMapItem[]>();
 
 async function loadBaseGeoJSON(): Promise<GeoJSON.FeatureCollection> {
   if (_geoCache) return _geoCache;
@@ -170,12 +204,14 @@ async function loadBaseGeoJSON(): Promise<GeoJSON.FeatureCollection> {
 // 한국어 국가명 헬퍼
 const _DisplayNames: any = typeof Intl !== "undefined" ? (Intl as any).DisplayNames : null;
 const _koNames = _DisplayNames ? new _DisplayNames(["ko"], { type: "region" }) : null;
-function getKoreanName(alpha2?: string, fallback = "국가명 정보 없음"): string {
+function getKoreanName(alpha2?: string, fallback?: string): string {
   if (alpha2 && _koNames) {
-    const ko = _koNames.of(alpha2) as string | undefined;
-    if (ko && ko !== alpha2) return ko;
+    try {
+      const ko = _koNames.of(alpha2) as string | undefined;
+      if (ko && ko !== alpha2) return ko;
+    } catch { /* invalid code */ }
   }
-  return fallback;
+  return fallback ?? "";
 }
 
 // ─── 타입 ────────────────────────────────────────────────────────────────────
@@ -210,18 +246,75 @@ export default function WorldMap({
 
   const countryData = getCountryData(year, tradeType);
 
-  // 선택된 품목의 상위 수출/수입국 목록 (ISO alpha-2)
-  const productTopIso = useMemo(() => {
-    if (!selectedProduct) return null;
-    const products = getTreemapData(year, tradeType);
-    const found = products.find((p) => p.name === selectedProduct);
-    if (!found?.topCountries?.length) return null;
-    return new Set(
-      found.topCountries
-        .map((name) => KO_NAME_TO_ISO[name])
-        .filter(Boolean) as string[]
-    );
-  }, [selectedProduct, year, tradeType]);
+  // ─ 품목별 국가 순위 (Supabase 실시간 조회) ─
+  const [productCountryRanks, setProductCountryRanks] = useState<MonthlyCountryMapItem[] | null>(null);
+
+  useEffect(() => {
+    if (!selectedProduct) { setProductCountryRanks(null); return; }
+
+    const cacheKey = `${year}-${month}-${selectedProduct}-${tradeType}`;
+    if (_productRankCache.has(cacheKey)) {
+      setProductCountryRanks(_productRankCache.get(cacheKey)!);
+      return;
+    }
+
+    let mounted = true;
+    const MONTHS = ["01","02","03","04","05","06","07","08","09","10","11","12"];
+    const monthsToFetch = month
+      ? [`${year}${month}`]
+      : MONTHS.map((m) => `${year}${m}`);
+
+    const totals = new Map<string, number>();
+    let _amtCol: string | null = null;
+
+    // 금액 컬럼 다단계 탐지 (컬럼명이 DB마다 다를 수 있음)
+    const detectAmtCol = (row: any): string | null => {
+      const keys = Object.keys(row);
+      const isExport = tradeType !== "수입";
+      // 1순위: 모드 접두사 + amt/amnt/amount/hamnt 패턴
+      const modeRe = isExport ? /exp/i : /imp/i;
+      for (const re of [/amt$/i, /amnt$/i, /amount$/i, /hamnt$/i, /amt/i, /amnt/i]) {
+        const col = keys.find((k) => modeRe.test(k) && re.test(k));
+        if (col) return col;
+      }
+      // 2순위: amt/amnt/amount 패턴 (모드 무관)
+      for (const re of [/amt/i, /amnt/i, /amount/i, /금액/i]) {
+        const col = keys.find((k) => re.test(k) && typeof row[k] === "number" && row[k] > 0);
+        if (col) return col;
+      }
+      // 3순위: 큰 숫자 컬럼 (무역금액은 수만 이상, MTI 코드나 ID는 작음)
+      const bigCols = keys
+        .filter((k) => typeof row[k] === "number" && row[k] > 10000 && !/id$|^id|_cd$|_code$/i.test(k))
+        .sort((a, b) => Number(row[b]) - Number(row[a]));
+      return bigCols[0] ?? null;
+    };
+
+    Promise.allSettled(
+      monthsToFetch.map(async (yymm) => {
+        const rows = await queryTrade({ mtiName: selectedProduct, yymm });
+        if (!rows?.length) return;
+        if (!_amtCol) _amtCol = detectAmtCol(rows[0] as any);
+        if (!_amtCol) return;
+        const col = _amtCol;
+        rows.forEach((row: any) => {
+          const ctr = (row["CTR_NAME"] ?? row["ctr_name"] ?? "").trim();
+          const amt = Number(row[col] ?? 0);
+          if (ctr && amt > 0) totals.set(ctr, (totals.get(ctr) ?? 0) + amt);
+        });
+      })
+    ).then(() => {
+      if (!mounted) return;
+      const sorted: MonthlyCountryMapItem[] = Array.from(totals.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 30)
+        .map(([ctr_name, total_amt], i) => ({ ctr_name, total_amt, rank: i + 1 }));
+      const result = sorted.length > 0 ? sorted : null;
+      if (result) _productRankCache.set(cacheKey, result);
+      setProductCountryRanks(result);
+    });
+
+    return () => { mounted = false; };
+  }, [selectedProduct, year, month, tradeType]);
 
   // ─ Pretendard 폰트 로드 ─
   useEffect(() => {
@@ -238,7 +331,7 @@ export default function WorldMap({
   const [monthlyRanks, setMonthlyRanks] = useState<MonthlyCountryMapItem[] | null>(null);
   useEffect(() => {
     let mounted = true;
-    if (!month) { setMonthlyRanks(null); return () => { mounted = false; }; }
+    if (!month) { return () => { mounted = false; }; }
     getMonthlyCountryMapData(year, month, tradeType)
       .then((rows) => { if (mounted) setMonthlyRanks(rows); })
       .catch(() => { if (mounted) setMonthlyRanks(null); });
@@ -248,10 +341,11 @@ export default function WorldMap({
   // ─ 연간 집계 (월 미선택 시 12개월 합산 → rank 1~30) ─
   const [annualRanks, setAnnualRanks] = useState<MonthlyCountryMapItem[] | null>(null);
   useEffect(() => {
-    if (month) { setAnnualRanks(null); return; }
+    if (month) { return; }
     const cacheKey = `${year}-${tradeType}`;
     if (_annualRankCache.has(cacheKey)) {
-      setAnnualRanks(_annualRankCache.get(cacheKey)!);
+      const cached = _annualRankCache.get(cacheKey)!;
+      Promise.resolve().then(() => setAnnualRanks(cached));
       return;
     }
     let mounted = true;
@@ -317,6 +411,44 @@ export default function WorldMap({
     return [...updated, ...extras];
   }, [countryData, month, monthlyRanks, annualRanks]);
 
+  // 품목 국가 ISO 맵 (product rank → ISO alpha-2)
+  // 동적 데이터 없으면 정적 topCountries + topProducts 역색인 fallback
+  const productByIso = useMemo((): Map<string, number> | null => {
+    if (!selectedProduct) return null;
+    if (productCountryRanks?.length) {
+      const m = new Map<string, number>();
+      productCountryRanks.forEach((row) => {
+        const iso = KO_NAME_TO_ISO[row.ctr_name];
+        if (iso) m.set(iso, row.rank);
+      });
+      if (m.size > 0) return m;
+    }
+    // Fallback: topCountries(상품 정적) + topProducts 역색인(국가 정적)
+    const productIsoSet = new Set<string>();
+
+    const found = getTreemapData(year, tradeType).find((p) => p.name === selectedProduct);
+    found?.topCountries?.forEach((name) => {
+      const iso = KO_NAME_TO_ISO[name];
+      if (iso) productIsoSet.add(iso);
+    });
+
+    activeCountryData.forEach((c) => {
+      if (c.iso && (c.topProducts ?? []).includes(selectedProduct)) {
+        productIsoSet.add(c.iso);
+      }
+    });
+
+    if (productIsoSet.size === 0) return null;
+
+    const m = new Map<string, number>();
+    activeCountryData.forEach((c) => { if (productIsoSet.has(c.iso)) m.set(c.iso, c.rank); });
+    found?.topCountries?.forEach((name, i) => {
+      const iso = KO_NAME_TO_ISO[name];
+      if (iso && !m.has(iso)) m.set(iso, i + 1);
+    });
+    return m.size > 0 ? m : null;
+  }, [selectedProduct, productCountryRanks, year, tradeType, activeCountryData]);
+
   const top5Countries = useMemo(
     () => activeCountryData.filter((c) => c.rank <= 5).sort((a, b) => a.rank - b.rank),
     [activeCountryData]
@@ -358,29 +490,33 @@ export default function WorldMap({
         const rank      = cData ? cData.rank : (mRow ? mRow.rank : 999);
         const exportVal = cData ? cData.export : (mRow ? (mRow.total_amt / 1e8).toFixed(1) : "0");
         const isTop30   = rank <= 30;
-        const countryName = cData?.name ?? (alpha2 ? getKoreanName(alpha2) : "");
+        const countryName = cData?.name || getKoreanName(alpha2 || undefined);
+
+        // 품목 필터: 선택 시 품목별 실시간 순위 사용, 미선택 시 전체 순위
+        const productRank = productByIso && alpha2 ? (productByIso.get(alpha2) ?? 999) : null;
+        const effectiveRank = productRank !== null ? productRank : rank;
+        const isColored = productByIso
+          ? (!!alpha2 && productByIso.has(alpha2))
+          : (rank <= 30);
 
         const inTier =
           filterTier === "all"   ? true :
-          filterTier === "1-3"   ? rank >= 1  && rank <= 3  :
-          filterTier === "4-9"   ? rank >= 4  && rank <= 9  :
-          filterTier === "10-15" ? rank >= 10 && rank <= 15 :
-          filterTier === "16-21" ? rank >= 16 && rank <= 21 :
-          filterTier === "22-30" ? rank >= 22 && rank <= 30 : false;
-
-        // 품목 필터: 선택된 품목이 있으면 그 품목의 상위 국가만 강조
-        const inProduct = !productTopIso || (alpha2 ? productTopIso.has(alpha2) : false);
+          filterTier === "1-3"   ? effectiveRank >= 1  && effectiveRank <= 3  :
+          filterTier === "4-9"   ? effectiveRank >= 4  && effectiveRank <= 9  :
+          filterTier === "10-15" ? effectiveRank >= 10 && effectiveRank <= 15 :
+          filterTier === "16-21" ? effectiveRank >= 16 && effectiveRank <= 21 :
+          filterTier === "22-30" ? effectiveRank >= 22 && effectiveRank <= 30 : false;
 
         return {
           ...f,
           id: typeof f.id === "number" ? f.id : Number(isoNum) || 0,
           properties: {
             alpha2,
-            fill_color:   (isTop30 && inTier && inProduct)
-              ? (filterTier === "all" ? getMapColor(rank) : getFilterColor(rank))
+            fill_color:   (isColored && inTier)
+              ? (filterTier === "all" ? getMapColor(effectiveRank) : getFilterColor(effectiveRank))
               : "#DCF3EF",
-            rank,
-            is_top30:     isTop30 ? 1 : 0,
+            rank:         effectiveRank,
+            is_top30:     (effectiveRank <= 30) ? 1 : 0,
             country_name: countryName,
             export_val:   exportVal,
             top_products: (cData?.topProducts ?? []).join("||"),
@@ -388,7 +524,7 @@ export default function WorldMap({
         };
       }),
     };
-  }, [baseGeoJSON, activeCountryData, filterTier, month, monthlyRanks, annualRanks, productTopIso]);
+  }, [baseGeoJSON, activeCountryData, filterTier, month, monthlyRanks, annualRanks, productByIso]);
 
   // ─ 툴팁 ─
   const [tooltip, setTooltip] = useState<Tooltip | null>(null);
@@ -477,8 +613,8 @@ export default function WorldMap({
           ref={mapRef}
           mapStyle={MAP_STYLE}
           initialViewState={{ longitude: 155, latitude: 20, zoom: 1.0 }}
-          // ★ MapLibre 엔진 레벨 world wrap
-          renderWorldCopies={true}
+          renderWorldCopies={false}
+          maxBounds={[[-180, -85], [360, 85]]}
           dragRotate={false}
           pitchWithRotate={false}
           style={{ width: "100%", height: "100%" }}
@@ -554,8 +690,8 @@ export default function WorldMap({
             </Source>
           )}
 
-          {/* TOP5 순위 레이블 — HTML Marker (한국어 지원) */}
-          {top5Countries.map((country) => {
+          {/* TOP5 순위 레이블 — 품목 선택 시 숨김 */}
+          {!selectedProduct && top5Countries.map((country) => {
             const coords = COUNTRY_CENTROIDS[country.iso];
             if (!coords) return null;
             return (
