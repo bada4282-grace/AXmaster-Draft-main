@@ -115,15 +115,10 @@ function ProductDetailContent() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [subTab, year, tradeType]);
 
-  // 현재 연도 금액 & 전년 대비 증감 (tradeType 반영)
-  const currentYearData = isAggregated
-    ? aggregateTreemapByDepth(getTreemapData(year, tradeType), codeParam.length).find((p) => p.code === codeParam)
-    : getTreemapData(year, tradeType).find((p) => p.name === name);
-  const prevYearData = isAggregated
-    ? aggregateTreemapByDepth(getTreemapData(String(parseInt(year) - 1), tradeType), codeParam.length).find((p) => p.code === codeParam)
-    : getTreemapData(String(parseInt(year) - 1), tradeType).find((p) => p.name === name);
-  const currentVal = currentYearData?.value ?? 0;
-  const prevVal = prevYearData?.value ?? 0;
+  // 현재 연도 금액 & 전년 대비 증감 — 추이 데이터에서 직접 조회 (Top30 제한 없음)
+  const prevYear = String(parseInt(year) - 1);
+  const currentVal = trend.find((d) => d.year === year)?.value ?? 0;
+  const prevVal = trend.find((d) => d.year === prevYear)?.value ?? 0;
   const changeRate = prevVal ? ((currentVal - prevVal) / prevVal * 100).toFixed(1) : null;
   const tradeLabel = tradeType === "수입" ? "수입" : "수출";
   const tooltipFollowProps = {

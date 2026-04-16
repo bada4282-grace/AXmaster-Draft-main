@@ -307,13 +307,13 @@ for (const yr of YEARS) {
 }
 
 // ─── 품목별 연간 추이 (수출 & 수입) ─────────────────────────────────────
-// top28은 수출 2024 기준
-const top28codes = Object.entries(prodExp['2024']).sort((a, b) => b[1] - a[1])
-  .slice(0, TOP_N_PRODUCTS).map(e => e[0]);
-// 수입 top28 (2024 기준)
-const top28ImpCodes = Object.entries(prodImp['2024']).sort((a, b) => b[1] - a[1])
-  .slice(0, TOP_N_PRODUCTS).map(e => e[0]);
-const allProdCodes = [...new Set([...top28codes, ...top28ImpCodes])];
+// 모든 연도의 Top N 품목 합집합 — 어떤 연도에서든 Top N에 들면 추이 데이터 생성
+const allProdCodes = [...new Set(
+  YEARS.flatMap(yr => [
+    ...Object.entries(prodExp[yr]).sort((a, b) => b[1] - a[1]).slice(0, TOP_N_PRODUCTS).map(e => e[0]),
+    ...Object.entries(prodImp[yr]).sort((a, b) => b[1] - a[1]).slice(0, TOP_N_PRODUCTS).map(e => e[0]),
+  ])
+)];
 
 const productExpTrendOut = {};
 const productImpTrendOut = {};

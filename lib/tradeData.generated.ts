@@ -23401,6 +23401,66 @@ export const TIMESERIES_BY_YEAR_COUNTRY: Record<string, Record<string, {
 export const PRODUCT_EXP_TREND_BY_CODE: Record<string, {
   year: string; value: number;
 }[]> = {
+  "111100": [
+    {
+      "year": "2020",
+      "value": 17.2
+    },
+    {
+      "year": "2021",
+      "value": 7
+    },
+    {
+      "year": "2022",
+      "value": 13.1
+    },
+    {
+      "year": "2023",
+      "value": 15.5
+    },
+    {
+      "year": "2024",
+      "value": 12.2
+    },
+    {
+      "year": "2025",
+      "value": 27.1
+    },
+    {
+      "year": "2026(1-2월)",
+      "value": 9.2
+    }
+  ],
+  "111200": [
+    {
+      "year": "2020",
+      "value": 16.4
+    },
+    {
+      "year": "2021",
+      "value": 21.4
+    },
+    {
+      "year": "2022",
+      "value": 16.4
+    },
+    {
+      "year": "2023",
+      "value": 17.2
+    },
+    {
+      "year": "2024",
+      "value": 19.8
+    },
+    {
+      "year": "2025",
+      "value": 25.8
+    },
+    {
+      "year": "2026(1-2월)",
+      "value": 7.7
+    }
+  ],
   "112000": [
     {
       "year": "2020",
@@ -23459,6 +23519,36 @@ export const PRODUCT_EXP_TREND_BY_CODE: Record<string, {
     {
       "year": "2026(1-2월)",
       "value": 0.3
+    }
+  ],
+  "119000": [
+    {
+      "year": "2020",
+      "value": 6.9
+    },
+    {
+      "year": "2021",
+      "value": 7.1
+    },
+    {
+      "year": "2022",
+      "value": 0
+    },
+    {
+      "year": "2023",
+      "value": 0
+    },
+    {
+      "year": "2024",
+      "value": 0
+    },
+    {
+      "year": "2025",
+      "value": 0
+    },
+    {
+      "year": "2026(1-2월)",
+      "value": 0
     }
   ],
   "119090": [
@@ -24001,6 +24091,36 @@ export const PRODUCT_EXP_TREND_BY_CODE: Record<string, {
       "value": 16.4
     }
   ],
+  "229000": [
+    {
+      "year": "2020",
+      "value": 34.6
+    },
+    {
+      "year": "2021",
+      "value": 33.3
+    },
+    {
+      "year": "2022",
+      "value": 0
+    },
+    {
+      "year": "2023",
+      "value": 0
+    },
+    {
+      "year": "2024",
+      "value": 0
+    },
+    {
+      "year": "2025",
+      "value": 0
+    },
+    {
+      "year": "2026(1-2월)",
+      "value": 0
+    }
+  ],
   "229090": [
     {
       "year": "2020",
@@ -24029,6 +24149,36 @@ export const PRODUCT_EXP_TREND_BY_CODE: Record<string, {
     {
       "year": "2026(1-2월)",
       "value": 2.5
+    }
+  ],
+  "290000": [
+    {
+      "year": "2020",
+      "value": 23.4
+    },
+    {
+      "year": "2021",
+      "value": 28.8
+    },
+    {
+      "year": "2022",
+      "value": 0
+    },
+    {
+      "year": "2023",
+      "value": 0
+    },
+    {
+      "year": "2024",
+      "value": 0
+    },
+    {
+      "year": "2025",
+      "value": 0
+    },
+    {
+      "year": "2026(1-2월)",
+      "value": 0
     }
   ],
   "290090": [
@@ -24091,6 +24241,36 @@ export const PRODUCT_EXP_TREND_BY_CODE: Record<string, {
       "value": 9.9
     }
   ],
+  "613210": [
+    {
+      "year": "2020",
+      "value": 31
+    },
+    {
+      "year": "2021",
+      "value": 42.9
+    },
+    {
+      "year": "2022",
+      "value": 43.5
+    },
+    {
+      "year": "2023",
+      "value": 42.3
+    },
+    {
+      "year": "2024",
+      "value": 37.3
+    },
+    {
+      "year": "2025",
+      "value": 35.9
+    },
+    {
+      "year": "2026(1-2월)",
+      "value": 5.3
+    }
+  ],
   "621110": [
     {
       "year": "2020",
@@ -24119,6 +24299,96 @@ export const PRODUCT_EXP_TREND_BY_CODE: Record<string, {
     {
       "year": "2026(1-2월)",
       "value": 1.1
+    }
+  ],
+  "622120": [
+    {
+      "year": "2020",
+      "value": 17.4
+    },
+    {
+      "year": "2021",
+      "value": 32
+    },
+    {
+      "year": "2022",
+      "value": 26
+    },
+    {
+      "year": "2023",
+      "value": 18.7
+    },
+    {
+      "year": "2024",
+      "value": 17.6
+    },
+    {
+      "year": "2025",
+      "value": 20
+    },
+    {
+      "year": "2026(1-2월)",
+      "value": 3
+    }
+  ],
+  "622130": [
+    {
+      "year": "2020",
+      "value": 1
+    },
+    {
+      "year": "2021",
+      "value": 1.8
+    },
+    {
+      "year": "2022",
+      "value": 1.8
+    },
+    {
+      "year": "2023",
+      "value": 2
+    },
+    {
+      "year": "2024",
+      "value": 3.9
+    },
+    {
+      "year": "2025",
+      "value": 6.6
+    },
+    {
+      "year": "2026(1-2월)",
+      "value": 1.2
+    }
+  ],
+  "725190": [
+    {
+      "year": "2020",
+      "value": 27.1
+    },
+    {
+      "year": "2021",
+      "value": 38
+    },
+    {
+      "year": "2022",
+      "value": 39.6
+    },
+    {
+      "year": "2023",
+      "value": 40.6
+    },
+    {
+      "year": "2024",
+      "value": 24.8
+    },
+    {
+      "year": "2025",
+      "value": 29.3
+    },
+    {
+      "year": "2026(1-2월)",
+      "value": 5.6
     }
   ],
   "732100": [
@@ -24241,6 +24511,66 @@ export const PRODUCT_EXP_TREND_BY_CODE: Record<string, {
       "value": 36.2
     }
   ],
+  "741170": [
+    {
+      "year": "2020",
+      "value": 19.8
+    },
+    {
+      "year": "2021",
+      "value": 29.5
+    },
+    {
+      "year": "2022",
+      "value": 37.8
+    },
+    {
+      "year": "2023",
+      "value": 40.2
+    },
+    {
+      "year": "2024",
+      "value": 31
+    },
+    {
+      "year": "2025",
+      "value": 34.4
+    },
+    {
+      "year": "2026(1-2월)",
+      "value": 3.6
+    }
+  ],
+  "741190": [
+    {
+      "year": "2020",
+      "value": 32.3
+    },
+    {
+      "year": "2021",
+      "value": 60.1
+    },
+    {
+      "year": "2022",
+      "value": 0
+    },
+    {
+      "year": "2023",
+      "value": 0.1
+    },
+    {
+      "year": "2024",
+      "value": 0
+    },
+    {
+      "year": "2025",
+      "value": 0
+    },
+    {
+      "year": "2026(1-2월)",
+      "value": 0
+    }
+  ],
   "741400": [
     {
       "year": "2020",
@@ -24361,6 +24691,36 @@ export const PRODUCT_EXP_TREND_BY_CODE: Record<string, {
       "value": 43.1
     }
   ],
+  "790100": [
+    {
+      "year": "2020",
+      "value": 33.8
+    },
+    {
+      "year": "2021",
+      "value": 38.1
+    },
+    {
+      "year": "2022",
+      "value": 0
+    },
+    {
+      "year": "2023",
+      "value": 0
+    },
+    {
+      "year": "2024",
+      "value": 0
+    },
+    {
+      "year": "2025",
+      "value": 0
+    },
+    {
+      "year": "2026(1-2월)",
+      "value": 0
+    }
+  ],
   "790190": [
     {
       "year": "2020",
@@ -24391,6 +24751,36 @@ export const PRODUCT_EXP_TREND_BY_CODE: Record<string, {
       "value": 4.4
     }
   ],
+  "812130": [
+    {
+      "year": "2020",
+      "value": 1.3
+    },
+    {
+      "year": "2021",
+      "value": 1.2
+    },
+    {
+      "year": "2022",
+      "value": 0
+    },
+    {
+      "year": "2023",
+      "value": 0
+    },
+    {
+      "year": "2024",
+      "value": 0
+    },
+    {
+      "year": "2025",
+      "value": 0
+    },
+    {
+      "year": "2026(1-2월)",
+      "value": 0
+    }
+  ],
   "812160": [
     {
       "year": "2020",
@@ -24419,6 +24809,66 @@ export const PRODUCT_EXP_TREND_BY_CODE: Record<string, {
     {
       "year": "2026(1-2월)",
       "value": 13.9
+    }
+  ],
+  "812190": [
+    {
+      "year": "2020",
+      "value": 37
+    },
+    {
+      "year": "2021",
+      "value": 47.7
+    },
+    {
+      "year": "2022",
+      "value": 0
+    },
+    {
+      "year": "2023",
+      "value": 0.1
+    },
+    {
+      "year": "2024",
+      "value": 0
+    },
+    {
+      "year": "2025",
+      "value": 0.1
+    },
+    {
+      "year": "2026(1-2월)",
+      "value": 0
+    }
+  ],
+  "812410": [
+    {
+      "year": "2020",
+      "value": 4.8
+    },
+    {
+      "year": "2021",
+      "value": 61.8
+    },
+    {
+      "year": "2022",
+      "value": 40.9
+    },
+    {
+      "year": "2023",
+      "value": 9.5
+    },
+    {
+      "year": "2024",
+      "value": 7.7
+    },
+    {
+      "year": "2025",
+      "value": 6.8
+    },
+    {
+      "year": "2026(1-2월)",
+      "value": 1
     }
   ],
   "812890": [
@@ -24479,6 +24929,36 @@ export const PRODUCT_EXP_TREND_BY_CODE: Record<string, {
     {
       "year": "2026(1-2월)",
       "value": 0.1
+    }
+  ],
+  "813120": [
+    {
+      "year": "2020",
+      "value": 2.1
+    },
+    {
+      "year": "2021",
+      "value": 2.2
+    },
+    {
+      "year": "2022",
+      "value": 2.8
+    },
+    {
+      "year": "2023",
+      "value": 2.9
+    },
+    {
+      "year": "2024",
+      "value": 3
+    },
+    {
+      "year": "2025",
+      "value": 3
+    },
+    {
+      "year": "2026(1-2월)",
+      "value": 0.4
     }
   ],
   "813800": [
@@ -24601,6 +25081,66 @@ export const PRODUCT_EXP_TREND_BY_CODE: Record<string, {
       "value": 15.5
     }
   ],
+  "831390": [
+    {
+      "year": "2020",
+      "value": 24
+    },
+    {
+      "year": "2021",
+      "value": 27.5
+    },
+    {
+      "year": "2022",
+      "value": 15.5
+    },
+    {
+      "year": "2023",
+      "value": 14
+    },
+    {
+      "year": "2024",
+      "value": 19
+    },
+    {
+      "year": "2025",
+      "value": 16.8
+    },
+    {
+      "year": "2026(1-2월)",
+      "value": 3.2
+    }
+  ],
+  "831500": [
+    {
+      "year": "2020",
+      "value": 9.2
+    },
+    {
+      "year": "2021",
+      "value": 10.7
+    },
+    {
+      "year": "2022",
+      "value": 12.9
+    },
+    {
+      "year": "2023",
+      "value": 10.5
+    },
+    {
+      "year": "2024",
+      "value": 17.1
+    },
+    {
+      "year": "2025",
+      "value": 25.7
+    },
+    {
+      "year": "2026(1-2월)",
+      "value": 3.8
+    }
+  ],
   "834300": [
     {
       "year": "2020",
@@ -24721,34 +25261,34 @@ export const PRODUCT_EXP_TREND_BY_CODE: Record<string, {
       "value": 19.6
     }
   ],
-  "022110": [
+  "970100": [
     {
       "year": "2020",
-      "value": 0
+      "value": 8.5
     },
     {
       "year": "2021",
-      "value": 0
+      "value": 9.3
     },
     {
       "year": "2022",
-      "value": 0
+      "value": 13.4
     },
     {
       "year": "2023",
-      "value": 0
+      "value": 16
     },
     {
       "year": "2024",
-      "value": 0
+      "value": 37
     },
     {
       "year": "2025",
-      "value": 0.1
+      "value": 41.1
     },
     {
       "year": "2026(1-2월)",
-      "value": 0
+      "value": 5.4
     }
   ],
   "013600": [
@@ -24780,12 +25320,102 @@ export const PRODUCT_EXP_TREND_BY_CODE: Record<string, {
       "year": "2026(1-2월)",
       "value": 0.5
     }
+  ],
+  "022110": [
+    {
+      "year": "2020",
+      "value": 0
+    },
+    {
+      "year": "2021",
+      "value": 0
+    },
+    {
+      "year": "2022",
+      "value": 0
+    },
+    {
+      "year": "2023",
+      "value": 0
+    },
+    {
+      "year": "2024",
+      "value": 0
+    },
+    {
+      "year": "2025",
+      "value": 0.1
+    },
+    {
+      "year": "2026(1-2월)",
+      "value": 0
+    }
   ]
 };
 
 export const PRODUCT_IMP_TREND_BY_CODE: Record<string, {
   year: string; value: number;
 }[]> = {
+  "111100": [
+    {
+      "year": "2020",
+      "value": 9.4
+    },
+    {
+      "year": "2021",
+      "value": 26.4
+    },
+    {
+      "year": "2022",
+      "value": 12.6
+    },
+    {
+      "year": "2023",
+      "value": 10.9
+    },
+    {
+      "year": "2024",
+      "value": 25.4
+    },
+    {
+      "year": "2025",
+      "value": 82.7
+    },
+    {
+      "year": "2026(1-2월)",
+      "value": 21.3
+    }
+  ],
+  "111200": [
+    {
+      "year": "2020",
+      "value": 4.5
+    },
+    {
+      "year": "2021",
+      "value": 4.8
+    },
+    {
+      "year": "2022",
+      "value": 4
+    },
+    {
+      "year": "2023",
+      "value": 4.9
+    },
+    {
+      "year": "2024",
+      "value": 5.6
+    },
+    {
+      "year": "2025",
+      "value": 8.5
+    },
+    {
+      "year": "2026(1-2월)",
+      "value": 5.3
+    }
+  ],
   "112000": [
     {
       "year": "2020",
@@ -24844,6 +25474,36 @@ export const PRODUCT_IMP_TREND_BY_CODE: Record<string, {
     {
       "year": "2026(1-2월)",
       "value": 10.7
+    }
+  ],
+  "119000": [
+    {
+      "year": "2020",
+      "value": 40.4
+    },
+    {
+      "year": "2021",
+      "value": 52.9
+    },
+    {
+      "year": "2022",
+      "value": 0
+    },
+    {
+      "year": "2023",
+      "value": 0
+    },
+    {
+      "year": "2024",
+      "value": 0
+    },
+    {
+      "year": "2025",
+      "value": 0
+    },
+    {
+      "year": "2026(1-2월)",
+      "value": 0
     }
   ],
   "119090": [
@@ -25386,6 +26046,36 @@ export const PRODUCT_IMP_TREND_BY_CODE: Record<string, {
       "value": 16.6
     }
   ],
+  "229000": [
+    {
+      "year": "2020",
+      "value": 34.1
+    },
+    {
+      "year": "2021",
+      "value": 41.8
+    },
+    {
+      "year": "2022",
+      "value": 0
+    },
+    {
+      "year": "2023",
+      "value": 0
+    },
+    {
+      "year": "2024",
+      "value": 0
+    },
+    {
+      "year": "2025",
+      "value": 0
+    },
+    {
+      "year": "2026(1-2월)",
+      "value": 0
+    }
+  ],
   "229090": [
     {
       "year": "2020",
@@ -25414,6 +26104,36 @@ export const PRODUCT_IMP_TREND_BY_CODE: Record<string, {
     {
       "year": "2026(1-2월)",
       "value": 6.8
+    }
+  ],
+  "290000": [
+    {
+      "year": "2020",
+      "value": 37.3
+    },
+    {
+      "year": "2021",
+      "value": 43.5
+    },
+    {
+      "year": "2022",
+      "value": 0
+    },
+    {
+      "year": "2023",
+      "value": 0
+    },
+    {
+      "year": "2024",
+      "value": 0
+    },
+    {
+      "year": "2025",
+      "value": 0
+    },
+    {
+      "year": "2026(1-2월)",
+      "value": 0
     }
   ],
   "290090": [
@@ -25476,6 +26196,36 @@ export const PRODUCT_IMP_TREND_BY_CODE: Record<string, {
       "value": 6.8
     }
   ],
+  "613210": [
+    {
+      "year": "2020",
+      "value": 12.6
+    },
+    {
+      "year": "2021",
+      "value": 22.9
+    },
+    {
+      "year": "2022",
+      "value": 22.9
+    },
+    {
+      "year": "2023",
+      "value": 23.1
+    },
+    {
+      "year": "2024",
+      "value": 19.2
+    },
+    {
+      "year": "2025",
+      "value": 13.1
+    },
+    {
+      "year": "2026(1-2월)",
+      "value": 1.4
+    }
+  ],
   "621110": [
     {
       "year": "2020",
@@ -25504,6 +26254,96 @@ export const PRODUCT_IMP_TREND_BY_CODE: Record<string, {
     {
       "year": "2026(1-2월)",
       "value": 7.4
+    }
+  ],
+  "622120": [
+    {
+      "year": "2020",
+      "value": 14.6
+    },
+    {
+      "year": "2021",
+      "value": 30.5
+    },
+    {
+      "year": "2022",
+      "value": 30.8
+    },
+    {
+      "year": "2023",
+      "value": 22.9
+    },
+    {
+      "year": "2024",
+      "value": 25.1
+    },
+    {
+      "year": "2025",
+      "value": 26.4
+    },
+    {
+      "year": "2026(1-2월)",
+      "value": 5.6
+    }
+  ],
+  "622130": [
+    {
+      "year": "2020",
+      "value": 17.2
+    },
+    {
+      "year": "2021",
+      "value": 26.9
+    },
+    {
+      "year": "2022",
+      "value": 27.7
+    },
+    {
+      "year": "2023",
+      "value": 23.3
+    },
+    {
+      "year": "2024",
+      "value": 24.2
+    },
+    {
+      "year": "2025",
+      "value": 27.5
+    },
+    {
+      "year": "2026(1-2월)",
+      "value": 6.1
+    }
+  ],
+  "725190": [
+    {
+      "year": "2020",
+      "value": 2.4
+    },
+    {
+      "year": "2021",
+      "value": 3.2
+    },
+    {
+      "year": "2022",
+      "value": 3.1
+    },
+    {
+      "year": "2023",
+      "value": 2.8
+    },
+    {
+      "year": "2024",
+      "value": 2.7
+    },
+    {
+      "year": "2025",
+      "value": 1.9
+    },
+    {
+      "year": "2026(1-2월)",
+      "value": 0.3
     }
   ],
   "732100": [
@@ -25626,6 +26466,66 @@ export const PRODUCT_IMP_TREND_BY_CODE: Record<string, {
       "value": 3.4
     }
   ],
+  "741170": [
+    {
+      "year": "2020",
+      "value": 20.6
+    },
+    {
+      "year": "2021",
+      "value": 6
+    },
+    {
+      "year": "2022",
+      "value": 7.4
+    },
+    {
+      "year": "2023",
+      "value": 4.4
+    },
+    {
+      "year": "2024",
+      "value": 2.3
+    },
+    {
+      "year": "2025",
+      "value": 1.3
+    },
+    {
+      "year": "2026(1-2월)",
+      "value": 0.1
+    }
+  ],
+  "741190": [
+    {
+      "year": "2020",
+      "value": 23.5
+    },
+    {
+      "year": "2021",
+      "value": 45.3
+    },
+    {
+      "year": "2022",
+      "value": 0.2
+    },
+    {
+      "year": "2023",
+      "value": 0.2
+    },
+    {
+      "year": "2024",
+      "value": 0.1
+    },
+    {
+      "year": "2025",
+      "value": 0.2
+    },
+    {
+      "year": "2026(1-2월)",
+      "value": 0
+    }
+  ],
   "741400": [
     {
       "year": "2020",
@@ -25746,6 +26646,36 @@ export const PRODUCT_IMP_TREND_BY_CODE: Record<string, {
       "value": 4.5
     }
   ],
+  "790100": [
+    {
+      "year": "2020",
+      "value": 13
+    },
+    {
+      "year": "2021",
+      "value": 15.4
+    },
+    {
+      "year": "2022",
+      "value": 0
+    },
+    {
+      "year": "2023",
+      "value": 0
+    },
+    {
+      "year": "2024",
+      "value": 0
+    },
+    {
+      "year": "2025",
+      "value": 0
+    },
+    {
+      "year": "2026(1-2월)",
+      "value": 0
+    }
+  ],
   "790190": [
     {
       "year": "2020",
@@ -25776,6 +26706,36 @@ export const PRODUCT_IMP_TREND_BY_CODE: Record<string, {
       "value": 2.5
     }
   ],
+  "812130": [
+    {
+      "year": "2020",
+      "value": 27.9
+    },
+    {
+      "year": "2021",
+      "value": 33.9
+    },
+    {
+      "year": "2022",
+      "value": 0
+    },
+    {
+      "year": "2023",
+      "value": 0
+    },
+    {
+      "year": "2024",
+      "value": 0.1
+    },
+    {
+      "year": "2025",
+      "value": 0.1
+    },
+    {
+      "year": "2026(1-2월)",
+      "value": 0
+    }
+  ],
   "812160": [
     {
       "year": "2020",
@@ -25804,6 +26764,66 @@ export const PRODUCT_IMP_TREND_BY_CODE: Record<string, {
     {
       "year": "2026(1-2월)",
       "value": 10.5
+    }
+  ],
+  "812190": [
+    {
+      "year": "2020",
+      "value": 12.6
+    },
+    {
+      "year": "2021",
+      "value": 15.6
+    },
+    {
+      "year": "2022",
+      "value": 1
+    },
+    {
+      "year": "2023",
+      "value": 0.6
+    },
+    {
+      "year": "2024",
+      "value": 0.7
+    },
+    {
+      "year": "2025",
+      "value": 0.9
+    },
+    {
+      "year": "2026(1-2월)",
+      "value": 0.2
+    }
+  ],
+  "812410": [
+    {
+      "year": "2020",
+      "value": 5.6
+    },
+    {
+      "year": "2021",
+      "value": 12.6
+    },
+    {
+      "year": "2022",
+      "value": 12.3
+    },
+    {
+      "year": "2023",
+      "value": 11.8
+    },
+    {
+      "year": "2024",
+      "value": 11.4
+    },
+    {
+      "year": "2025",
+      "value": 11.5
+    },
+    {
+      "year": "2026(1-2월)",
+      "value": 1.7
     }
   ],
   "812890": [
@@ -25864,6 +26884,36 @@ export const PRODUCT_IMP_TREND_BY_CODE: Record<string, {
     {
       "year": "2026(1-2월)",
       "value": 6.6
+    }
+  ],
+  "813120": [
+    {
+      "year": "2020",
+      "value": 20.8
+    },
+    {
+      "year": "2021",
+      "value": 28.7
+    },
+    {
+      "year": "2022",
+      "value": 27.8
+    },
+    {
+      "year": "2023",
+      "value": 22.5
+    },
+    {
+      "year": "2024",
+      "value": 30
+    },
+    {
+      "year": "2025",
+      "value": 41.3
+    },
+    {
+      "year": "2026(1-2월)",
+      "value": 9.9
     }
   ],
   "813800": [
@@ -25986,6 +27036,66 @@ export const PRODUCT_IMP_TREND_BY_CODE: Record<string, {
       "value": 13.9
     }
   ],
+  "831390": [
+    {
+      "year": "2020",
+      "value": 32.4
+    },
+    {
+      "year": "2021",
+      "value": 40.8
+    },
+    {
+      "year": "2022",
+      "value": 37.4
+    },
+    {
+      "year": "2023",
+      "value": 31.2
+    },
+    {
+      "year": "2024",
+      "value": 30.5
+    },
+    {
+      "year": "2025",
+      "value": 27.8
+    },
+    {
+      "year": "2026(1-2월)",
+      "value": 3.2
+    }
+  ],
+  "831500": [
+    {
+      "year": "2020",
+      "value": 19.8
+    },
+    {
+      "year": "2021",
+      "value": 23.2
+    },
+    {
+      "year": "2022",
+      "value": 25.4
+    },
+    {
+      "year": "2023",
+      "value": 23.9
+    },
+    {
+      "year": "2024",
+      "value": 26.1
+    },
+    {
+      "year": "2025",
+      "value": 33.5
+    },
+    {
+      "year": "2026(1-2월)",
+      "value": 5.3
+    }
+  ],
   "834300": [
     {
       "year": "2020",
@@ -26106,34 +27216,34 @@ export const PRODUCT_IMP_TREND_BY_CODE: Record<string, {
       "value": 0.9
     }
   ],
-  "022110": [
+  "970100": [
     {
       "year": "2020",
-      "value": 31.2
+      "value": 5.1
     },
     {
       "year": "2021",
-      "value": 38.1
+      "value": 2
     },
     {
       "year": "2022",
-      "value": 45.1
+      "value": 1.5
     },
     {
       "year": "2023",
-      "value": 38.5
+      "value": 2.6
     },
     {
       "year": "2024",
-      "value": 39.5
+      "value": 2.3
     },
     {
       "year": "2025",
-      "value": 40.6
+      "value": 3
     },
     {
       "year": "2026(1-2월)",
-      "value": 10.5
+      "value": 0.3
     }
   ],
   "013600": [
@@ -26165,12 +27275,354 @@ export const PRODUCT_IMP_TREND_BY_CODE: Record<string, {
       "year": "2026(1-2월)",
       "value": 6
     }
+  ],
+  "022110": [
+    {
+      "year": "2020",
+      "value": 31.2
+    },
+    {
+      "year": "2021",
+      "value": 38.1
+    },
+    {
+      "year": "2022",
+      "value": 45.1
+    },
+    {
+      "year": "2023",
+      "value": 38.5
+    },
+    {
+      "year": "2024",
+      "value": 39.5
+    },
+    {
+      "year": "2025",
+      "value": 40.6
+    },
+    {
+      "year": "2026(1-2월)",
+      "value": 10.5
+    }
   ]
 };
 
 export const PRODUCT_EXP_TOP_COUNTRIES_BY_CODE: Record<string, Record<string, {
   country: string; value: number;
 }[]>> = {
+  "111100": {
+    "2020": [
+      {
+        "country": "홍콩",
+        "value": 9
+      },
+      {
+        "country": "싱가포르",
+        "value": 4.2
+      },
+      {
+        "country": "대만",
+        "value": 1.1
+      },
+      {
+        "country": "베트남",
+        "value": 0.7
+      },
+      {
+        "country": "중국",
+        "value": 0.5
+      }
+    ],
+    "2021": [
+      {
+        "country": "홍콩",
+        "value": 1.5
+      },
+      {
+        "country": "대만",
+        "value": 1.2
+      },
+      {
+        "country": "중국",
+        "value": 0.7
+      },
+      {
+        "country": "베트남",
+        "value": 0.7
+      },
+      {
+        "country": "필리핀",
+        "value": 0.7
+      }
+    ],
+    "2022": [
+      {
+        "country": "싱가포르",
+        "value": 3.7
+      },
+      {
+        "country": "홍콩",
+        "value": 2.8
+      },
+      {
+        "country": "태국",
+        "value": 1.9
+      },
+      {
+        "country": "대만",
+        "value": 1
+      },
+      {
+        "country": "중국",
+        "value": 0.8
+      }
+    ],
+    "2023": [
+      {
+        "country": "싱가포르",
+        "value": 4.1
+      },
+      {
+        "country": "홍콩",
+        "value": 3.7
+      },
+      {
+        "country": "태국",
+        "value": 1.4
+      },
+      {
+        "country": "일본",
+        "value": 1.3
+      },
+      {
+        "country": "스위스",
+        "value": 1.1
+      }
+    ],
+    "2024": [
+      {
+        "country": "홍콩",
+        "value": 5.5
+      },
+      {
+        "country": "싱가포르",
+        "value": 1.7
+      },
+      {
+        "country": "대만",
+        "value": 1
+      },
+      {
+        "country": "일본",
+        "value": 1
+      },
+      {
+        "country": "베트남",
+        "value": 0.7
+      }
+    ],
+    "2025": [
+      {
+        "country": "홍콩",
+        "value": 17.6
+      },
+      {
+        "country": "싱가포르",
+        "value": 2.9
+      },
+      {
+        "country": "대만",
+        "value": 1.7
+      },
+      {
+        "country": "베트남",
+        "value": 1
+      },
+      {
+        "country": "태국",
+        "value": 0.9
+      }
+    ],
+    "2026": [
+      {
+        "country": "홍콩",
+        "value": 7.5
+      },
+      {
+        "country": "대만",
+        "value": 0.3
+      },
+      {
+        "country": "싱가포르",
+        "value": 0.2
+      },
+      {
+        "country": "중국",
+        "value": 0.2
+      },
+      {
+        "country": "스위스",
+        "value": 0.2
+      }
+    ]
+  },
+  "111200": {
+    "2020": [
+      {
+        "country": "일본",
+        "value": 9.4
+      },
+      {
+        "country": "미국",
+        "value": 3
+      },
+      {
+        "country": "홍콩",
+        "value": 1.6
+      },
+      {
+        "country": "중국",
+        "value": 0.7
+      },
+      {
+        "country": "태국",
+        "value": 0.5
+      }
+    ],
+    "2021": [
+      {
+        "country": "일본",
+        "value": 13.4
+      },
+      {
+        "country": "미국",
+        "value": 4.4
+      },
+      {
+        "country": "홍콩",
+        "value": 1.2
+      },
+      {
+        "country": "태국",
+        "value": 0.6
+      },
+      {
+        "country": "중국",
+        "value": 0.4
+      }
+    ],
+    "2022": [
+      {
+        "country": "일본",
+        "value": 8.2
+      },
+      {
+        "country": "미국",
+        "value": 2.6
+      },
+      {
+        "country": "호주",
+        "value": 1.3
+      },
+      {
+        "country": "홍콩",
+        "value": 1.2
+      },
+      {
+        "country": "캐나다",
+        "value": 0.9
+      }
+    ],
+    "2023": [
+      {
+        "country": "일본",
+        "value": 8.4
+      },
+      {
+        "country": "미국",
+        "value": 2.3
+      },
+      {
+        "country": "캐나다",
+        "value": 1.9
+      },
+      {
+        "country": "호주",
+        "value": 1.4
+      },
+      {
+        "country": "홍콩",
+        "value": 1.2
+      }
+    ],
+    "2024": [
+      {
+        "country": "일본",
+        "value": 9.1
+      },
+      {
+        "country": "홍콩",
+        "value": 4.2
+      },
+      {
+        "country": "미국",
+        "value": 2.4
+      },
+      {
+        "country": "호주",
+        "value": 1.1
+      },
+      {
+        "country": "태국",
+        "value": 0.9
+      }
+    ],
+    "2025": [
+      {
+        "country": "일본",
+        "value": 8.6
+      },
+      {
+        "country": "홍콩",
+        "value": 5.6
+      },
+      {
+        "country": "영국",
+        "value": 3.5
+      },
+      {
+        "country": "미국",
+        "value": 3.4
+      },
+      {
+        "country": "인도",
+        "value": 1.4
+      }
+    ],
+    "2026": [
+      {
+        "country": "홍콩",
+        "value": 2.7
+      },
+      {
+        "country": "일본",
+        "value": 1.7
+      },
+      {
+        "country": "호주",
+        "value": 1.6
+      },
+      {
+        "country": "싱가포르",
+        "value": 0.8
+      },
+      {
+        "country": "중국",
+        "value": 0.6
+      }
+    ]
+  },
   "112000": {
     "2020": [
       {
@@ -26482,6 +27934,57 @@ export const PRODUCT_EXP_TOP_COUNTRIES_BY_CODE: Record<string, Record<string, {
         "value": 0
       }
     ]
+  },
+  "119000": {
+    "2020": [
+      {
+        "country": "일본",
+        "value": 2.6
+      },
+      {
+        "country": "독일",
+        "value": 1.7
+      },
+      {
+        "country": "싱가포르",
+        "value": 1
+      },
+      {
+        "country": "미국",
+        "value": 0.6
+      },
+      {
+        "country": "중국",
+        "value": 0.4
+      }
+    ],
+    "2021": [
+      {
+        "country": "일본",
+        "value": 2.8
+      },
+      {
+        "country": "싱가포르",
+        "value": 1.6
+      },
+      {
+        "country": "독일",
+        "value": 0.9
+      },
+      {
+        "country": "미국",
+        "value": 0.6
+      },
+      {
+        "country": "중국",
+        "value": 0.4
+      }
+    ],
+    "2022": [],
+    "2023": [],
+    "2024": [],
+    "2025": [],
+    "2026": []
   },
   "119090": {
     "2020": [],
@@ -29245,6 +30748,78 @@ export const PRODUCT_EXP_TOP_COUNTRIES_BY_CODE: Record<string, Record<string, {
       }
     ]
   },
+  "229000": {
+    "2020": [
+      {
+        "country": "미국",
+        "value": 4.2
+      },
+      {
+        "country": "중국",
+        "value": 2.9
+      },
+      {
+        "country": "이탈리아",
+        "value": 2.6
+      },
+      {
+        "country": "인도",
+        "value": 2.3
+      },
+      {
+        "country": "인도네시아",
+        "value": 1.5
+      }
+    ],
+    "2021": [
+      {
+        "country": "베트남",
+        "value": 4.6
+      },
+      {
+        "country": "중국",
+        "value": 3.3
+      },
+      {
+        "country": "이탈리아",
+        "value": 2.4
+      },
+      {
+        "country": "미국",
+        "value": 2.3
+      },
+      {
+        "country": "인도",
+        "value": 1.4
+      }
+    ],
+    "2022": [
+      {
+        "country": "대만",
+        "value": 0
+      },
+      {
+        "country": "독일",
+        "value": 0
+      },
+      {
+        "country": "러시아",
+        "value": 0
+      },
+      {
+        "country": "미국",
+        "value": 0
+      },
+      {
+        "country": "베트남",
+        "value": 0
+      }
+    ],
+    "2023": [],
+    "2024": [],
+    "2025": [],
+    "2026": []
+  },
   "229090": {
     "2020": [],
     "2021": [],
@@ -29358,6 +30933,78 @@ export const PRODUCT_EXP_TOP_COUNTRIES_BY_CODE: Record<string, Record<string, {
         "value": 0.1
       }
     ]
+  },
+  "290000": {
+    "2020": [
+      {
+        "country": "중국",
+        "value": 7.4
+      },
+      {
+        "country": "미국",
+        "value": 2.8
+      },
+      {
+        "country": "일본",
+        "value": 1.9
+      },
+      {
+        "country": "베트남",
+        "value": 1.7
+      },
+      {
+        "country": "네덜란드",
+        "value": 1.5
+      }
+    ],
+    "2021": [
+      {
+        "country": "중국",
+        "value": 9.8
+      },
+      {
+        "country": "미국",
+        "value": 3.5
+      },
+      {
+        "country": "베트남",
+        "value": 1.9
+      },
+      {
+        "country": "일본",
+        "value": 1.8
+      },
+      {
+        "country": "네덜란드",
+        "value": 1.7
+      }
+    ],
+    "2022": [
+      {
+        "country": "네덜란드",
+        "value": 0
+      },
+      {
+        "country": "미국",
+        "value": 0
+      },
+      {
+        "country": "스웨덴",
+        "value": 0
+      },
+      {
+        "country": "스페인",
+        "value": 0
+      },
+      {
+        "country": "일본",
+        "value": 0
+      }
+    ],
+    "2023": [],
+    "2024": [],
+    "2025": [],
+    "2026": []
   },
   "290090": {
     "2020": [],
@@ -29629,6 +31276,162 @@ export const PRODUCT_EXP_TOP_COUNTRIES_BY_CODE: Record<string, Record<string, {
       }
     ]
   },
+  "613210": {
+    "2020": [
+      {
+        "country": "중국",
+        "value": 4.5
+      },
+      {
+        "country": "인도",
+        "value": 3.6
+      },
+      {
+        "country": "일본",
+        "value": 3.3
+      },
+      {
+        "country": "베트남",
+        "value": 3.2
+      },
+      {
+        "country": "미국",
+        "value": 2.5
+      }
+    ],
+    "2021": [
+      {
+        "country": "인도",
+        "value": 6
+      },
+      {
+        "country": "미국",
+        "value": 5.7
+      },
+      {
+        "country": "일본",
+        "value": 5.2
+      },
+      {
+        "country": "베트남",
+        "value": 4.1
+      },
+      {
+        "country": "멕시코",
+        "value": 3.1
+      }
+    ],
+    "2022": [
+      {
+        "country": "인도",
+        "value": 6.9
+      },
+      {
+        "country": "일본",
+        "value": 6.1
+      },
+      {
+        "country": "미국",
+        "value": 3.9
+      },
+      {
+        "country": "이탈리아",
+        "value": 3.7
+      },
+      {
+        "country": "멕시코",
+        "value": 3.6
+      }
+    ],
+    "2023": [
+      {
+        "country": "인도",
+        "value": 7
+      },
+      {
+        "country": "일본",
+        "value": 6
+      },
+      {
+        "country": "미국",
+        "value": 3.2
+      },
+      {
+        "country": "튀르키예",
+        "value": 3.2
+      },
+      {
+        "country": "이탈리아",
+        "value": 3.1
+      }
+    ],
+    "2024": [
+      {
+        "country": "인도",
+        "value": 6.6
+      },
+      {
+        "country": "일본",
+        "value": 5.8
+      },
+      {
+        "country": "베트남",
+        "value": 3.6
+      },
+      {
+        "country": "미국",
+        "value": 3.4
+      },
+      {
+        "country": "이탈리아",
+        "value": 3.1
+      }
+    ],
+    "2025": [
+      {
+        "country": "인도",
+        "value": 5.2
+      },
+      {
+        "country": "베트남",
+        "value": 4.8
+      },
+      {
+        "country": "일본",
+        "value": 4.7
+      },
+      {
+        "country": "브라질",
+        "value": 2.4
+      },
+      {
+        "country": "이탈리아",
+        "value": 2.3
+      }
+    ],
+    "2026": [
+      {
+        "country": "인도",
+        "value": 0.8
+      },
+      {
+        "country": "일본",
+        "value": 0.6
+      },
+      {
+        "country": "베트남",
+        "value": 0.6
+      },
+      {
+        "country": "미국",
+        "value": 0.5
+      },
+      {
+        "country": "튀르키예",
+        "value": 0.4
+      }
+    ]
+  },
   "621110": {
     "2020": [
       {
@@ -29782,6 +31585,474 @@ export const PRODUCT_EXP_TOP_COUNTRIES_BY_CODE: Record<string, Record<string, {
       {
         "country": "스페인",
         "value": 0.1
+      }
+    ]
+  },
+  "622120": {
+    "2020": [
+      {
+        "country": "중국",
+        "value": 10.9
+      },
+      {
+        "country": "베트남",
+        "value": 3
+      },
+      {
+        "country": "말레이시아",
+        "value": 1.7
+      },
+      {
+        "country": "대만",
+        "value": 0.9
+      },
+      {
+        "country": "태국",
+        "value": 0.6
+      }
+    ],
+    "2021": [
+      {
+        "country": "중국",
+        "value": 20.3
+      },
+      {
+        "country": "베트남",
+        "value": 4.1
+      },
+      {
+        "country": "말레이시아",
+        "value": 3.4
+      },
+      {
+        "country": "대만",
+        "value": 2
+      },
+      {
+        "country": "태국",
+        "value": 1.5
+      }
+    ],
+    "2022": [
+      {
+        "country": "중국",
+        "value": 19.4
+      },
+      {
+        "country": "말레이시아",
+        "value": 1.9
+      },
+      {
+        "country": "베트남",
+        "value": 1.8
+      },
+      {
+        "country": "태국",
+        "value": 1.7
+      },
+      {
+        "country": "인도네시아",
+        "value": 0.5
+      }
+    ],
+    "2023": [
+      {
+        "country": "중국",
+        "value": 15
+      },
+      {
+        "country": "베트남",
+        "value": 1.5
+      },
+      {
+        "country": "말레이시아",
+        "value": 1.1
+      },
+      {
+        "country": "태국",
+        "value": 0.4
+      },
+      {
+        "country": "싱가포르",
+        "value": 0.3
+      }
+    ],
+    "2024": [
+      {
+        "country": "중국",
+        "value": 12.3
+      },
+      {
+        "country": "대만",
+        "value": 2.2
+      },
+      {
+        "country": "베트남",
+        "value": 1.7
+      },
+      {
+        "country": "태국",
+        "value": 0.7
+      },
+      {
+        "country": "말레이시아",
+        "value": 0.4
+      }
+    ],
+    "2025": [
+      {
+        "country": "중국",
+        "value": 11.8
+      },
+      {
+        "country": "미국",
+        "value": 4.7
+      },
+      {
+        "country": "베트남",
+        "value": 1.4
+      },
+      {
+        "country": "대만",
+        "value": 0.8
+      },
+      {
+        "country": "말레이시아",
+        "value": 0.6
+      }
+    ],
+    "2026": [
+      {
+        "country": "대만",
+        "value": 0.8
+      },
+      {
+        "country": "중국",
+        "value": 0.7
+      },
+      {
+        "country": "미국",
+        "value": 0.5
+      },
+      {
+        "country": "베트남",
+        "value": 0.4
+      },
+      {
+        "country": "태국",
+        "value": 0.3
+      }
+    ]
+  },
+  "622130": {
+    "2020": [
+      {
+        "country": "중국",
+        "value": 0.5
+      },
+      {
+        "country": "일본",
+        "value": 0.2
+      },
+      {
+        "country": "말레이시아",
+        "value": 0.1
+      },
+      {
+        "country": "대만",
+        "value": 0
+      },
+      {
+        "country": "홍콩",
+        "value": 0
+      }
+    ],
+    "2021": [
+      {
+        "country": "중국",
+        "value": 1.2
+      },
+      {
+        "country": "일본",
+        "value": 0.3
+      },
+      {
+        "country": "말레이시아",
+        "value": 0.1
+      },
+      {
+        "country": "대만",
+        "value": 0
+      },
+      {
+        "country": "튀르키예",
+        "value": 0
+      }
+    ],
+    "2022": [
+      {
+        "country": "중국",
+        "value": 1.2
+      },
+      {
+        "country": "일본",
+        "value": 0.2
+      },
+      {
+        "country": "말레이시아",
+        "value": 0.1
+      },
+      {
+        "country": "태국",
+        "value": 0.1
+      },
+      {
+        "country": "그리스",
+        "value": 0
+      }
+    ],
+    "2023": [
+      {
+        "country": "중국",
+        "value": 1.1
+      },
+      {
+        "country": "말레이시아",
+        "value": 0.3
+      },
+      {
+        "country": "일본",
+        "value": 0.2
+      },
+      {
+        "country": "태국",
+        "value": 0.1
+      },
+      {
+        "country": "스페인",
+        "value": 0.1
+      }
+    ],
+    "2024": [
+      {
+        "country": "중국",
+        "value": 2.9
+      },
+      {
+        "country": "말레이시아",
+        "value": 0.3
+      },
+      {
+        "country": "일본",
+        "value": 0.3
+      },
+      {
+        "country": "태국",
+        "value": 0.1
+      },
+      {
+        "country": "대만",
+        "value": 0
+      }
+    ],
+    "2025": [
+      {
+        "country": "중국",
+        "value": 4.9
+      },
+      {
+        "country": "말레이시아",
+        "value": 1
+      },
+      {
+        "country": "일본",
+        "value": 0.3
+      },
+      {
+        "country": "태국",
+        "value": 0.1
+      },
+      {
+        "country": "대만",
+        "value": 0.1
+      }
+    ],
+    "2026": [
+      {
+        "country": "중국",
+        "value": 0.8
+      },
+      {
+        "country": "말레이시아",
+        "value": 0.3
+      },
+      {
+        "country": "일본",
+        "value": 0
+      },
+      {
+        "country": "대만",
+        "value": 0
+      },
+      {
+        "country": "태국",
+        "value": 0
+      }
+    ]
+  },
+  "725190": {
+    "2020": [
+      {
+        "country": "벨기에",
+        "value": 5.5
+      },
+      {
+        "country": "미국",
+        "value": 5.2
+      },
+      {
+        "country": "중국",
+        "value": 3.7
+      },
+      {
+        "country": "러시아",
+        "value": 1.5
+      },
+      {
+        "country": "베트남",
+        "value": 0.9
+      }
+    ],
+    "2021": [
+      {
+        "country": "벨기에",
+        "value": 7.5
+      },
+      {
+        "country": "미국",
+        "value": 7.1
+      },
+      {
+        "country": "러시아",
+        "value": 3.4
+      },
+      {
+        "country": "중국",
+        "value": 1.9
+      },
+      {
+        "country": "인도네시아",
+        "value": 1.3
+      }
+    ],
+    "2022": [
+      {
+        "country": "미국",
+        "value": 10.3
+      },
+      {
+        "country": "벨기에",
+        "value": 7.8
+      },
+      {
+        "country": "러시아",
+        "value": 3.1
+      },
+      {
+        "country": "영국",
+        "value": 1.4
+      },
+      {
+        "country": "인도네시아",
+        "value": 1.3
+      }
+    ],
+    "2023": [
+      {
+        "country": "미국",
+        "value": 12.1
+      },
+      {
+        "country": "벨기에",
+        "value": 7.7
+      },
+      {
+        "country": "러시아",
+        "value": 3.5
+      },
+      {
+        "country": "튀르키예",
+        "value": 1.9
+      },
+      {
+        "country": "사우디아라비아",
+        "value": 1.7
+      }
+    ],
+    "2024": [
+      {
+        "country": "미국",
+        "value": 6.4
+      },
+      {
+        "country": "벨기에",
+        "value": 4.5
+      },
+      {
+        "country": "튀르키예",
+        "value": 1.3
+      },
+      {
+        "country": "사우디아라비아",
+        "value": 0.8
+      },
+      {
+        "country": "호주",
+        "value": 0.7
+      }
+    ],
+    "2025": [
+      {
+        "country": "벨기에",
+        "value": 7
+      },
+      {
+        "country": "미국",
+        "value": 5.4
+      },
+      {
+        "country": "튀르키예",
+        "value": 1.5
+      },
+      {
+        "country": "에티오피아",
+        "value": 1.1
+      },
+      {
+        "country": "지부티",
+        "value": 1
+      }
+    ],
+    "2026": [
+      {
+        "country": "벨기에",
+        "value": 1.4
+      },
+      {
+        "country": "미국",
+        "value": 0.9
+      },
+      {
+        "country": "지부티",
+        "value": 0.5
+      },
+      {
+        "country": "에티오피아",
+        "value": 0.3
+      },
+      {
+        "country": "베트남",
+        "value": 0.2
       }
     ]
   },
@@ -30409,6 +32680,318 @@ export const PRODUCT_EXP_TOP_COUNTRIES_BY_CODE: Record<string, Record<string, {
       }
     ]
   },
+  "741170": {
+    "2020": [
+      {
+        "country": "호주",
+        "value": 4
+      },
+      {
+        "country": "러시아",
+        "value": 2.5
+      },
+      {
+        "country": "독일",
+        "value": 1.6
+      },
+      {
+        "country": "베트남",
+        "value": 1.6
+      },
+      {
+        "country": "튀르키예",
+        "value": 0.8
+      }
+    ],
+    "2021": [
+      {
+        "country": "러시아",
+        "value": 6.1
+      },
+      {
+        "country": "호주",
+        "value": 5.6
+      },
+      {
+        "country": "요르단",
+        "value": 2.2
+      },
+      {
+        "country": "베트남",
+        "value": 2
+      },
+      {
+        "country": "칠레",
+        "value": 1.5
+      }
+    ],
+    "2022": [
+      {
+        "country": "호주",
+        "value": 12.2
+      },
+      {
+        "country": "러시아",
+        "value": 3
+      },
+      {
+        "country": "요르단",
+        "value": 2.1
+      },
+      {
+        "country": "독일",
+        "value": 1.7
+      },
+      {
+        "country": "베트남",
+        "value": 1.6
+      }
+    ],
+    "2023": [
+      {
+        "country": "호주",
+        "value": 10.3
+      },
+      {
+        "country": "키르기스스탄",
+        "value": 3.1
+      },
+      {
+        "country": "러시아",
+        "value": 3
+      },
+      {
+        "country": "독일",
+        "value": 2.8
+      },
+      {
+        "country": "요르단",
+        "value": 1.4
+      }
+    ],
+    "2024": [
+      {
+        "country": "호주",
+        "value": 7.3
+      },
+      {
+        "country": "키르기스스탄",
+        "value": 3.9
+      },
+      {
+        "country": "러시아",
+        "value": 2
+      },
+      {
+        "country": "독일",
+        "value": 0.9
+      },
+      {
+        "country": "베트남",
+        "value": 0.9
+      }
+    ],
+    "2025": [
+      {
+        "country": "키르기스스탄",
+        "value": 7.7
+      },
+      {
+        "country": "호주",
+        "value": 5.6
+      },
+      {
+        "country": "러시아",
+        "value": 2
+      },
+      {
+        "country": "카자흐스탄",
+        "value": 1.6
+      },
+      {
+        "country": "알바니아",
+        "value": 1.5
+      }
+    ],
+    "2026": [
+      {
+        "country": "호주",
+        "value": 0.6
+      },
+      {
+        "country": "키르기스스탄",
+        "value": 0.4
+      },
+      {
+        "country": "알바니아",
+        "value": 0.3
+      },
+      {
+        "country": "칠레",
+        "value": 0.2
+      },
+      {
+        "country": "대만",
+        "value": 0.1
+      }
+    ]
+  },
+  "741190": {
+    "2020": [
+      {
+        "country": "미국",
+        "value": 7.3
+      },
+      {
+        "country": "영국",
+        "value": 4.8
+      },
+      {
+        "country": "이스라엘",
+        "value": 3.1
+      },
+      {
+        "country": "독일",
+        "value": 2.9
+      },
+      {
+        "country": "스페인",
+        "value": 2.6
+      }
+    ],
+    "2021": [
+      {
+        "country": "미국",
+        "value": 20.6
+      },
+      {
+        "country": "프랑스",
+        "value": 6
+      },
+      {
+        "country": "영국",
+        "value": 5.2
+      },
+      {
+        "country": "이스라엘",
+        "value": 4.3
+      },
+      {
+        "country": "독일",
+        "value": 3.6
+      }
+    ],
+    "2022": [
+      {
+        "country": "일본",
+        "value": 0
+      },
+      {
+        "country": "러시아",
+        "value": 0
+      },
+      {
+        "country": "카자흐스탄",
+        "value": 0
+      },
+      {
+        "country": "태국",
+        "value": 0
+      },
+      {
+        "country": "필리핀",
+        "value": 0
+      }
+    ],
+    "2023": [
+      {
+        "country": "일본",
+        "value": 0
+      },
+      {
+        "country": "미국",
+        "value": 0
+      },
+      {
+        "country": "필리핀",
+        "value": 0
+      },
+      {
+        "country": "캄보디아",
+        "value": 0
+      },
+      {
+        "country": "러시아",
+        "value": 0
+      }
+    ],
+    "2024": [
+      {
+        "country": "일본",
+        "value": 0
+      },
+      {
+        "country": "미국",
+        "value": 0
+      },
+      {
+        "country": "키르기스스탄",
+        "value": 0
+      },
+      {
+        "country": "독일",
+        "value": 0
+      },
+      {
+        "country": "알바니아",
+        "value": 0
+      }
+    ],
+    "2025": [
+      {
+        "country": "일본",
+        "value": 0
+      },
+      {
+        "country": "미국",
+        "value": 0
+      },
+      {
+        "country": "키르기스스탄",
+        "value": 0
+      },
+      {
+        "country": "카자흐스탄",
+        "value": 0
+      },
+      {
+        "country": "중국",
+        "value": 0
+      }
+    ],
+    "2026": [
+      {
+        "country": "북마리아나 군도",
+        "value": 0
+      },
+      {
+        "country": "일본",
+        "value": 0
+      },
+      {
+        "country": "미국",
+        "value": 0
+      },
+      {
+        "country": "호주",
+        "value": 0
+      },
+      {
+        "country": "대만",
+        "value": 0
+      }
+    ]
+  },
   "741400": {
     "2020": [
       {
@@ -30991,6 +33574,57 @@ export const PRODUCT_EXP_TOP_COUNTRIES_BY_CODE: Record<string, Record<string, {
       }
     ]
   },
+  "790100": {
+    "2020": [
+      {
+        "country": "중국",
+        "value": 9.5
+      },
+      {
+        "country": "베트남",
+        "value": 4.6
+      },
+      {
+        "country": "미국",
+        "value": 3.8
+      },
+      {
+        "country": "헝가리",
+        "value": 2
+      },
+      {
+        "country": "폴란드",
+        "value": 2
+      }
+    ],
+    "2021": [
+      {
+        "country": "중국",
+        "value": 10.9
+      },
+      {
+        "country": "베트남",
+        "value": 5
+      },
+      {
+        "country": "미국",
+        "value": 3.9
+      },
+      {
+        "country": "헝가리",
+        "value": 3.6
+      },
+      {
+        "country": "홍콩",
+        "value": 2.2
+      }
+    ],
+    "2022": [],
+    "2023": [],
+    "2024": [],
+    "2025": [],
+    "2026": []
+  },
   "790190": {
     "2020": [],
     "2021": [],
@@ -31105,6 +33739,162 @@ export const PRODUCT_EXP_TOP_COUNTRIES_BY_CODE: Record<string, Record<string, {
       }
     ]
   },
+  "812130": {
+    "2020": [
+      {
+        "country": "홍콩",
+        "value": 0.5
+      },
+      {
+        "country": "싱가포르",
+        "value": 0.2
+      },
+      {
+        "country": "미국",
+        "value": 0.1
+      },
+      {
+        "country": "중국",
+        "value": 0.1
+      },
+      {
+        "country": "아랍에미리트 연합",
+        "value": 0.1
+      }
+    ],
+    "2021": [
+      {
+        "country": "홍콩",
+        "value": 0.5
+      },
+      {
+        "country": "싱가포르",
+        "value": 0.2
+      },
+      {
+        "country": "중국",
+        "value": 0.1
+      },
+      {
+        "country": "아랍에미리트 연합",
+        "value": 0.1
+      },
+      {
+        "country": "미국",
+        "value": 0.1
+      }
+    ],
+    "2022": [
+      {
+        "country": "홍콩",
+        "value": 0
+      },
+      {
+        "country": "아랍에미리트 연합",
+        "value": 0
+      },
+      {
+        "country": "미국",
+        "value": 0
+      },
+      {
+        "country": "독일",
+        "value": 0
+      },
+      {
+        "country": "일본",
+        "value": 0
+      }
+    ],
+    "2023": [
+      {
+        "country": "일본",
+        "value": 0
+      },
+      {
+        "country": "미국",
+        "value": 0
+      },
+      {
+        "country": "인도",
+        "value": 0
+      },
+      {
+        "country": "싱가포르",
+        "value": 0
+      },
+      {
+        "country": "베트남",
+        "value": 0
+      }
+    ],
+    "2024": [
+      {
+        "country": "일본",
+        "value": 0
+      },
+      {
+        "country": "말레이시아",
+        "value": 0
+      },
+      {
+        "country": "이탈리아",
+        "value": 0
+      },
+      {
+        "country": "중국",
+        "value": 0
+      },
+      {
+        "country": "태국",
+        "value": 0
+      }
+    ],
+    "2025": [
+      {
+        "country": "일본",
+        "value": 0
+      },
+      {
+        "country": "영국",
+        "value": 0
+      },
+      {
+        "country": "중국",
+        "value": 0
+      },
+      {
+        "country": "사우디아라비아",
+        "value": 0
+      },
+      {
+        "country": "덴마크",
+        "value": 0
+      }
+    ],
+    "2026": [
+      {
+        "country": "일본",
+        "value": 0
+      },
+      {
+        "country": "미국",
+        "value": 0
+      },
+      {
+        "country": "영국",
+        "value": 0
+      },
+      {
+        "country": "중국",
+        "value": 0
+      },
+      {
+        "country": "홍콩",
+        "value": 0
+      }
+    ]
+  },
   "812160": {
     "2020": [],
     "2021": [],
@@ -31216,6 +34006,318 @@ export const PRODUCT_EXP_TOP_COUNTRIES_BY_CODE: Record<string, Record<string, {
       {
         "country": "독일",
         "value": 0.5
+      }
+    ]
+  },
+  "812190": {
+    "2020": [
+      {
+        "country": "미국",
+        "value": 20.8
+      },
+      {
+        "country": "영국",
+        "value": 3.6
+      },
+      {
+        "country": "독일",
+        "value": 2.4
+      },
+      {
+        "country": "캐나다",
+        "value": 1.8
+      },
+      {
+        "country": "홍콩",
+        "value": 1.2
+      }
+    ],
+    "2021": [
+      {
+        "country": "미국",
+        "value": 21.6
+      },
+      {
+        "country": "영국",
+        "value": 5
+      },
+      {
+        "country": "독일",
+        "value": 4.4
+      },
+      {
+        "country": "홍콩",
+        "value": 2.3
+      },
+      {
+        "country": "인도",
+        "value": 2
+      }
+    ],
+    "2022": [
+      {
+        "country": "미국",
+        "value": 0
+      },
+      {
+        "country": "아랍에미리트 연합",
+        "value": 0
+      },
+      {
+        "country": "호주",
+        "value": 0
+      },
+      {
+        "country": "베트남",
+        "value": 0
+      },
+      {
+        "country": "몽골",
+        "value": 0
+      }
+    ],
+    "2023": [
+      {
+        "country": "베트남",
+        "value": 0
+      },
+      {
+        "country": "미국",
+        "value": 0
+      },
+      {
+        "country": "아랍에미리트 연합",
+        "value": 0
+      },
+      {
+        "country": "홍콩",
+        "value": 0
+      },
+      {
+        "country": "독일",
+        "value": 0
+      }
+    ],
+    "2024": [
+      {
+        "country": "미국",
+        "value": 0
+      },
+      {
+        "country": "홍콩",
+        "value": 0
+      },
+      {
+        "country": "마다가스카르",
+        "value": 0
+      },
+      {
+        "country": "독일",
+        "value": 0
+      },
+      {
+        "country": "대만",
+        "value": 0
+      }
+    ],
+    "2025": [
+      {
+        "country": "모잠비크",
+        "value": 0
+      },
+      {
+        "country": "아랍에미리트 연합",
+        "value": 0
+      },
+      {
+        "country": "미국",
+        "value": 0
+      },
+      {
+        "country": "홍콩",
+        "value": 0
+      },
+      {
+        "country": "일본",
+        "value": 0
+      }
+    ],
+    "2026": [
+      {
+        "country": "미국",
+        "value": 0
+      },
+      {
+        "country": "홍콩",
+        "value": 0
+      },
+      {
+        "country": "일본",
+        "value": 0
+      },
+      {
+        "country": "호주",
+        "value": 0
+      },
+      {
+        "country": "싱가포르",
+        "value": 0
+      }
+    ]
+  },
+  "812410": {
+    "2020": [
+      {
+        "country": "미국",
+        "value": 2
+      },
+      {
+        "country": "일본",
+        "value": 0.6
+      },
+      {
+        "country": "중국",
+        "value": 0.4
+      },
+      {
+        "country": "독일",
+        "value": 0.3
+      },
+      {
+        "country": "슬로바키아",
+        "value": 0.2
+      }
+    ],
+    "2021": [
+      {
+        "country": "중국",
+        "value": 54.1
+      },
+      {
+        "country": "미국",
+        "value": 3.5
+      },
+      {
+        "country": "일본",
+        "value": 0.8
+      },
+      {
+        "country": "독일",
+        "value": 0.4
+      },
+      {
+        "country": "대만",
+        "value": 0.4
+      }
+    ],
+    "2022": [
+      {
+        "country": "중국",
+        "value": 33.6
+      },
+      {
+        "country": "미국",
+        "value": 3.5
+      },
+      {
+        "country": "일본",
+        "value": 0.7
+      },
+      {
+        "country": "대만",
+        "value": 0.5
+      },
+      {
+        "country": "인도",
+        "value": 0.4
+      }
+    ],
+    "2023": [
+      {
+        "country": "미국",
+        "value": 2.8
+      },
+      {
+        "country": "중국",
+        "value": 2.7
+      },
+      {
+        "country": "일본",
+        "value": 0.7
+      },
+      {
+        "country": "대만",
+        "value": 0.6
+      },
+      {
+        "country": "독일",
+        "value": 0.4
+      }
+    ],
+    "2024": [
+      {
+        "country": "미국",
+        "value": 2.7
+      },
+      {
+        "country": "중국",
+        "value": 1.4
+      },
+      {
+        "country": "일본",
+        "value": 0.7
+      },
+      {
+        "country": "대만",
+        "value": 0.6
+      },
+      {
+        "country": "네덜란드",
+        "value": 0.4
+      }
+    ],
+    "2025": [
+      {
+        "country": "미국",
+        "value": 2
+      },
+      {
+        "country": "중국",
+        "value": 1.1
+      },
+      {
+        "country": "일본",
+        "value": 0.8
+      },
+      {
+        "country": "대만",
+        "value": 0.6
+      },
+      {
+        "country": "네덜란드",
+        "value": 0.4
+      }
+    ],
+    "2026": [
+      {
+        "country": "중국",
+        "value": 0.2
+      },
+      {
+        "country": "미국",
+        "value": 0.2
+      },
+      {
+        "country": "일본",
+        "value": 0.2
+      },
+      {
+        "country": "대만",
+        "value": 0.1
+      },
+      {
+        "country": "네덜란드",
+        "value": 0.1
       }
     ]
   },
@@ -31527,6 +34629,162 @@ export const PRODUCT_EXP_TOP_COUNTRIES_BY_CODE: Record<string, Record<string, {
       },
       {
         "country": "우즈베키스탄",
+        "value": 0
+      }
+    ]
+  },
+  "813120": {
+    "2020": [
+      {
+        "country": "중국",
+        "value": 0.4
+      },
+      {
+        "country": "일본",
+        "value": 0.3
+      },
+      {
+        "country": "미국",
+        "value": 0.3
+      },
+      {
+        "country": "베트남",
+        "value": 0.1
+      },
+      {
+        "country": "우즈베키스탄",
+        "value": 0.1
+      }
+    ],
+    "2021": [
+      {
+        "country": "미국",
+        "value": 0.3
+      },
+      {
+        "country": "중국",
+        "value": 0.3
+      },
+      {
+        "country": "싱가포르",
+        "value": 0.2
+      },
+      {
+        "country": "일본",
+        "value": 0.2
+      },
+      {
+        "country": "홍콩",
+        "value": 0.2
+      }
+    ],
+    "2022": [
+      {
+        "country": "미국",
+        "value": 0.4
+      },
+      {
+        "country": "중국",
+        "value": 0.4
+      },
+      {
+        "country": "일본",
+        "value": 0.4
+      },
+      {
+        "country": "베트남",
+        "value": 0.2
+      },
+      {
+        "country": "헝가리",
+        "value": 0.2
+      }
+    ],
+    "2023": [
+      {
+        "country": "미국",
+        "value": 0.8
+      },
+      {
+        "country": "중국",
+        "value": 0.3
+      },
+      {
+        "country": "베트남",
+        "value": 0.3
+      },
+      {
+        "country": "일본",
+        "value": 0.2
+      },
+      {
+        "country": "싱가포르",
+        "value": 0.2
+      }
+    ],
+    "2024": [
+      {
+        "country": "미국",
+        "value": 0.8
+      },
+      {
+        "country": "중국",
+        "value": 0.4
+      },
+      {
+        "country": "베트남",
+        "value": 0.3
+      },
+      {
+        "country": "싱가포르",
+        "value": 0.2
+      },
+      {
+        "country": "일본",
+        "value": 0.2
+      }
+    ],
+    "2025": [
+      {
+        "country": "미국",
+        "value": 0.6
+      },
+      {
+        "country": "베트남",
+        "value": 0.3
+      },
+      {
+        "country": "중국",
+        "value": 0.3
+      },
+      {
+        "country": "싱가포르",
+        "value": 0.2
+      },
+      {
+        "country": "일본",
+        "value": 0.2
+      }
+    ],
+    "2026": [
+      {
+        "country": "미국",
+        "value": 0.1
+      },
+      {
+        "country": "일본",
+        "value": 0
+      },
+      {
+        "country": "베트남",
+        "value": 0
+      },
+      {
+        "country": "싱가포르",
+        "value": 0
+      },
+      {
+        "country": "중국",
         "value": 0
       }
     ]
@@ -32155,6 +35413,318 @@ export const PRODUCT_EXP_TOP_COUNTRIES_BY_CODE: Record<string, Record<string, {
       }
     ]
   },
+  "831390": {
+    "2020": [
+      {
+        "country": "중국",
+        "value": 7.8
+      },
+      {
+        "country": "베트남",
+        "value": 7.7
+      },
+      {
+        "country": "미국",
+        "value": 3.8
+      },
+      {
+        "country": "홍콩",
+        "value": 1.5
+      },
+      {
+        "country": "대만",
+        "value": 0.8
+      }
+    ],
+    "2021": [
+      {
+        "country": "베트남",
+        "value": 9.4
+      },
+      {
+        "country": "중국",
+        "value": 9.1
+      },
+      {
+        "country": "미국",
+        "value": 3.7
+      },
+      {
+        "country": "홍콩",
+        "value": 1.4
+      },
+      {
+        "country": "대만",
+        "value": 1.1
+      }
+    ],
+    "2022": [
+      {
+        "country": "중국",
+        "value": 5.5
+      },
+      {
+        "country": "베트남",
+        "value": 5.4
+      },
+      {
+        "country": "미국",
+        "value": 1.1
+      },
+      {
+        "country": "홍콩",
+        "value": 0.9
+      },
+      {
+        "country": "독일",
+        "value": 0.5
+      }
+    ],
+    "2023": [
+      {
+        "country": "베트남",
+        "value": 5.4
+      },
+      {
+        "country": "중국",
+        "value": 3.9
+      },
+      {
+        "country": "미국",
+        "value": 2
+      },
+      {
+        "country": "독일",
+        "value": 0.5
+      },
+      {
+        "country": "홍콩",
+        "value": 0.4
+      }
+    ],
+    "2024": [
+      {
+        "country": "베트남",
+        "value": 6.4
+      },
+      {
+        "country": "미국",
+        "value": 5.8
+      },
+      {
+        "country": "중국",
+        "value": 4.6
+      },
+      {
+        "country": "독일",
+        "value": 0.4
+      },
+      {
+        "country": "홍콩",
+        "value": 0.3
+      }
+    ],
+    "2025": [
+      {
+        "country": "베트남",
+        "value": 5.7
+      },
+      {
+        "country": "미국",
+        "value": 4.9
+      },
+      {
+        "country": "중국",
+        "value": 4.1
+      },
+      {
+        "country": "홍콩",
+        "value": 0.3
+      },
+      {
+        "country": "대만",
+        "value": 0.3
+      }
+    ],
+    "2026": [
+      {
+        "country": "미국",
+        "value": 1.4
+      },
+      {
+        "country": "베트남",
+        "value": 0.9
+      },
+      {
+        "country": "중국",
+        "value": 0.5
+      },
+      {
+        "country": "말레이시아",
+        "value": 0.1
+      },
+      {
+        "country": "홍콩",
+        "value": 0.1
+      }
+    ]
+  },
+  "831500": {
+    "2020": [
+      {
+        "country": "중국",
+        "value": 3.6
+      },
+      {
+        "country": "미국",
+        "value": 1.6
+      },
+      {
+        "country": "대만",
+        "value": 1.4
+      },
+      {
+        "country": "일본",
+        "value": 1.3
+      },
+      {
+        "country": "싱가포르",
+        "value": 0.7
+      }
+    ],
+    "2021": [
+      {
+        "country": "중국",
+        "value": 4.7
+      },
+      {
+        "country": "미국",
+        "value": 1.7
+      },
+      {
+        "country": "일본",
+        "value": 1.5
+      },
+      {
+        "country": "대만",
+        "value": 1.3
+      },
+      {
+        "country": "프랑스",
+        "value": 0.7
+      }
+    ],
+    "2022": [
+      {
+        "country": "중국",
+        "value": 5.5
+      },
+      {
+        "country": "미국",
+        "value": 1.9
+      },
+      {
+        "country": "일본",
+        "value": 1.7
+      },
+      {
+        "country": "대만",
+        "value": 1.7
+      },
+      {
+        "country": "프랑스",
+        "value": 0.9
+      }
+    ],
+    "2023": [
+      {
+        "country": "중국",
+        "value": 4
+      },
+      {
+        "country": "미국",
+        "value": 2.1
+      },
+      {
+        "country": "대만",
+        "value": 1.1
+      },
+      {
+        "country": "프랑스",
+        "value": 1
+      },
+      {
+        "country": "싱가포르",
+        "value": 1
+      }
+    ],
+    "2024": [
+      {
+        "country": "중국",
+        "value": 11.1
+      },
+      {
+        "country": "미국",
+        "value": 1.9
+      },
+      {
+        "country": "일본",
+        "value": 1
+      },
+      {
+        "country": "싱가포르",
+        "value": 1
+      },
+      {
+        "country": "대만",
+        "value": 0.8
+      }
+    ],
+    "2025": [
+      {
+        "country": "중국",
+        "value": 19.1
+      },
+      {
+        "country": "미국",
+        "value": 2.5
+      },
+      {
+        "country": "대만",
+        "value": 1.1
+      },
+      {
+        "country": "일본",
+        "value": 0.7
+      },
+      {
+        "country": "체코",
+        "value": 0.7
+      }
+    ],
+    "2026": [
+      {
+        "country": "중국",
+        "value": 2.9
+      },
+      {
+        "country": "미국",
+        "value": 0.3
+      },
+      {
+        "country": "대만",
+        "value": 0.2
+      },
+      {
+        "country": "프랑스",
+        "value": 0.1
+      },
+      {
+        "country": "일본",
+        "value": 0.1
+      }
+    ]
+  },
   "834300": {
     "2020": [
       {
@@ -32779,159 +36349,159 @@ export const PRODUCT_EXP_TOP_COUNTRIES_BY_CODE: Record<string, Record<string, {
       }
     ]
   },
-  "022110": {
+  "970100": {
     "2020": [
       {
-        "country": "홍콩",
-        "value": 0
+        "country": "아랍에미리트 연합",
+        "value": 2
       },
       {
-        "country": "미얀마",
-        "value": 0
+        "country": "노르웨이",
+        "value": 1.7
       },
       {
-        "country": "라오스",
-        "value": 0
+        "country": "미국",
+        "value": 1.2
       },
       {
-        "country": "베트남",
-        "value": 0
+        "country": "사우디아라비아",
+        "value": 0.9
       },
       {
-        "country": "필리핀",
-        "value": 0
+        "country": "인도네시아",
+        "value": 0.5
       }
     ],
     "2021": [
       {
-        "country": "홍콩",
-        "value": 0
+        "country": "아랍에미리트 연합",
+        "value": 4.6
       },
       {
-        "country": "미얀마",
-        "value": 0
+        "country": "미국",
+        "value": 1.4
       },
       {
-        "country": "베트남",
-        "value": 0
+        "country": "사우디아라비아",
+        "value": 0.8
       },
       {
-        "country": "이라크",
-        "value": 0
+        "country": "오만",
+        "value": 0.6
       },
       {
-        "country": "필리핀",
-        "value": 0
+        "country": "인도네시아",
+        "value": 0.4
       }
     ],
     "2022": [
       {
-        "country": "홍콩",
-        "value": 0
+        "country": "폴란드",
+        "value": 4.1
       },
       {
-        "country": "베트남",
-        "value": 0
+        "country": "아랍에미리트 연합",
+        "value": 2.9
       },
       {
-        "country": "미얀마",
-        "value": 0
+        "country": "사우디아라비아",
+        "value": 2.8
       },
       {
-        "country": "몽골",
-        "value": 0
+        "country": "미국",
+        "value": 1.7
       },
       {
-        "country": "이라크",
-        "value": 0
+        "country": "인도네시아",
+        "value": 0.5
       }
     ],
     "2023": [
       {
-        "country": "홍콩",
-        "value": 0
+        "country": "폴란드",
+        "value": 6.5
       },
       {
-        "country": "말레이시아",
-        "value": 0
+        "country": "사우디아라비아",
+        "value": 4.4
       },
       {
-        "country": "미얀마",
-        "value": 0
+        "country": "미국",
+        "value": 1.7
       },
       {
-        "country": "몽골",
-        "value": 0
+        "country": "아랍에미리트 연합",
+        "value": 1.6
       },
       {
-        "country": "캄보디아",
-        "value": 0
+        "country": "인도네시아",
+        "value": 0.3
       }
     ],
     "2024": [
       {
-        "country": "홍콩",
-        "value": 0
+        "country": "폴란드",
+        "value": 24
       },
       {
-        "country": "말레이시아",
-        "value": 0
+        "country": "사우디아라비아",
+        "value": 4.5
       },
       {
-        "country": "몽골",
-        "value": 0
+        "country": "미국",
+        "value": 1.9
       },
       {
-        "country": "대만",
-        "value": 0
+        "country": "아랍에미리트 연합",
+        "value": 1.4
       },
       {
-        "country": "베트남",
-        "value": 0
+        "country": "인도네시아",
+        "value": 0.7
       }
     ],
     "2025": [
       {
-        "country": "홍콩",
-        "value": 0
-      },
-      {
-        "country": "싱가포르",
-        "value": 0
-      },
-      {
-        "country": "말레이시아",
-        "value": 0
-      },
-      {
-        "country": "대만",
-        "value": 0
+        "country": "폴란드",
+        "value": 30.1
       },
       {
         "country": "아랍에미리트 연합",
-        "value": 0
+        "value": 1.8
+      },
+      {
+        "country": "사우디아라비아",
+        "value": 1.4
+      },
+      {
+        "country": "이집트",
+        "value": 1.4
+      },
+      {
+        "country": "미국",
+        "value": 1.1
       }
     ],
     "2026": [
       {
-        "country": "홍콩",
-        "value": 0
-      },
-      {
-        "country": "싱가포르",
-        "value": 0
-      },
-      {
-        "country": "말레이시아",
-        "value": 0
+        "country": "폴란드",
+        "value": 2.1
       },
       {
         "country": "아랍에미리트 연합",
-        "value": 0
+        "value": 1.5
       },
       {
-        "country": "필리핀",
-        "value": 0
+        "country": "이집트",
+        "value": 1.2
+      },
+      {
+        "country": "미국",
+        "value": 0.2
+      },
+      {
+        "country": "영국",
+        "value": 0.2
       }
     ]
   },
@@ -33090,12 +36660,480 @@ export const PRODUCT_EXP_TOP_COUNTRIES_BY_CODE: Record<string, Record<string, {
         "value": 0
       }
     ]
+  },
+  "022110": {
+    "2020": [
+      {
+        "country": "홍콩",
+        "value": 0
+      },
+      {
+        "country": "미얀마",
+        "value": 0
+      },
+      {
+        "country": "라오스",
+        "value": 0
+      },
+      {
+        "country": "베트남",
+        "value": 0
+      },
+      {
+        "country": "필리핀",
+        "value": 0
+      }
+    ],
+    "2021": [
+      {
+        "country": "홍콩",
+        "value": 0
+      },
+      {
+        "country": "미얀마",
+        "value": 0
+      },
+      {
+        "country": "베트남",
+        "value": 0
+      },
+      {
+        "country": "이라크",
+        "value": 0
+      },
+      {
+        "country": "필리핀",
+        "value": 0
+      }
+    ],
+    "2022": [
+      {
+        "country": "홍콩",
+        "value": 0
+      },
+      {
+        "country": "베트남",
+        "value": 0
+      },
+      {
+        "country": "미얀마",
+        "value": 0
+      },
+      {
+        "country": "몽골",
+        "value": 0
+      },
+      {
+        "country": "이라크",
+        "value": 0
+      }
+    ],
+    "2023": [
+      {
+        "country": "홍콩",
+        "value": 0
+      },
+      {
+        "country": "말레이시아",
+        "value": 0
+      },
+      {
+        "country": "미얀마",
+        "value": 0
+      },
+      {
+        "country": "몽골",
+        "value": 0
+      },
+      {
+        "country": "캄보디아",
+        "value": 0
+      }
+    ],
+    "2024": [
+      {
+        "country": "홍콩",
+        "value": 0
+      },
+      {
+        "country": "말레이시아",
+        "value": 0
+      },
+      {
+        "country": "몽골",
+        "value": 0
+      },
+      {
+        "country": "대만",
+        "value": 0
+      },
+      {
+        "country": "베트남",
+        "value": 0
+      }
+    ],
+    "2025": [
+      {
+        "country": "홍콩",
+        "value": 0
+      },
+      {
+        "country": "싱가포르",
+        "value": 0
+      },
+      {
+        "country": "말레이시아",
+        "value": 0
+      },
+      {
+        "country": "대만",
+        "value": 0
+      },
+      {
+        "country": "아랍에미리트 연합",
+        "value": 0
+      }
+    ],
+    "2026": [
+      {
+        "country": "홍콩",
+        "value": 0
+      },
+      {
+        "country": "싱가포르",
+        "value": 0
+      },
+      {
+        "country": "말레이시아",
+        "value": 0
+      },
+      {
+        "country": "아랍에미리트 연합",
+        "value": 0
+      },
+      {
+        "country": "필리핀",
+        "value": 0
+      }
+    ]
   }
 };
 
 export const PRODUCT_IMP_TOP_COUNTRIES_BY_CODE: Record<string, Record<string, {
   country: string; value: number;
 }[]>> = {
+  "111100": {
+    "2020": [
+      {
+        "country": "일본",
+        "value": 3
+      },
+      {
+        "country": "홍콩",
+        "value": 2.1
+      },
+      {
+        "country": "호주",
+        "value": 1.9
+      },
+      {
+        "country": "중국",
+        "value": 0.7
+      },
+      {
+        "country": "스위스",
+        "value": 0.6
+      }
+    ],
+    "2021": [
+      {
+        "country": "호주",
+        "value": 11.4
+      },
+      {
+        "country": "홍콩",
+        "value": 4.3
+      },
+      {
+        "country": "일본",
+        "value": 3.5
+      },
+      {
+        "country": "캐나다",
+        "value": 2.6
+      },
+      {
+        "country": "스위스",
+        "value": 1.2
+      }
+    ],
+    "2022": [
+      {
+        "country": "호주",
+        "value": 6
+      },
+      {
+        "country": "일본",
+        "value": 3.5
+      },
+      {
+        "country": "파푸아 뉴기니",
+        "value": 0.8
+      },
+      {
+        "country": "캐나다",
+        "value": 0.6
+      },
+      {
+        "country": "중국",
+        "value": 0.5
+      }
+    ],
+    "2023": [
+      {
+        "country": "호주",
+        "value": 5
+      },
+      {
+        "country": "일본",
+        "value": 3.2
+      },
+      {
+        "country": "파푸아 뉴기니",
+        "value": 0.9
+      },
+      {
+        "country": "홍콩",
+        "value": 0.6
+      },
+      {
+        "country": "중국",
+        "value": 0.4
+      }
+    ],
+    "2024": [
+      {
+        "country": "호주",
+        "value": 12.3
+      },
+      {
+        "country": "일본",
+        "value": 4.8
+      },
+      {
+        "country": "홍콩",
+        "value": 3.3
+      },
+      {
+        "country": "파푸아 뉴기니",
+        "value": 2
+      },
+      {
+        "country": "스위스",
+        "value": 1
+      }
+    ],
+    "2025": [
+      {
+        "country": "호주",
+        "value": 33.3
+      },
+      {
+        "country": "홍콩",
+        "value": 24.1
+      },
+      {
+        "country": "일본",
+        "value": 8.2
+      },
+      {
+        "country": "파푸아 뉴기니",
+        "value": 4.4
+      },
+      {
+        "country": "싱가포르",
+        "value": 3.4
+      }
+    ],
+    "2026": [
+      {
+        "country": "호주",
+        "value": 8.3
+      },
+      {
+        "country": "홍콩",
+        "value": 6.3
+      },
+      {
+        "country": "싱가포르",
+        "value": 3.1
+      },
+      {
+        "country": "일본",
+        "value": 1.9
+      },
+      {
+        "country": "파푸아 뉴기니",
+        "value": 0.5
+      }
+    ]
+  },
+  "111200": {
+    "2020": [
+      {
+        "country": "아르헨티나",
+        "value": 1.2
+      },
+      {
+        "country": "멕시코",
+        "value": 1.1
+      },
+      {
+        "country": "일본",
+        "value": 0.6
+      },
+      {
+        "country": "미국",
+        "value": 0.4
+      },
+      {
+        "country": "페루",
+        "value": 0.4
+      }
+    ],
+    "2021": [
+      {
+        "country": "아르헨티나",
+        "value": 1.1
+      },
+      {
+        "country": "멕시코",
+        "value": 1
+      },
+      {
+        "country": "일본",
+        "value": 0.8
+      },
+      {
+        "country": "페루",
+        "value": 0.8
+      },
+      {
+        "country": "미국",
+        "value": 0.7
+      }
+    ],
+    "2022": [
+      {
+        "country": "우루과이",
+        "value": 1
+      },
+      {
+        "country": "멕시코",
+        "value": 0.6
+      },
+      {
+        "country": "미국",
+        "value": 0.6
+      },
+      {
+        "country": "일본",
+        "value": 0.6
+      },
+      {
+        "country": "페루",
+        "value": 0.4
+      }
+    ],
+    "2023": [
+      {
+        "country": "아르헨티나",
+        "value": 1.1
+      },
+      {
+        "country": "멕시코",
+        "value": 0.9
+      },
+      {
+        "country": "미국",
+        "value": 0.6
+      },
+      {
+        "country": "일본",
+        "value": 0.5
+      },
+      {
+        "country": "페루",
+        "value": 0.5
+      }
+    ],
+    "2024": [
+      {
+        "country": "멕시코",
+        "value": 1.1
+      },
+      {
+        "country": "아르헨티나",
+        "value": 1.1
+      },
+      {
+        "country": "페루",
+        "value": 0.8
+      },
+      {
+        "country": "일본",
+        "value": 0.7
+      },
+      {
+        "country": "미국",
+        "value": 0.7
+      }
+    ],
+    "2025": [
+      {
+        "country": "멕시코",
+        "value": 1.9
+      },
+      {
+        "country": "아르헨티나",
+        "value": 1.3
+      },
+      {
+        "country": "독일",
+        "value": 1.2
+      },
+      {
+        "country": "캐나다",
+        "value": 1.1
+      },
+      {
+        "country": "미국",
+        "value": 0.9
+      }
+    ],
+    "2026": [
+      {
+        "country": "독일",
+        "value": 1.5
+      },
+      {
+        "country": "홍콩",
+        "value": 0.9
+      },
+      {
+        "country": "스웨덴",
+        "value": 0.8
+      },
+      {
+        "country": "중국",
+        "value": 0.5
+      },
+      {
+        "country": "미국",
+        "value": 0.3
+      }
+    ]
+  },
   "112000": {
     "2020": [
       {
@@ -33407,6 +37445,57 @@ export const PRODUCT_IMP_TOP_COUNTRIES_BY_CODE: Record<string, Record<string, {
         "value": 0.8
       }
     ]
+  },
+  "119000": {
+    "2020": [
+      {
+        "country": "멕시코",
+        "value": 9.2
+      },
+      {
+        "country": "호주",
+        "value": 6.4
+      },
+      {
+        "country": "페루",
+        "value": 4
+      },
+      {
+        "country": "미국",
+        "value": 3.2
+      },
+      {
+        "country": "칠레",
+        "value": 1.9
+      }
+    ],
+    "2021": [
+      {
+        "country": "멕시코",
+        "value": 10.6
+      },
+      {
+        "country": "호주",
+        "value": 7
+      },
+      {
+        "country": "페루",
+        "value": 5
+      },
+      {
+        "country": "칠레",
+        "value": 3.5
+      },
+      {
+        "country": "미국",
+        "value": 3.3
+      }
+    ],
+    "2022": [],
+    "2023": [],
+    "2024": [],
+    "2025": [],
+    "2026": []
   },
   "119090": {
     "2020": [],
@@ -36170,6 +40259,78 @@ export const PRODUCT_IMP_TOP_COUNTRIES_BY_CODE: Record<string, Record<string, {
       }
     ]
   },
+  "229000": {
+    "2020": [
+      {
+        "country": "미국",
+        "value": 9.9
+      },
+      {
+        "country": "일본",
+        "value": 4.5
+      },
+      {
+        "country": "중국",
+        "value": 3
+      },
+      {
+        "country": "독일",
+        "value": 3
+      },
+      {
+        "country": "싱가포르",
+        "value": 2.2
+      }
+    ],
+    "2021": [
+      {
+        "country": "미국",
+        "value": 11.1
+      },
+      {
+        "country": "독일",
+        "value": 4.4
+      },
+      {
+        "country": "일본",
+        "value": 4.4
+      },
+      {
+        "country": "인도네시아",
+        "value": 4.2
+      },
+      {
+        "country": "중국",
+        "value": 4
+      }
+    ],
+    "2022": [
+      {
+        "country": "베트남",
+        "value": 0
+      },
+      {
+        "country": "미국",
+        "value": 0
+      },
+      {
+        "country": "독일",
+        "value": 0
+      },
+      {
+        "country": "일본",
+        "value": 0
+      },
+      {
+        "country": "인도",
+        "value": 0
+      }
+    ],
+    "2023": [],
+    "2024": [],
+    "2025": [],
+    "2026": []
+  },
   "229090": {
     "2020": [],
     "2021": [],
@@ -36283,6 +40444,78 @@ export const PRODUCT_IMP_TOP_COUNTRIES_BY_CODE: Record<string, Record<string, {
         "value": 0.6
       }
     ]
+  },
+  "290000": {
+    "2020": [
+      {
+        "country": "중국",
+        "value": 12.4
+      },
+      {
+        "country": "일본",
+        "value": 10.7
+      },
+      {
+        "country": "미국",
+        "value": 5.3
+      },
+      {
+        "country": "독일",
+        "value": 2.1
+      },
+      {
+        "country": "인도",
+        "value": 0.9
+      }
+    ],
+    "2021": [
+      {
+        "country": "중국",
+        "value": 16.5
+      },
+      {
+        "country": "일본",
+        "value": 10.8
+      },
+      {
+        "country": "미국",
+        "value": 5.6
+      },
+      {
+        "country": "독일",
+        "value": 2.2
+      },
+      {
+        "country": "대만",
+        "value": 1
+      }
+    ],
+    "2022": [
+      {
+        "country": "일본",
+        "value": 0
+      },
+      {
+        "country": "중국",
+        "value": 0
+      },
+      {
+        "country": "스페인",
+        "value": 0
+      },
+      {
+        "country": "핀란드",
+        "value": 0
+      },
+      {
+        "country": "미국",
+        "value": 0
+      }
+    ],
+    "2023": [],
+    "2024": [],
+    "2025": [],
+    "2026": []
   },
   "290090": {
     "2020": [],
@@ -36554,6 +40787,162 @@ export const PRODUCT_IMP_TOP_COUNTRIES_BY_CODE: Record<string, Record<string, {
       }
     ]
   },
+  "613210": {
+    "2020": [
+      {
+        "country": "일본",
+        "value": 8.9
+      },
+      {
+        "country": "중국",
+        "value": 2.8
+      },
+      {
+        "country": "대만",
+        "value": 0.7
+      },
+      {
+        "country": "호주",
+        "value": 0.1
+      },
+      {
+        "country": "인도네시아",
+        "value": 0
+      }
+    ],
+    "2021": [
+      {
+        "country": "일본",
+        "value": 12.7
+      },
+      {
+        "country": "중국",
+        "value": 8.3
+      },
+      {
+        "country": "인도",
+        "value": 1
+      },
+      {
+        "country": "대만",
+        "value": 0.8
+      },
+      {
+        "country": "카자흐스탄",
+        "value": 0
+      }
+    ],
+    "2022": [
+      {
+        "country": "일본",
+        "value": 12.7
+      },
+      {
+        "country": "중국",
+        "value": 8.9
+      },
+      {
+        "country": "대만",
+        "value": 1.1
+      },
+      {
+        "country": "브라질",
+        "value": 0.1
+      },
+      {
+        "country": "러시아",
+        "value": 0.1
+      }
+    ],
+    "2023": [
+      {
+        "country": "일본",
+        "value": 13.3
+      },
+      {
+        "country": "중국",
+        "value": 9.3
+      },
+      {
+        "country": "대만",
+        "value": 0.4
+      },
+      {
+        "country": "벨기에",
+        "value": 0
+      },
+      {
+        "country": "베트남",
+        "value": 0
+      }
+    ],
+    "2024": [
+      {
+        "country": "일본",
+        "value": 10.9
+      },
+      {
+        "country": "중국",
+        "value": 8.2
+      },
+      {
+        "country": "대만",
+        "value": 0.1
+      },
+      {
+        "country": "독일",
+        "value": 0
+      },
+      {
+        "country": "벨기에",
+        "value": 0
+      }
+    ],
+    "2025": [
+      {
+        "country": "일본",
+        "value": 6.4
+      },
+      {
+        "country": "중국",
+        "value": 6
+      },
+      {
+        "country": "대만",
+        "value": 0.4
+      },
+      {
+        "country": "베트남",
+        "value": 0.2
+      },
+      {
+        "country": "인도네시아",
+        "value": 0
+      }
+    ],
+    "2026": [
+      {
+        "country": "일본",
+        "value": 1.1
+      },
+      {
+        "country": "대만",
+        "value": 0.1
+      },
+      {
+        "country": "베트남",
+        "value": 0
+      },
+      {
+        "country": "중국",
+        "value": 0
+      },
+      {
+        "country": "인도네시아",
+        "value": 0
+      }
+    ]
+  },
   "621110": {
     "2020": [
       {
@@ -36707,6 +41096,474 @@ export const PRODUCT_IMP_TOP_COUNTRIES_BY_CODE: Record<string, Record<string, {
       {
         "country": "아랍에미리트 연합",
         "value": 0.5
+      }
+    ]
+  },
+  "622120": {
+    "2020": [
+      {
+        "country": "칠레",
+        "value": 7.1
+      },
+      {
+        "country": "콩고 민주공화국",
+        "value": 4.2
+      },
+      {
+        "country": "일본",
+        "value": 0.9
+      },
+      {
+        "country": "필리핀",
+        "value": 0.8
+      },
+      {
+        "country": "호주",
+        "value": 0.5
+      }
+    ],
+    "2021": [
+      {
+        "country": "칠레",
+        "value": 16.6
+      },
+      {
+        "country": "콩고 민주공화국",
+        "value": 8
+      },
+      {
+        "country": "호주",
+        "value": 1.6
+      },
+      {
+        "country": "필리핀",
+        "value": 1.1
+      },
+      {
+        "country": "일본",
+        "value": 1
+      }
+    ],
+    "2022": [
+      {
+        "country": "칠레",
+        "value": 17.9
+      },
+      {
+        "country": "콩고 민주공화국",
+        "value": 8.4
+      },
+      {
+        "country": "호주",
+        "value": 1
+      },
+      {
+        "country": "일본",
+        "value": 1
+      },
+      {
+        "country": "독일",
+        "value": 0.7
+      }
+    ],
+    "2023": [
+      {
+        "country": "칠레",
+        "value": 11.9
+      },
+      {
+        "country": "콩고 민주공화국",
+        "value": 6.4
+      },
+      {
+        "country": "일본",
+        "value": 1.1
+      },
+      {
+        "country": "필리핀",
+        "value": 0.8
+      },
+      {
+        "country": "호주",
+        "value": 0.7
+      }
+    ],
+    "2024": [
+      {
+        "country": "칠레",
+        "value": 11.1
+      },
+      {
+        "country": "콩고 민주공화국",
+        "value": 9.4
+      },
+      {
+        "country": "필리핀",
+        "value": 1.5
+      },
+      {
+        "country": "일본",
+        "value": 1.2
+      },
+      {
+        "country": "호주",
+        "value": 1.1
+      }
+    ],
+    "2025": [
+      {
+        "country": "콩고 민주공화국",
+        "value": 13.3
+      },
+      {
+        "country": "칠레",
+        "value": 7.6
+      },
+      {
+        "country": "호주",
+        "value": 2
+      },
+      {
+        "country": "일본",
+        "value": 1.1
+      },
+      {
+        "country": "잠비아",
+        "value": 0.8
+      }
+    ],
+    "2026": [
+      {
+        "country": "콩고 민주공화국",
+        "value": 2.1
+      },
+      {
+        "country": "칠레",
+        "value": 1.4
+      },
+      {
+        "country": "인도",
+        "value": 0.7
+      },
+      {
+        "country": "인도네시아",
+        "value": 0.7
+      },
+      {
+        "country": "잠비아",
+        "value": 0.2
+      }
+    ]
+  },
+  "622130": {
+    "2020": [
+      {
+        "country": "미국",
+        "value": 4.2
+      },
+      {
+        "country": "사우디아라비아",
+        "value": 1
+      },
+      {
+        "country": "멕시코",
+        "value": 0.8
+      },
+      {
+        "country": "필리핀",
+        "value": 0.8
+      },
+      {
+        "country": "말레이시아",
+        "value": 0.7
+      }
+    ],
+    "2021": [
+      {
+        "country": "미국",
+        "value": 5.5
+      },
+      {
+        "country": "사우디아라비아",
+        "value": 2.3
+      },
+      {
+        "country": "필리핀",
+        "value": 1.4
+      },
+      {
+        "country": "멕시코",
+        "value": 1.4
+      },
+      {
+        "country": "아랍에미리트 연합",
+        "value": 1.2
+      }
+    ],
+    "2022": [
+      {
+        "country": "미국",
+        "value": 5.2
+      },
+      {
+        "country": "사우디아라비아",
+        "value": 2.8
+      },
+      {
+        "country": "멕시코",
+        "value": 2.1
+      },
+      {
+        "country": "필리핀",
+        "value": 1.5
+      },
+      {
+        "country": "아랍에미리트 연합",
+        "value": 1.1
+      }
+    ],
+    "2023": [
+      {
+        "country": "미국",
+        "value": 3.6
+      },
+      {
+        "country": "사우디아라비아",
+        "value": 2
+      },
+      {
+        "country": "필리핀",
+        "value": 1.4
+      },
+      {
+        "country": "멕시코",
+        "value": 1.3
+      },
+      {
+        "country": "일본",
+        "value": 1.2
+      }
+    ],
+    "2024": [
+      {
+        "country": "미국",
+        "value": 3.4
+      },
+      {
+        "country": "멕시코",
+        "value": 1.9
+      },
+      {
+        "country": "사우디아라비아",
+        "value": 1.6
+      },
+      {
+        "country": "일본",
+        "value": 1.4
+      },
+      {
+        "country": "대만",
+        "value": 1.2
+      }
+    ],
+    "2025": [
+      {
+        "country": "미국",
+        "value": 8.2
+      },
+      {
+        "country": "사우디아라비아",
+        "value": 2
+      },
+      {
+        "country": "멕시코",
+        "value": 1.6
+      },
+      {
+        "country": "대만",
+        "value": 1.2
+      },
+      {
+        "country": "일본",
+        "value": 1
+      }
+    ],
+    "2026": [
+      {
+        "country": "미국",
+        "value": 2.8
+      },
+      {
+        "country": "대만",
+        "value": 0.3
+      },
+      {
+        "country": "사우디아라비아",
+        "value": 0.3
+      },
+      {
+        "country": "멕시코",
+        "value": 0.2
+      },
+      {
+        "country": "인도",
+        "value": 0.2
+      }
+    ]
+  },
+  "725190": {
+    "2020": [
+      {
+        "country": "일본",
+        "value": 1.1
+      },
+      {
+        "country": "중국",
+        "value": 0.5
+      },
+      {
+        "country": "미국",
+        "value": 0.3
+      },
+      {
+        "country": "스웨덴",
+        "value": 0.2
+      },
+      {
+        "country": "체코",
+        "value": 0.1
+      }
+    ],
+    "2021": [
+      {
+        "country": "일본",
+        "value": 1.5
+      },
+      {
+        "country": "중국",
+        "value": 0.9
+      },
+      {
+        "country": "미국",
+        "value": 0.3
+      },
+      {
+        "country": "스웨덴",
+        "value": 0.1
+      },
+      {
+        "country": "체코",
+        "value": 0.1
+      }
+    ],
+    "2022": [
+      {
+        "country": "일본",
+        "value": 1.3
+      },
+      {
+        "country": "중국",
+        "value": 0.9
+      },
+      {
+        "country": "미국",
+        "value": 0.4
+      },
+      {
+        "country": "스웨덴",
+        "value": 0.1
+      },
+      {
+        "country": "체코",
+        "value": 0.1
+      }
+    ],
+    "2023": [
+      {
+        "country": "일본",
+        "value": 1
+      },
+      {
+        "country": "중국",
+        "value": 0.9
+      },
+      {
+        "country": "미국",
+        "value": 0.2
+      },
+      {
+        "country": "스웨덴",
+        "value": 0.2
+      },
+      {
+        "country": "아랍에미리트 연합",
+        "value": 0.1
+      }
+    ],
+    "2024": [
+      {
+        "country": "일본",
+        "value": 1.1
+      },
+      {
+        "country": "중국",
+        "value": 0.9
+      },
+      {
+        "country": "스웨덴",
+        "value": 0.2
+      },
+      {
+        "country": "미국",
+        "value": 0.1
+      },
+      {
+        "country": "독일",
+        "value": 0.1
+      }
+    ],
+    "2025": [
+      {
+        "country": "일본",
+        "value": 0.9
+      },
+      {
+        "country": "중국",
+        "value": 0.6
+      },
+      {
+        "country": "스웨덴",
+        "value": 0.1
+      },
+      {
+        "country": "미국",
+        "value": 0.1
+      },
+      {
+        "country": "브라질",
+        "value": 0.1
+      }
+    ],
+    "2026": [
+      {
+        "country": "일본",
+        "value": 0.2
+      },
+      {
+        "country": "중국",
+        "value": 0.1
+      },
+      {
+        "country": "스웨덴",
+        "value": 0
+      },
+      {
+        "country": "브라질",
+        "value": 0
+      },
+      {
+        "country": "미국",
+        "value": 0
       }
     ]
   },
@@ -37334,6 +42191,318 @@ export const PRODUCT_IMP_TOP_COUNTRIES_BY_CODE: Record<string, Record<string, {
       }
     ]
   },
+  "741170": {
+    "2020": [
+      {
+        "country": "독일",
+        "value": 12.7
+      },
+      {
+        "country": "미국",
+        "value": 1.9
+      },
+      {
+        "country": "멕시코",
+        "value": 1.6
+      },
+      {
+        "country": "프랑스",
+        "value": 0.7
+      },
+      {
+        "country": "영국",
+        "value": 0.7
+      }
+    ],
+    "2021": [
+      {
+        "country": "독일",
+        "value": 3.8
+      },
+      {
+        "country": "미국",
+        "value": 0.8
+      },
+      {
+        "country": "멕시코",
+        "value": 0.5
+      },
+      {
+        "country": "프랑스",
+        "value": 0.4
+      },
+      {
+        "country": "영국",
+        "value": 0.2
+      }
+    ],
+    "2022": [
+      {
+        "country": "독일",
+        "value": 5.4
+      },
+      {
+        "country": "멕시코",
+        "value": 0.5
+      },
+      {
+        "country": "미국",
+        "value": 0.4
+      },
+      {
+        "country": "헝가리",
+        "value": 0.4
+      },
+      {
+        "country": "러시아",
+        "value": 0.2
+      }
+    ],
+    "2023": [
+      {
+        "country": "독일",
+        "value": 3.1
+      },
+      {
+        "country": "오스트리아",
+        "value": 0.3
+      },
+      {
+        "country": "멕시코",
+        "value": 0.3
+      },
+      {
+        "country": "미국",
+        "value": 0.3
+      },
+      {
+        "country": "헝가리",
+        "value": 0.2
+      }
+    ],
+    "2024": [
+      {
+        "country": "독일",
+        "value": 1.8
+      },
+      {
+        "country": "미국",
+        "value": 0.4
+      },
+      {
+        "country": "멕시코",
+        "value": 0.2
+      },
+      {
+        "country": "헝가리",
+        "value": 0
+      },
+      {
+        "country": "프랑스",
+        "value": 0
+      }
+    ],
+    "2025": [
+      {
+        "country": "독일",
+        "value": 0.9
+      },
+      {
+        "country": "미국",
+        "value": 0.4
+      },
+      {
+        "country": "헝가리",
+        "value": 0
+      },
+      {
+        "country": "멕시코",
+        "value": 0
+      },
+      {
+        "country": "스웨덴",
+        "value": 0
+      }
+    ],
+    "2026": [
+      {
+        "country": "독일",
+        "value": 0.1
+      },
+      {
+        "country": "미국",
+        "value": 0
+      },
+      {
+        "country": "헝가리",
+        "value": 0
+      },
+      {
+        "country": "인도",
+        "value": 0
+      },
+      {
+        "country": "아랍에미리트 연합",
+        "value": 0
+      }
+    ]
+  },
+  "741190": {
+    "2020": [
+      {
+        "country": "독일",
+        "value": 12
+      },
+      {
+        "country": "일본",
+        "value": 3.8
+      },
+      {
+        "country": "미국",
+        "value": 2.8
+      },
+      {
+        "country": "슬로바키아",
+        "value": 2.8
+      },
+      {
+        "country": "스웨덴",
+        "value": 0.9
+      }
+    ],
+    "2021": [
+      {
+        "country": "독일",
+        "value": 24.1
+      },
+      {
+        "country": "미국",
+        "value": 9.9
+      },
+      {
+        "country": "일본",
+        "value": 3.9
+      },
+      {
+        "country": "스웨덴",
+        "value": 2.8
+      },
+      {
+        "country": "슬로바키아",
+        "value": 1.9
+      }
+    ],
+    "2022": [
+      {
+        "country": "일본",
+        "value": 0.1
+      },
+      {
+        "country": "중국",
+        "value": 0
+      },
+      {
+        "country": "대만",
+        "value": 0
+      },
+      {
+        "country": "미국",
+        "value": 0
+      },
+      {
+        "country": "덴마크",
+        "value": 0
+      }
+    ],
+    "2023": [
+      {
+        "country": "일본",
+        "value": 0.1
+      },
+      {
+        "country": "중국",
+        "value": 0.1
+      },
+      {
+        "country": "미국",
+        "value": 0
+      },
+      {
+        "country": "대만",
+        "value": 0
+      },
+      {
+        "country": "싱가포르",
+        "value": 0
+      }
+    ],
+    "2024": [
+      {
+        "country": "일본",
+        "value": 0.1
+      },
+      {
+        "country": "중국",
+        "value": 0.1
+      },
+      {
+        "country": "미국",
+        "value": 0
+      },
+      {
+        "country": "대만",
+        "value": 0
+      },
+      {
+        "country": "핀란드",
+        "value": 0
+      }
+    ],
+    "2025": [
+      {
+        "country": "일본",
+        "value": 0.1
+      },
+      {
+        "country": "중국",
+        "value": 0.1
+      },
+      {
+        "country": "미국",
+        "value": 0
+      },
+      {
+        "country": "대만",
+        "value": 0
+      },
+      {
+        "country": "핀란드",
+        "value": 0
+      }
+    ],
+    "2026": [
+      {
+        "country": "중국",
+        "value": 0
+      },
+      {
+        "country": "일본",
+        "value": 0
+      },
+      {
+        "country": "대만",
+        "value": 0
+      },
+      {
+        "country": "미국",
+        "value": 0
+      },
+      {
+        "country": "북마리아나 군도",
+        "value": 0
+      }
+    ]
+  },
   "741400": {
     "2020": [
       {
@@ -37916,6 +43085,57 @@ export const PRODUCT_IMP_TOP_COUNTRIES_BY_CODE: Record<string, Record<string, {
       }
     ]
   },
+  "790100": {
+    "2020": [
+      {
+        "country": "일본",
+        "value": 2.7
+      },
+      {
+        "country": "중국",
+        "value": 2.5
+      },
+      {
+        "country": "독일",
+        "value": 2.1
+      },
+      {
+        "country": "미국",
+        "value": 1.6
+      },
+      {
+        "country": "말레이시아",
+        "value": 0.8
+      }
+    ],
+    "2021": [
+      {
+        "country": "일본",
+        "value": 3.7
+      },
+      {
+        "country": "중국",
+        "value": 2.8
+      },
+      {
+        "country": "독일",
+        "value": 2.4
+      },
+      {
+        "country": "미국",
+        "value": 2.3
+      },
+      {
+        "country": "말레이시아",
+        "value": 0.8
+      }
+    ],
+    "2022": [],
+    "2023": [],
+    "2024": [],
+    "2025": [],
+    "2026": []
+  },
   "790190": {
     "2020": [],
     "2021": [],
@@ -38030,6 +43250,162 @@ export const PRODUCT_IMP_TOP_COUNTRIES_BY_CODE: Record<string, Record<string, {
       }
     ]
   },
+  "812130": {
+    "2020": [
+      {
+        "country": "중국",
+        "value": 27.9
+      },
+      {
+        "country": "미국",
+        "value": 0
+      },
+      {
+        "country": "독일",
+        "value": 0
+      },
+      {
+        "country": "홍콩",
+        "value": 0
+      },
+      {
+        "country": "일본",
+        "value": 0
+      }
+    ],
+    "2021": [
+      {
+        "country": "중국",
+        "value": 33.9
+      },
+      {
+        "country": "미국",
+        "value": 0
+      },
+      {
+        "country": "홍콩",
+        "value": 0
+      },
+      {
+        "country": "일본",
+        "value": 0
+      },
+      {
+        "country": "독일",
+        "value": 0
+      }
+    ],
+    "2022": [
+      {
+        "country": "중국",
+        "value": 0
+      },
+      {
+        "country": "홍콩",
+        "value": 0
+      },
+      {
+        "country": "미국",
+        "value": 0
+      },
+      {
+        "country": "독일",
+        "value": 0
+      },
+      {
+        "country": "영국",
+        "value": 0
+      }
+    ],
+    "2023": [
+      {
+        "country": "중국",
+        "value": 0
+      },
+      {
+        "country": "태국",
+        "value": 0
+      },
+      {
+        "country": "핀란드",
+        "value": 0
+      },
+      {
+        "country": "미국",
+        "value": 0
+      },
+      {
+        "country": "베트남",
+        "value": 0
+      }
+    ],
+    "2024": [
+      {
+        "country": "중국",
+        "value": 0
+      },
+      {
+        "country": "태국",
+        "value": 0
+      },
+      {
+        "country": "이탈리아",
+        "value": 0
+      },
+      {
+        "country": "일본",
+        "value": 0
+      },
+      {
+        "country": "말레이시아",
+        "value": 0
+      }
+    ],
+    "2025": [
+      {
+        "country": "중국",
+        "value": 0.1
+      },
+      {
+        "country": "태국",
+        "value": 0
+      },
+      {
+        "country": "일본",
+        "value": 0
+      },
+      {
+        "country": "미국",
+        "value": 0
+      },
+      {
+        "country": "영국",
+        "value": 0
+      }
+    ],
+    "2026": [
+      {
+        "country": "중국",
+        "value": 0
+      },
+      {
+        "country": "일본",
+        "value": 0
+      },
+      {
+        "country": "홍콩",
+        "value": 0
+      },
+      {
+        "country": "미국",
+        "value": 0
+      },
+      {
+        "country": "영국",
+        "value": 0
+      }
+    ]
+  },
   "812160": {
     "2020": [],
     "2021": [],
@@ -38141,6 +43517,318 @@ export const PRODUCT_IMP_TOP_COUNTRIES_BY_CODE: Record<string, Record<string, {
       {
         "country": "일본",
         "value": 0
+      }
+    ]
+  },
+  "812190": {
+    "2020": [
+      {
+        "country": "베트남",
+        "value": 10.5
+      },
+      {
+        "country": "중국",
+        "value": 1.8
+      },
+      {
+        "country": "미국",
+        "value": 0.2
+      },
+      {
+        "country": "홍콩",
+        "value": 0.1
+      },
+      {
+        "country": "호주",
+        "value": 0
+      }
+    ],
+    "2021": [
+      {
+        "country": "베트남",
+        "value": 14.8
+      },
+      {
+        "country": "중국",
+        "value": 0.4
+      },
+      {
+        "country": "미국",
+        "value": 0.1
+      },
+      {
+        "country": "홍콩",
+        "value": 0.1
+      },
+      {
+        "country": "인도",
+        "value": 0.1
+      }
+    ],
+    "2022": [
+      {
+        "country": "베트남",
+        "value": 1
+      },
+      {
+        "country": "중국",
+        "value": 0
+      },
+      {
+        "country": "미국",
+        "value": 0
+      },
+      {
+        "country": "핀란드",
+        "value": 0
+      },
+      {
+        "country": "멕시코",
+        "value": 0
+      }
+    ],
+    "2023": [
+      {
+        "country": "베트남",
+        "value": 0.6
+      },
+      {
+        "country": "중국",
+        "value": 0
+      },
+      {
+        "country": "미국",
+        "value": 0
+      },
+      {
+        "country": "태국",
+        "value": 0
+      },
+      {
+        "country": "홍콩",
+        "value": 0
+      }
+    ],
+    "2024": [
+      {
+        "country": "베트남",
+        "value": 0.7
+      },
+      {
+        "country": "중국",
+        "value": 0
+      },
+      {
+        "country": "일본",
+        "value": 0
+      },
+      {
+        "country": "미국",
+        "value": 0
+      },
+      {
+        "country": "덴마크",
+        "value": 0
+      }
+    ],
+    "2025": [
+      {
+        "country": "베트남",
+        "value": 0.9
+      },
+      {
+        "country": "중국",
+        "value": 0
+      },
+      {
+        "country": "일본",
+        "value": 0
+      },
+      {
+        "country": "에스토니아",
+        "value": 0
+      },
+      {
+        "country": "미국",
+        "value": 0
+      }
+    ],
+    "2026": [
+      {
+        "country": "베트남",
+        "value": 0.2
+      },
+      {
+        "country": "미국",
+        "value": 0
+      },
+      {
+        "country": "일본",
+        "value": 0
+      },
+      {
+        "country": "중국",
+        "value": 0
+      },
+      {
+        "country": "리투아니아",
+        "value": 0
+      }
+    ]
+  },
+  "812410": {
+    "2020": [
+      {
+        "country": "중국",
+        "value": 2.2
+      },
+      {
+        "country": "베트남",
+        "value": 2.1
+      },
+      {
+        "country": "독일",
+        "value": 0.4
+      },
+      {
+        "country": "일본",
+        "value": 0.3
+      },
+      {
+        "country": "미국",
+        "value": 0.2
+      }
+    ],
+    "2021": [
+      {
+        "country": "중국",
+        "value": 2.6
+      },
+      {
+        "country": "베트남",
+        "value": 2.5
+      },
+      {
+        "country": "미국",
+        "value": 2.4
+      },
+      {
+        "country": "독일",
+        "value": 2
+      },
+      {
+        "country": "일본",
+        "value": 1.5
+      }
+    ],
+    "2022": [
+      {
+        "country": "베트남",
+        "value": 3.1
+      },
+      {
+        "country": "미국",
+        "value": 2.8
+      },
+      {
+        "country": "중국",
+        "value": 1.9
+      },
+      {
+        "country": "독일",
+        "value": 1.7
+      },
+      {
+        "country": "일본",
+        "value": 1.3
+      }
+    ],
+    "2023": [
+      {
+        "country": "베트남",
+        "value": 3.4
+      },
+      {
+        "country": "미국",
+        "value": 2.6
+      },
+      {
+        "country": "독일",
+        "value": 1.8
+      },
+      {
+        "country": "중국",
+        "value": 1.5
+      },
+      {
+        "country": "일본",
+        "value": 1.1
+      }
+    ],
+    "2024": [
+      {
+        "country": "베트남",
+        "value": 3
+      },
+      {
+        "country": "미국",
+        "value": 2.6
+      },
+      {
+        "country": "독일",
+        "value": 2
+      },
+      {
+        "country": "중국",
+        "value": 1.5
+      },
+      {
+        "country": "일본",
+        "value": 1
+      }
+    ],
+    "2025": [
+      {
+        "country": "베트남",
+        "value": 3.3
+      },
+      {
+        "country": "미국",
+        "value": 2.4
+      },
+      {
+        "country": "독일",
+        "value": 1.7
+      },
+      {
+        "country": "중국",
+        "value": 1.4
+      },
+      {
+        "country": "일본",
+        "value": 1.1
+      }
+    ],
+    "2026": [
+      {
+        "country": "베트남",
+        "value": 0.4
+      },
+      {
+        "country": "미국",
+        "value": 0.3
+      },
+      {
+        "country": "중국",
+        "value": 0.3
+      },
+      {
+        "country": "독일",
+        "value": 0.3
+      },
+      {
+        "country": "일본",
+        "value": 0.2
       }
     ]
   },
@@ -38453,6 +44141,162 @@ export const PRODUCT_IMP_TOP_COUNTRIES_BY_CODE: Record<string, Record<string, {
       {
         "country": "대만",
         "value": 0
+      }
+    ]
+  },
+  "813120": {
+    "2020": [
+      {
+        "country": "중국",
+        "value": 11.5
+      },
+      {
+        "country": "싱가포르",
+        "value": 3.5
+      },
+      {
+        "country": "미국",
+        "value": 2.2
+      },
+      {
+        "country": "대만",
+        "value": 1
+      },
+      {
+        "country": "멕시코",
+        "value": 0.9
+      }
+    ],
+    "2021": [
+      {
+        "country": "중국",
+        "value": 16.2
+      },
+      {
+        "country": "싱가포르",
+        "value": 5.2
+      },
+      {
+        "country": "미국",
+        "value": 3.1
+      },
+      {
+        "country": "대만",
+        "value": 1.2
+      },
+      {
+        "country": "멕시코",
+        "value": 0.9
+      }
+    ],
+    "2022": [
+      {
+        "country": "중국",
+        "value": 16.1
+      },
+      {
+        "country": "싱가포르",
+        "value": 4.6
+      },
+      {
+        "country": "미국",
+        "value": 2.9
+      },
+      {
+        "country": "대만",
+        "value": 1.7
+      },
+      {
+        "country": "멕시코",
+        "value": 0.8
+      }
+    ],
+    "2023": [
+      {
+        "country": "중국",
+        "value": 11.2
+      },
+      {
+        "country": "싱가포르",
+        "value": 3.4
+      },
+      {
+        "country": "미국",
+        "value": 2.3
+      },
+      {
+        "country": "대만",
+        "value": 1.7
+      },
+      {
+        "country": "말레이시아",
+        "value": 1.2
+      }
+    ],
+    "2024": [
+      {
+        "country": "중국",
+        "value": 11.1
+      },
+      {
+        "country": "말레이시아",
+        "value": 4.9
+      },
+      {
+        "country": "싱가포르",
+        "value": 3.9
+      },
+      {
+        "country": "미국",
+        "value": 3.7
+      },
+      {
+        "country": "대만",
+        "value": 1.8
+      }
+    ],
+    "2025": [
+      {
+        "country": "중국",
+        "value": 11.9
+      },
+      {
+        "country": "말레이시아",
+        "value": 8.2
+      },
+      {
+        "country": "미국",
+        "value": 5.5
+      },
+      {
+        "country": "싱가포르",
+        "value": 5.5
+      },
+      {
+        "country": "대만",
+        "value": 3
+      }
+    ],
+    "2026": [
+      {
+        "country": "중국",
+        "value": 3.6
+      },
+      {
+        "country": "말레이시아",
+        "value": 1.8
+      },
+      {
+        "country": "체코",
+        "value": 1.7
+      },
+      {
+        "country": "싱가포르",
+        "value": 1.2
+      },
+      {
+        "country": "미국",
+        "value": 0.5
       }
     ]
   },
@@ -39080,6 +44924,318 @@ export const PRODUCT_IMP_TOP_COUNTRIES_BY_CODE: Record<string, Record<string, {
       }
     ]
   },
+  "831390": {
+    "2020": [
+      {
+        "country": "일본",
+        "value": 12.6
+      },
+      {
+        "country": "중국",
+        "value": 7.7
+      },
+      {
+        "country": "대만",
+        "value": 6.4
+      },
+      {
+        "country": "베트남",
+        "value": 1.3
+      },
+      {
+        "country": "미국",
+        "value": 1.2
+      }
+    ],
+    "2021": [
+      {
+        "country": "일본",
+        "value": 15.2
+      },
+      {
+        "country": "중국",
+        "value": 8.5
+      },
+      {
+        "country": "대만",
+        "value": 7.7
+      },
+      {
+        "country": "싱가포르",
+        "value": 2.1
+      },
+      {
+        "country": "베트남",
+        "value": 1.7
+      }
+    ],
+    "2022": [
+      {
+        "country": "일본",
+        "value": 13.4
+      },
+      {
+        "country": "중국",
+        "value": 8.7
+      },
+      {
+        "country": "대만",
+        "value": 5
+      },
+      {
+        "country": "프랑스",
+        "value": 1.8
+      },
+      {
+        "country": "베트남",
+        "value": 1.8
+      }
+    ],
+    "2023": [
+      {
+        "country": "일본",
+        "value": 13.8
+      },
+      {
+        "country": "중국",
+        "value": 5.9
+      },
+      {
+        "country": "대만",
+        "value": 3.4
+      },
+      {
+        "country": "말레이시아",
+        "value": 1.6
+      },
+      {
+        "country": "프랑스",
+        "value": 1.6
+      }
+    ],
+    "2024": [
+      {
+        "country": "일본",
+        "value": 14.3
+      },
+      {
+        "country": "중국",
+        "value": 5
+      },
+      {
+        "country": "대만",
+        "value": 3.1
+      },
+      {
+        "country": "프랑스",
+        "value": 1.6
+      },
+      {
+        "country": "베트남",
+        "value": 1.5
+      }
+    ],
+    "2025": [
+      {
+        "country": "일본",
+        "value": 10.5
+      },
+      {
+        "country": "중국",
+        "value": 4.8
+      },
+      {
+        "country": "대만",
+        "value": 3.3
+      },
+      {
+        "country": "프랑스",
+        "value": 2.8
+      },
+      {
+        "country": "싱가포르",
+        "value": 1.7
+      }
+    ],
+    "2026": [
+      {
+        "country": "중국",
+        "value": 0.7
+      },
+      {
+        "country": "프랑스",
+        "value": 0.6
+      },
+      {
+        "country": "대만",
+        "value": 0.5
+      },
+      {
+        "country": "싱가포르",
+        "value": 0.3
+      },
+      {
+        "country": "베트남",
+        "value": 0.2
+      }
+    ]
+  },
+  "831500": {
+    "2020": [
+      {
+        "country": "일본",
+        "value": 9.2
+      },
+      {
+        "country": "중국",
+        "value": 4.2
+      },
+      {
+        "country": "싱가포르",
+        "value": 3
+      },
+      {
+        "country": "미국",
+        "value": 1.5
+      },
+      {
+        "country": "대만",
+        "value": 0.6
+      }
+    ],
+    "2021": [
+      {
+        "country": "일본",
+        "value": 9.5
+      },
+      {
+        "country": "중국",
+        "value": 5.6
+      },
+      {
+        "country": "싱가포르",
+        "value": 3.7
+      },
+      {
+        "country": "미국",
+        "value": 1.8
+      },
+      {
+        "country": "대만",
+        "value": 0.9
+      }
+    ],
+    "2022": [
+      {
+        "country": "일본",
+        "value": 9
+      },
+      {
+        "country": "중국",
+        "value": 7.8
+      },
+      {
+        "country": "싱가포르",
+        "value": 3.9
+      },
+      {
+        "country": "미국",
+        "value": 1.8
+      },
+      {
+        "country": "대만",
+        "value": 1
+      }
+    ],
+    "2023": [
+      {
+        "country": "중국",
+        "value": 8
+      },
+      {
+        "country": "일본",
+        "value": 7.4
+      },
+      {
+        "country": "싱가포르",
+        "value": 3.4
+      },
+      {
+        "country": "미국",
+        "value": 2
+      },
+      {
+        "country": "체코",
+        "value": 1.5
+      }
+    ],
+    "2024": [
+      {
+        "country": "중국",
+        "value": 8.8
+      },
+      {
+        "country": "일본",
+        "value": 7.7
+      },
+      {
+        "country": "싱가포르",
+        "value": 3.3
+      },
+      {
+        "country": "체코",
+        "value": 2.7
+      },
+      {
+        "country": "미국",
+        "value": 1.9
+      }
+    ],
+    "2025": [
+      {
+        "country": "중국",
+        "value": 15.1
+      },
+      {
+        "country": "일본",
+        "value": 8
+      },
+      {
+        "country": "싱가포르",
+        "value": 3.9
+      },
+      {
+        "country": "체코",
+        "value": 1.8
+      },
+      {
+        "country": "미국",
+        "value": 1.7
+      }
+    ],
+    "2026": [
+      {
+        "country": "중국",
+        "value": 2.2
+      },
+      {
+        "country": "일본",
+        "value": 1.4
+      },
+      {
+        "country": "싱가포르",
+        "value": 0.5
+      },
+      {
+        "country": "베트남",
+        "value": 0.4
+      },
+      {
+        "country": "체코",
+        "value": 0.3
+      }
+    ]
+  },
   "834300": {
     "2020": [
       {
@@ -39704,158 +45860,158 @@ export const PRODUCT_IMP_TOP_COUNTRIES_BY_CODE: Record<string, Record<string, {
       }
     ]
   },
-  "022110": {
+  "970100": {
     "2020": [
       {
         "country": "미국",
-        "value": 18.2
+        "value": 2.8
       },
       {
-        "country": "호주",
-        "value": 11.4
+        "country": "독일",
+        "value": 1.9
       },
       {
-        "country": "뉴질랜드",
-        "value": 0.9
+        "country": "이스라엘",
+        "value": 0.2
       },
       {
-        "country": "캐나다",
-        "value": 0.3
+        "country": "영국",
+        "value": 0.1
       },
       {
-        "country": "멕시코",
-        "value": 0.3
+        "country": "콜롬비아",
+        "value": 0.1
       }
     ],
     "2021": [
       {
         "country": "미국",
-        "value": 21.7
+        "value": 1.6
       },
       {
-        "country": "호주",
-        "value": 13.8
+        "country": "이스라엘",
+        "value": 0.1
       },
       {
-        "country": "뉴질랜드",
-        "value": 1.2
+        "country": "이탈리아",
+        "value": 0.1
       },
       {
-        "country": "캐나다",
-        "value": 0.6
+        "country": "아랍에미리트 연합",
+        "value": 0.1
       },
       {
-        "country": "멕시코",
-        "value": 0.4
+        "country": "독일",
+        "value": 0
       }
     ],
     "2022": [
       {
         "country": "미국",
-        "value": 26.2
+        "value": 1
       },
       {
         "country": "호주",
-        "value": 14.8
+        "value": 0.1
       },
       {
-        "country": "뉴질랜드",
-        "value": 1.7
+        "country": "이탈리아",
+        "value": 0.1
       },
       {
-        "country": "캐나다",
-        "value": 1.7
+        "country": "아랍에미리트 연합",
+        "value": 0.1
       },
       {
-        "country": "멕시코",
-        "value": 0.4
+        "country": "이스라엘",
+        "value": 0
       }
     ],
     "2023": [
       {
         "country": "미국",
-        "value": 22.1
+        "value": 1.7
       },
       {
-        "country": "호주",
-        "value": 13.8
+        "country": "사우디아라비아",
+        "value": 0.3
       },
       {
-        "country": "뉴질랜드",
-        "value": 1.2
-      },
-      {
-        "country": "캐나다",
-        "value": 1
-      },
-      {
-        "country": "멕시코",
+        "country": "이스라엘",
         "value": 0.2
+      },
+      {
+        "country": "독일",
+        "value": 0.1
+      },
+      {
+        "country": "프랑스",
+        "value": 0.1
       }
     ],
     "2024": [
       {
         "country": "미국",
-        "value": 22.4
+        "value": 1
       },
       {
-        "country": "호주",
-        "value": 14.6
+        "country": "이탈리아",
+        "value": 0.2
       },
       {
-        "country": "캐나다",
-        "value": 1.1
+        "country": "프랑스",
+        "value": 0.2
       },
       {
-        "country": "뉴질랜드",
-        "value": 1.1
+        "country": "튀르키예",
+        "value": 0.2
       },
       {
-        "country": "멕시코",
+        "country": "독일",
         "value": 0.2
       }
     ],
     "2025": [
       {
         "country": "미국",
-        "value": 22.1
+        "value": 2
       },
       {
-        "country": "호주",
-        "value": 16.1
+        "country": "이탈리아",
+        "value": 0.4
       },
       {
-        "country": "뉴질랜드",
-        "value": 1.1
+        "country": "독일",
+        "value": 0.2
       },
       {
-        "country": "캐나다",
-        "value": 1
+        "country": "프랑스",
+        "value": 0.1
       },
       {
-        "country": "멕시코",
+        "country": "영국",
         "value": 0.1
       }
     ],
     "2026": [
       {
         "country": "미국",
-        "value": 5.2
-      },
-      {
-        "country": "호주",
-        "value": 4.9
-      },
-      {
-        "country": "뉴질랜드",
         "value": 0.2
       },
       {
-        "country": "캐나다",
-        "value": 0.2
+        "country": "튀르키예",
+        "value": 0
       },
       {
-        "country": "멕시코",
+        "country": "영국",
+        "value": 0
+      },
+      {
+        "country": "체코",
+        "value": 0
+      },
+      {
+        "country": "스페인",
         "value": 0
       }
     ]
@@ -40013,6 +46169,162 @@ export const PRODUCT_IMP_TOP_COUNTRIES_BY_CODE: Record<string, Record<string, {
       {
         "country": "브라질",
         "value": 0.2
+      }
+    ]
+  },
+  "022110": {
+    "2020": [
+      {
+        "country": "미국",
+        "value": 18.2
+      },
+      {
+        "country": "호주",
+        "value": 11.4
+      },
+      {
+        "country": "뉴질랜드",
+        "value": 0.9
+      },
+      {
+        "country": "캐나다",
+        "value": 0.3
+      },
+      {
+        "country": "멕시코",
+        "value": 0.3
+      }
+    ],
+    "2021": [
+      {
+        "country": "미국",
+        "value": 21.7
+      },
+      {
+        "country": "호주",
+        "value": 13.8
+      },
+      {
+        "country": "뉴질랜드",
+        "value": 1.2
+      },
+      {
+        "country": "캐나다",
+        "value": 0.6
+      },
+      {
+        "country": "멕시코",
+        "value": 0.4
+      }
+    ],
+    "2022": [
+      {
+        "country": "미국",
+        "value": 26.2
+      },
+      {
+        "country": "호주",
+        "value": 14.8
+      },
+      {
+        "country": "뉴질랜드",
+        "value": 1.7
+      },
+      {
+        "country": "캐나다",
+        "value": 1.7
+      },
+      {
+        "country": "멕시코",
+        "value": 0.4
+      }
+    ],
+    "2023": [
+      {
+        "country": "미국",
+        "value": 22.1
+      },
+      {
+        "country": "호주",
+        "value": 13.8
+      },
+      {
+        "country": "뉴질랜드",
+        "value": 1.2
+      },
+      {
+        "country": "캐나다",
+        "value": 1
+      },
+      {
+        "country": "멕시코",
+        "value": 0.2
+      }
+    ],
+    "2024": [
+      {
+        "country": "미국",
+        "value": 22.4
+      },
+      {
+        "country": "호주",
+        "value": 14.6
+      },
+      {
+        "country": "캐나다",
+        "value": 1.1
+      },
+      {
+        "country": "뉴질랜드",
+        "value": 1.1
+      },
+      {
+        "country": "멕시코",
+        "value": 0.2
+      }
+    ],
+    "2025": [
+      {
+        "country": "미국",
+        "value": 22.1
+      },
+      {
+        "country": "호주",
+        "value": 16.1
+      },
+      {
+        "country": "뉴질랜드",
+        "value": 1.1
+      },
+      {
+        "country": "캐나다",
+        "value": 1
+      },
+      {
+        "country": "멕시코",
+        "value": 0.1
+      }
+    ],
+    "2026": [
+      {
+        "country": "미국",
+        "value": 5.2
+      },
+      {
+        "country": "호주",
+        "value": 4.9
+      },
+      {
+        "country": "뉴질랜드",
+        "value": 0.2
+      },
+      {
+        "country": "캐나다",
+        "value": 0.2
+      },
+      {
+        "country": "멕시코",
+        "value": 0
       }
     ]
   }
@@ -132248,57 +138560,57 @@ export const MACRO_META: { key: string; label: string; desc: string }[] = [
   },
   {
     "key": "KR_BSI_MFG",
-    "label": "한국 제조업 BSI",
-    "desc": "제조업체의 현재·향후 경기 체감을 수치화한 지수 (100 이상 긍정적)"
+    "label": "한국 제조업  기업경기실사지수(BSI)",
+    "desc": "한국 제조업 BSI: 제조업체의 현재·향후 경기 체감을 수치화한 지수 (100 이상 긍정적)"
   },
   {
     "key": "KR_BSI_NON_MFG",
-    "label": "한국 비제조업 BSI",
-    "desc": "서비스·건설 등 비제조업체의 경기 체감 지수"
+    "label": "한국 비제조업  기업경기실사지수(BSI)",
+    "desc": "한국 비제조업 BSI: 서비스·건설 등 비제조업체의 경기 체감 지수"
   },
   {
     "key": "KR_EBSI",
-    "label": "한국 수출기업 EBSI",
-    "desc": "수출기업이 느끼는 수출 경기 전망 체감 지수"
+    "label": "한국  수출기업경기실사지수(EBSI)",
+    "desc": "한국 수출 BSI: 수출기업이 느끼는 수출 경기 전망을 나타내는 체감 지수"
   },
   {
     "key": "KR_PROD_YOY",
-    "label": "한국 산업생산 전년동기비",
-    "desc": "광공업 생산 활동의 전년 대비 증감률"
+    "label": "한국 산업생산지수  전년 동기 대비 증감율",
+    "desc": "한국 산업생산지수 전년동기비: 광공업 생산 활동의 전년 대비 증감률로 실물경기 판단 지표"
   },
   {
     "key": "KR_CPI_YOY",
-    "label": "한국 소비자물가 전년동기비",
-    "desc": "가계가 구입하는 상품·서비스 가격의 전년 대비 변동률"
+    "label": "한국 소비자물가지수  전년 동기 대비 증감율",
+    "desc": "한국 소비자물가지수 전년동기비: 가계가 구입하는 상품·서비스 가격의 전년 대비 변동률(인플레이션 지표)"
   },
   {
     "key": "US_BASE_RATE",
     "label": "미국 기준금리",
-    "desc": "연준이 결정하는 연방기금금리로, 글로벌 자금 흐름에 직접적 영향"
+    "desc": "연준(Fed)이 결정하는 연방기금금리로, 글로벌 자금 흐름에 직접적 영향"
   },
   {
     "key": "US_PMI_MFG",
-    "label": "미국 제조업 PMI",
-    "desc": "ISM 발표 제조업 경기 선행지표 (50 이상 확장)"
+    "label": "미국 제조업  구매관리자지수(PMI)",
+    "desc": "ISM이 발표하는 제조업 경기 선행지표 (50 이상 확장, 미만 위축)"
   },
   {
     "key": "CN_BASE_RATE",
     "label": "중국 기준금리",
-    "desc": "중국인민은행의 대출우대금리(LPR)"
+    "desc": "중국인민은행의 대출우대금리(LPR)로, 중국 내수·투자에 영향"
   },
   {
     "key": "CN_PMI_MFG",
-    "label": "중국 제조업 PMI",
-    "desc": "중국 제조업 경기 확장·위축 선행지표 (50 기준)"
+    "label": "중국 제조업 구 매관리자지수(PMI)",
+    "desc": "중국 제조업 경기 확장·위축을 나타내는 선행지표 (50 기준)"
   },
   {
     "key": "BRENT_OIL",
     "label": "브렌트유 가격",
-    "desc": "국제 원유 벤치마크 가격 (달러/배럴)"
+    "desc": "국제 원유 벤치마크 가격으로, 원자재·물류비·수출입 단가에 직접 영향"
   },
   {
     "key": "SCFI",
-    "label": "상하이컨테이너운임지수",
-    "desc": "상하이 출발 해상운임 수준, 글로벌 물류비 지표"
+    "label": "상하이컨테이너운임지수(SCFI)",
+    "desc": "상하이 출발 컨테이너 해상운임 수준을 나타내며, 글로벌 물류비 동향의 핵심 지표"
   }
 ];
