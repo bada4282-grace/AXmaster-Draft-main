@@ -49,6 +49,55 @@ function buildCountryList(): string[] {
 const PRODUCT_LOOKUP = buildProductLookup();
 const COUNTRY_LIST = buildCountryList();
 
+// 사용자 입력 별칭 → 실제 품목명 매핑 (부분 일치 보완)
+const PRODUCT_ALIAS_MAP: Record<string, string> = {
+  "반도체": "메모리반도체",
+  "자동차": "승용차",
+  "배터리": "리튬이온전지",
+  "디스플레이": "평판디스플레이",
+  "석유": "석유제품",
+  "화학": "합성수지",
+};
+
+// 대시보드 라우팅 버튼 타입
+export interface RouteButton {
+  label: string;
+  href: string;
+}
+
+// 질문에서 라우팅 가능한 버튼 목록 반환 (국가/품목 각 최대 1개)
+export function resolveRouteButtons(question: string): RouteButton[] {
+  const { countries, productNames } = extractKeywords(question);
+  const buttons: RouteButton[] = [];
+
+  if (countries.length > 0) {
+    buttons.push({
+      label: `${countries[0]} 데이터 확인하기`,
+      href: `/country/${encodeURIComponent(countries[0])}`,
+    });
+  }
+
+  // 정확히 매칭된 품목명 우선, 없으면 별칭으로 탐색
+  let productName = productNames[0];
+  if (!productName) {
+    for (const [alias, realName] of Object.entries(PRODUCT_ALIAS_MAP)) {
+      if (question.includes(alias)) {
+        productName = realName;
+        break;
+      }
+    }
+  }
+
+  if (productName) {
+    buttons.push({
+      label: `${productName} 데이터 확인하기`,
+      href: `/product/${encodeURIComponent(productName)}`,
+    });
+  }
+
+  return buttons;
+}
+
 // 질문에서 수출/수입 방향 감지
 function detectTradeType(question: string): "수출" | "수입" {
   if (question.includes("수입")) return "수입";

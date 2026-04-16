@@ -1,10 +1,13 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
 import { supabase } from "@/lib/supabase";
 import { saveChatLog, getChatLogs } from "@/lib/chat";
+import { resolveRouteButtons } from "@/lib/chatContext";
+import type { RouteButton } from "@/lib/chatContext";
 import type { User } from "@supabase/supabase-js";
 
 function TypingIndicator() {
@@ -47,7 +50,7 @@ function renderBotText(text: string): React.ReactNode {
   );
 }
 
-interface ChatMessage { role: "bot" | "user"; text: string; }
+interface ChatMessage { role: "bot" | "user"; text: string; routeButtons?: RouteButton[]; }
 
 interface ChatBotProps {
   open: boolean;
@@ -68,6 +71,7 @@ export default function ChatBot({
   initialMessage,
   showInternalToggle = true,
 }: ChatBotProps) {
+  const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -208,7 +212,7 @@ export default function ChatBot({
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: userMsg, history }),
+        body: JSON.stringify({ message: userMsg, history: [] }),
       });
 
       if (!res.body) throw new Error("No response body");
@@ -237,6 +241,15 @@ export default function ChatBot({
       }
 
       saveResponse = true;
+
+      // 스트리밍 완료 후 라우팅 버튼 계산해서 마지막 봇 메시지에 추가
+      const routeButtons = resolveRouteButtons(userMsg);
+      if (routeButtons.length > 0) {
+        setMessages(prev => [
+          ...prev.slice(0, -1),
+          { role: "bot", text: fullResponse, routeButtons },
+        ]);
+      }
     } catch {
       fullResponse = "답변 생성 중 오류가 발생했습니다.";
       setMessages(prev => [
@@ -307,20 +320,47 @@ export default function ChatBot({
       {/* Messages */}
       <div ref={messagesContainerRef} className="chatbot-messages" style={{ minHeight: 0 }}>
         {messages.map((msg, i) => (
-          <div key={i} style={{ display: "flex", justifyContent: msg.role === "user" ? "flex-end" : "flex-start", alignItems: "flex-start", gap: 4 }}>
-            {msg.role === "bot" && (
-              <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#fde8e8", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, flexShrink: 0, marginTop: 2 }}>🤖</div>
-            )}
+          <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: msg.role === "user" ? "flex-end" : "flex-start", gap: 4 }}>
+            <div style={{ display: "flex", justifyContent: msg.role === "user" ? "flex-end" : "flex-start", alignItems: "flex-start", gap: 4, width: "100%" }}>
+              {msg.role === "bot" && (
+                <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#fde8e8", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, flexShrink: 0, marginTop: 2 }}>🤖</div>
+              )}
               <div
                 className={msg.role === "bot" ? "chatbot-msg-bot" : "chatbot-msg-user"}
                 style={{ fontSize }}
               >
-              {msg.role === "bot"
-                ? (msg.text === "" && (isStreaming || welcomeLoading) && i === messages.length - 1
-                    ? <TypingIndicator />
-                    : renderBotText(msg.text))
-                : msg.text}
+                {msg.role === "bot"
+                  ? (msg.text === "" && (isStreaming || welcomeLoading) && i === messages.length - 1
+                      ? <TypingIndicator />
+                      : renderBotText(msg.text))
+                  : msg.text}
+              </div>
             </div>
+            {msg.role === "bot" && msg.routeButtons && msg.routeButtons.length > 0 && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 4, paddingLeft: 24 }}>
+                {msg.routeButtons.map((btn, j) => (
+                  <button
+                    key={j}
+                    onClick={() => router.push(btn.href)}
+                    style={{
+                      background: "#fff",
+                      border: "1px solid #E02020",
+                      borderRadius: 12,
+                      padding: "4px 10px",
+                      fontSize: 11,
+                      color: "#E02020",
+                      cursor: "pointer",
+                      textAlign: "left",
+                      fontWeight: 500,
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background = "#fde8e8"; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = "#fff"; }}
+                  >
+                    📊 {btn.label}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         ))}
         <div ref={bottomRef} />
