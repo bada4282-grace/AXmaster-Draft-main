@@ -40,7 +40,8 @@ function ProductDetailContent() {
   const name = decodeURIComponent(params.name as string);
   const codeParam = searchParams.get("code") ?? "";
 
-  const [year, setYear] = useState(DEFAULT_YEAR);
+  const initialYear = searchParams.get("year") ?? DEFAULT_YEAR;
+  const [year, setYear] = useState(initialYear);
   const [tradeType, setTradeType] = useState<TradeType>("수출");
   const [country, setCountry] = useState("");
   const [subTab, setSubTab] = useState<"금액 추이" | "상위 국가">(
@@ -173,7 +174,7 @@ function ProductDetailContent() {
         <div className="main-content-layout">
           {/* Dashboard card */}
           <div className="dashboard-card dashboard-main-card">
-            <FilterBar mode="product" defaultYear={DEFAULT_YEAR} onYearChange={setYear} onTradeTypeChange={setTradeType} onCountryChange={setCountry} disableMonthPeriod />
+            <FilterBar mode="product" defaultYear={initialYear} onYearChange={setYear} onTradeTypeChange={setTradeType} onCountryChange={setCountry} disableMonthPeriod />
             <KPIBar year={year} />
 
             <div className="split-panel" style={{ height: 380 }}>

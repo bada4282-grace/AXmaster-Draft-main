@@ -28,13 +28,16 @@ function CountryDetailContent() {
   const name = decodeURIComponent(params.name as string);
 
   const initialTradeType: TradeType = searchParams.get("mode") === "import" ? "수입" : "수출";
-  const [year, setYear] = useState(DEFAULT_YEAR);
+  const initialYear = searchParams.get("year") ?? DEFAULT_YEAR;
+  const [year, setYear] = useState(initialYear);
   const [month, setMonth] = useState("");
   const [tradeType, setTradeType] = useState<TradeType>(initialTradeType);
   const [subTab, setSubTab] = useState<"품목별" | "시계열 추이">(
     searchParams.get("tab") === "timeseries" ? "시계열 추이" : "품목별"
   );
-  const [mtiDepth, setMtiDepth] = useState(3);
+  const [mtiDepth, setMtiDepth] = useState(
+    Number(searchParams.get("mtiDepth") ?? 3)
+  );
   const [mtiCategoryActive, setMtiCategoryActive] = useState(false);
 
   const [loadingCount, setLoadingCount] = useState(0);
@@ -146,7 +149,7 @@ function CountryDetailContent() {
             <FilterBar
               mode="country"
               showCountrySelect={country.name}
-              defaultYear={DEFAULT_YEAR}
+              defaultYear={initialYear}
               onYearChange={setYear}
               onMonthChange={setMonth}
               onTradeTypeChange={setTradeType}

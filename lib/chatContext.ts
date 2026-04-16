@@ -96,12 +96,22 @@ export function resolveRouteButtons(question: string): RouteButton[] {
   const isTimeseriesQuery = /추이|시계열|연도별|트렌드|변화|증감/.test(question);
   const isCountriesQuery = /상위 국가|국가별|나라별|어느 나라|어떤 나라/.test(question);
 
-  // 국가 버튼 (정확 매칭, 수입/수출 + 탭 반영)
+  // MTI 단위 감지 (1,2,3,4,6단위)
+  const mtiDepthMatch = question.match(/MTI\s*([1-6])단위|([1-6])단위\s*MTI/i);
+  const detectedMtiDepth = mtiDepthMatch ? (mtiDepthMatch[1] ?? mtiDepthMatch[2]) : null;
+
+  // 연도 감지 (DEFAULT_YEAR와 다를 때만 파라미터 추가)
+  const { year } = extractKeywords(question);
+  const detectedYear = year !== DEFAULT_YEAR ? year : null;
+
+  // 국가 버튼 (정확 매칭, 수입/수출 + 탭 + 연도 반영)
   if (countries.length > 0) {
     const tradeType = detectTradeType(question);
     const params = new URLSearchParams();
     if (tradeType === "수입") params.set("mode", "import");
     if (isTimeseriesQuery) params.set("tab", "timeseries");
+    if (detectedYear) params.set("year", detectedYear);
+    if (detectedMtiDepth) params.set("mtiDepth", detectedMtiDepth);
     const queryString = params.toString() ? `?${params.toString()}` : "";
     buttons.push({
       label: `${countries[0]} ${tradeType} 데이터 확인하기`,
@@ -127,6 +137,7 @@ export function resolveRouteButtons(question: string): RouteButton[] {
     const params = new URLSearchParams();
     if (best.code.length < 6) params.set("code", best.code);
     if (isCountriesQuery) params.set("tab", "countries");
+    if (detectedYear) params.set("year", detectedYear);
     const queryString = params.toString() ? `?${params.toString()}` : "";
     buttons.push({
       label: `${best.name} 데이터 확인하기`,
@@ -135,10 +146,13 @@ export function resolveRouteButtons(question: string): RouteButton[] {
     });
   } else if (productNames.length > 0) {
     // TREEMAP 품목명 정확 매칭
-    const tabQuery = isCountriesQuery ? "?tab=countries" : "";
+    const params = new URLSearchParams();
+    if (isCountriesQuery) params.set("tab", "countries");
+    if (detectedYear) params.set("year", detectedYear);
+    const queryString = params.toString() ? `?${params.toString()}` : "";
     buttons.push({
       label: `${productNames[0]} 데이터 확인하기`,
-      href: `/product/${encodeURIComponent(productNames[0])}${tabQuery}`,
+      href: `/product/${encodeURIComponent(productNames[0])}${queryString}`,
       type: "exact",
     });
   } else {
