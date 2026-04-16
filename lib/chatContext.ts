@@ -94,7 +94,7 @@ export function resolveRouteButtons(question: string): RouteButton[] {
 
   // 탭 키워드 감지
   const isTimeseriesQuery = /추이|시계열|연도별|트렌드|변화|증감/.test(question);
-  const isCountriesQuery = /상위 국가|국가별|나라별|어느 나라|어떤 나라/.test(question);
+  const isCountriesQuery = /상위 ?국가|상위국|주요 ?수출국|주요 ?수입국|국가별|나라별|어느 나라|어떤 나라|높은 나라|높은 국가|많은 나라|많은 국가/.test(question);
 
   // MTI 단위 감지 (1,2,3,4,6단위)
   const mtiDepthMatch = question.match(/MTI\s*([1-6])단위|([1-6])단위\s*MTI/i);
