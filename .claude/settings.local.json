@@ -11,7 +11,12 @@
       "Bash(cat app/api/macro/route.ts)",
       "Bash(cat app/api/macro/route.tsx)",
       "Bash(wc -l components/*.tsx lib/*.ts)",
-      "Bash(git checkout *)"
+      "Bash(git checkout *)",
+      "WebFetch(domain:github.com)",
+      "Bash(git push *)",
+      "Bash(git fetch *)",
+      "Bash(git log *)",
+      "Bash(git merge *)"
     ]
   }
 }
