@@ -218,7 +218,6 @@ export default function TreemapChart({
     if (!data?.name) return;
     const item = aggregatedData.find((d) => d.name === data.name);
     if (!item) return;
-    if (forCountry) return;
     const params = new URLSearchParams({ code: item.code });
     router.push(`/product/${encodeURIComponent(item.name)}?${params.toString()}`);
   };

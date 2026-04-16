@@ -114,7 +114,7 @@ function ProductDetailContent() {
       clearTimeout(stopId);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [subTab, year, tradeType]);
+  }, [subTab, year, tradeType, country]);
 
   // 현재 연도 금액 & 전년 대비 증감 — 추이 데이터에서 직접 조회 (Top30 제한 없음)
   const prevYear = String(parseInt(year) - 1);
