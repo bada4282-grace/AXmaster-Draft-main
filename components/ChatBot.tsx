@@ -277,27 +277,27 @@ export default function ChatBot({
             </div>
           )}
         </div>
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 3, flexShrink: 0 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-            <span style={{ fontSize: 11, color: "#999", marginRight: 2 }}>Aa</span>
-            <button onClick={decreaseFontSize} style={{ width: 22, height: 22, borderRadius: "50%", border: "1px solid #ddd", background: "#fff", cursor: "pointer", fontSize: 14, color: "#555", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>−</button>
+        <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+          <span style={{ fontSize: 11, color: "#999", marginRight: 2 }}>Aa</span>
+          <button onClick={decreaseFontSize} style={{ width: 22, height: 22, borderRadius: "50%", border: "1px solid #ddd", background: "#fff", cursor: "pointer", fontSize: 14, color: "#555", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>−</button>
+          <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
             <button onClick={increaseFontSize} style={{ width: 22, height: 22, borderRadius: "50%", border: "1px solid #ddd", background: "#fff", cursor: "pointer", fontSize: 14, color: "#555", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>+</button>
+            <button
+              onClick={() => setMessages([{ role: "bot", text: initialMessage }])}
+              title="대화 내용 지우기"
+              style={{ width: 22, height: 22, borderRadius: "50%", border: "1px solid #ddd", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+              onMouseEnter={e => (e.currentTarget.style.background = "#fde8e8")}
+              onMouseLeave={e => (e.currentTarget.style.background = "#fff")}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="3 6 5 6 21 6" />
+                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                <path d="M10 11v6" />
+                <path d="M14 11v6" />
+                <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+              </svg>
+            </button>
           </div>
-          <button
-            onClick={() => setMessages([{ role: "bot", text: initialMessage }])}
-            title="대화 내용 지우기"
-            style={{ width: 22, height: 22, borderRadius: "50%", border: "1px solid #ddd", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
-            onMouseEnter={e => (e.currentTarget.style.background = "#fde8e8")}
-            onMouseLeave={e => (e.currentTarget.style.background = "#fff")}
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="3 6 5 6 21 6" />
-              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-              <path d="M10 11v6" />
-              <path d="M14 11v6" />
-              <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
-            </svg>
-          </button>
         </div>
       </div>
 
@@ -308,7 +308,10 @@ export default function ChatBot({
             {msg.role === "bot" && (
               <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#fde8e8", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, flexShrink: 0, marginTop: 2 }}>🤖</div>
             )}
-            <div className={msg.role === "bot" ? "chatbot-msg-bot" : "chatbot-msg-user"} style={{ fontSize }}>
+              <div
+                className={msg.role === "bot" ? "chatbot-msg-bot" : "chatbot-msg-user"}
+                style={{ fontSize }}
+              >
               {msg.role === "bot"
                 ? (msg.text === "" && (isStreaming || welcomeLoading) && i === messages.length - 1
                     ? <TypingIndicator />
@@ -363,8 +366,6 @@ export default function ChatBot({
             maxHeight: "120px",
             overflowY: "hidden",
             fontFamily: "inherit",
-            paddingTop: 5,
-            paddingBottom: 5,
           }}
         />
         <button className="chatbot-send-btn" onClick={() => send()}>

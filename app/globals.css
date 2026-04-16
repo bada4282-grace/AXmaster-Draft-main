@@ -15,7 +15,6 @@
 .app-main {
   flex: 1;
   min-width: 0;
-  overflow-x: hidden;
 }
 
 /* 레이아웃 레벨 영구 챗봇 사이드바 */
@@ -29,6 +28,8 @@
   overflow: visible;
   display: flex;
   flex-direction: column;
+  align-self: flex-start;
+  margin-top: clamp(200px, calc(100px + 10vw), 250px);
 }
 
 .app-chatbot-sidebar.collapsed {
@@ -81,9 +82,18 @@ body {
   color: #1a1a1a;
   background: #f8f8f8;
   -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
 }
 
-/* Header */
+/* Header — 뷰포트 전체 너비 (챗봇 사이드바와 무관) */
+header.w-full {
+  width: 100vw;
+  position: sticky;
+  top: 0;
+  left: 0;
+  margin-left: 0;
+  z-index: 50;
+}
 .header-top {
   background: #fff;
   border-bottom: 1px solid #e8e8e8;
@@ -112,9 +122,12 @@ body {
 }
 .gnb-item:hover { color: #E02020; }
 
-/* Hero */
+/* Hero — 뷰포트 전체 너비 (챗봇 사이드바와 무관) */
 .hero-banner {
-  width: 100%;
+  width: 100vw;
+  position: relative;
+  left: 0;
+  margin-left: 0;
   min-height: 100px;
   height: clamp(100px, 10vw, 150px);
   background: linear-gradient(160deg, #0d1b35 0%, #0a2040 40%, #0c3060 70%, #0d1b35 100%);
@@ -122,10 +135,10 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  position: relative;
   overflow: hidden;
   box-sizing: border-box;
   flex-shrink: 0;
+  z-index: 10;
 }
 
 /* Main tab pills */
@@ -478,7 +491,7 @@ body {
 }
 .chatbot-msg-user { background: #E02020; border-radius: 8px; padding: 8px 10px; font-size: 12px; color: #fff; line-height: 1.5; max-width: 90%; align-self: flex-end; }
 .chatbot-input-area { padding: 8px; border-top: 1px solid #f0f0f0; display: flex; gap: 6px; align-items: center; }
-.chatbot-input { flex: 1; min-width: 0; height: 32px; padding: 0 10px; border: 1px solid #e0e0e0; border-radius: 16px; font-size: 12px; outline: none; }
+.chatbot-input { flex: 1; min-width: 0; min-height: 32px; padding: 7px 10px; border: 1px solid #e0e0e0; border-radius: 16px; font-size: 12px; outline: none; }
 .chatbot-input:focus { border-color: #E02020; }
 .chatbot-send-btn { width: 32px; height: 32px; border-radius: 50%; background: #E02020; color: #fff; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; font-size: 12px; }
 .chatbot-close-btn { position: absolute; bottom: 52px; right: 8px; width: 28px; height: 28px; border-radius: 50%; background: #E02020; color: #fff; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; box-shadow: 0 2px 6px rgba(224,32,32,0.4); z-index: 10; }
