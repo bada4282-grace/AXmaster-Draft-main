@@ -39,7 +39,7 @@ export default function ProductDetailPage() {
     ?? getTreemapData(DEFAULT_YEAR, "수출").find((p) => p.name === name);
 
   // 해당 품목의 연간 추이 (tradeType 반영, 국가 선택 시 국가별 데이터)
-  const trend = product
+  const rawTrend = product
     ? country
       ? ["2020", "2021", "2022", "2023", "2024", "2025", "2026"].map((y) => {
           const d = getCountryTreemapData(y, country, tradeType).find((p) => p.name === name);
@@ -47,6 +47,13 @@ export default function ProductDetailPage() {
         })
       : getProductTrend(product.code, tradeType)
     : [];
+  // "2026(1-2월)" → "2026" 으로 정리, 괄호가 있으면 불완전 데이터로 표시
+  const incompleteYears = new Set<string>();
+  const trend = rawTrend.map((d) => {
+    const clean = d.year.replace(/\(.*\)/, "").trim();
+    if (clean !== d.year) incompleteYears.add(clean);
+    return { ...d, year: clean };
+  });
   const trendValues = trend.map((d) => d.value).filter((v) => v > 0);
   const trendMin = trendValues.length ? Math.floor(Math.min(...trendValues) * 0.85) : 0;
   const trendMax = trendValues.length ? Math.ceil(Math.max(...trendValues) * 1.1) : 100;
@@ -121,7 +128,7 @@ export default function ProductDetailPage() {
         <div className="main-content-layout">
           {/* Dashboard card */}
           <div className="dashboard-card dashboard-main-card">
-            <FilterBar mode="product" defaultYear={DEFAULT_YEAR} onYearChange={setYear} onTradeTypeChange={setTradeType} onCountryChange={setCountry} />
+            <FilterBar mode="product" defaultYear={DEFAULT_YEAR} onYearChange={setYear} onTradeTypeChange={setTradeType} onCountryChange={setCountry} disableMonthPeriod />
             <KPIBar year={year} />
 
             <div className="split-panel" style={{ height: 380 }}>
@@ -192,7 +199,7 @@ export default function ProductDetailPage() {
                         <YAxis domain={[trendMin, trendMax]} tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v}억`} />
                         <Tooltip
                           content={(props) => (
-                            <RechartsPayloadTooltip {...props} title={name} />
+                            <RechartsPayloadTooltip {...props} title={name} incompleteLabels={incompleteYears} />
                           )}
                           {...tooltipFollowProps}
                         />

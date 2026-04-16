@@ -13,8 +13,8 @@ interface FilterBarProps {
   onTradeTypeChange?: (type: "수출" | "수입") => void;
   onCountryChange?: (country: string) => void;
   defaultYear?: string;
-  mtiDepth?: number;
-  onMtiDepthChange?: (depth: number) => void;
+  /** 월·기간 셀렉트 비활성화 (연간 데이터만 사용하는 페이지용) */
+  disableMonthPeriod?: boolean;
 }
 
 export default function FilterBar({
@@ -26,8 +26,7 @@ export default function FilterBar({
   onTradeTypeChange,
   onCountryChange,
   defaultYear = "2026",
-  mtiDepth,
-  onMtiDepthChange,
+  disableMonthPeriod = false,
 }: FilterBarProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -131,7 +130,8 @@ export default function FilterBar({
             className="filter-select"
             value={month}
             onChange={(e) => handleMonth(e.target.value)}
-            style={{ width: 96 }}
+            disabled={disableMonthPeriod}
+            style={{ width: 96, ...(disableMonthPeriod ? { opacity: 0.4, cursor: "not-allowed", pointerEvents: "none" as const } : {}) }}
           >
             <option value="">월 (전체)</option>
             {Array.from({ length: 12 }, (_, i) => (
@@ -143,8 +143,9 @@ export default function FilterBar({
 
           <select
             className="filter-select"
-            style={{ width: 96 }}
+            style={{ width: 96, ...(disableMonthPeriod ? { opacity: 0.4, cursor: "not-allowed", pointerEvents: "none" as const } : {}) }}
             value={period}
+            disabled={disableMonthPeriod}
             onChange={(e) => { setPeriod(e.target.value); onPeriodChange?.(e.target.value); }}
           >
             <option value="annual">연간</option>
@@ -203,24 +204,6 @@ export default function FilterBar({
           )}
         </div>
       </div>
-
-      {mtiDepth !== undefined && onMtiDepthChange && (
-        <div className="filter-section filter-section-divider">
-          <select
-            className="filter-select"
-            value={mtiDepth}
-            onChange={(e) => onMtiDepthChange(Number(e.target.value))}
-            style={{ width: 80 }}
-          >
-            <option value={1}>1단위</option>
-            <option value={2}>2단위</option>
-            <option value={3}>3단위</option>
-            <option value={4}>4단위</option>
-            <option value={5}>5단위</option>
-            <option value={6}>6단위</option>
-          </select>
-        </div>
-      )}
     </div>
 
     {/* 데이터 없음 토스트 — .dashboard-area 중앙에 표시 */}

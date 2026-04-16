@@ -10,9 +10,8 @@
       "Bash(npx tsc *)",
       "Bash(cat app/api/macro/route.ts)",
       "Bash(cat app/api/macro/route.tsx)",
-      "Bash(taskkill /PID 9504 /F)",
-      "Bash(rm -rf .next)",
-      "Bash(taskkill //PID 9504 //F)"
+      "Bash(wc -l components/*.tsx lib/*.ts)",
+      "Bash(git checkout *)"
     ]
   }
 }

@@ -10,6 +10,8 @@ export interface RechartsPayloadTooltipProps {
   title: string;
   /** 제목 아래 보조 줄(기간·축 라벨 등) */
   subtitle?: string;
+  /** label 값이 이 Set에 포함되면 경고 메시지 표시 */
+  incompleteLabels?: Set<string>;
 }
 
 /** 차트 공통: 흰 카드 + 하단 꼬리, 제목은 국가명 등 강조 */
@@ -19,15 +21,22 @@ export function RechartsPayloadTooltip({
   label,
   title,
   subtitle,
+  incompleteLabels,
 }: RechartsPayloadTooltipProps) {
   if (!active || !payload?.length) return null;
 
   const sub = subtitle ?? (label !== undefined && label !== null && String(label) !== "" ? String(label) : undefined);
+  const isIncomplete = incompleteLabels && label !== undefined && label !== null && incompleteLabels.has(String(label));
 
   return (
     <div className="tooltip-shell">
       <p className="tooltip-shell-title">{title}</p>
       {sub && <p className="tooltip-shell-sub">{sub}</p>}
+      {isIncomplete && (
+        <p style={{ margin: "4px 0", padding: "2px 6px", background: "#FEF3C7", color: "#92400E", fontSize: 10, fontWeight: 600, borderRadius: 3, textAlign: "center" }}>
+          ⚠ 불완전한 데이터입니다.
+        </p>
+      )}
       {payload.map((p, i) => (
         <div key={`${String(p.name ?? "")}-${i}`} className="tooltip-shell-row">
           <span style={{ color: p.color ?? "#64748b" }}>{String(p.name ?? "")}</span>
