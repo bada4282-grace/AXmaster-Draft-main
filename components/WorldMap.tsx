@@ -613,8 +613,7 @@ export default function WorldMap({
           ref={mapRef}
           mapStyle={MAP_STYLE}
           initialViewState={{ longitude: 155, latitude: 20, zoom: 1.0 }}
-          renderWorldCopies={false}
-          maxBounds={[[-180, -85], [360, 85]]}
+          renderWorldCopies={true}
           dragRotate={false}
           pitchWithRotate={false}
           style={{ width: "100%", height: "100%" }}
