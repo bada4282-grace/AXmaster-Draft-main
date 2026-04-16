@@ -492,7 +492,7 @@ export default function WorldMap({
 
   const clearHover = useCallback(() => {
     const map = mapRef.current?.getMap();
-    if (map && hoverIdRef.current !== null) {
+    if (map && hoverIdRef.current !== null && map.getSource("countries")) {
       map.setFeatureState({ source: "countries", id: hoverIdRef.current }, { hover: false });
       hoverIdRef.current = null;
     }
@@ -502,7 +502,7 @@ export default function WorldMap({
   const onMouseMove = useCallback((e: MapLayerMouseEvent) => {
     if (markerHoverRef.current) return;
     const map = mapRef.current?.getMap();
-    if (!map) return;
+    if (!map || !map.getLayer("countries-fill")) return;
 
     const features = map.queryRenderedFeatures(e.point, { layers: ["countries-fill"] });
     if (!features || features.length === 0) {
@@ -567,7 +567,7 @@ export default function WorldMap({
   const onClick = useCallback((e: MapLayerMouseEvent) => {
     if (markerHoverRef.current) return;
     const map = mapRef.current?.getMap();
-    if (!map) return;
+    if (!map || !map.getLayer("countries-fill")) return;
     const features = map.queryRenderedFeatures(e.point, { layers: ["countries-fill"] });
     if (!features || features.length === 0) return;
 
