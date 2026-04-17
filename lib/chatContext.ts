@@ -4,6 +4,8 @@ import {
   getCountryTimeseries,
   getProductTopCountries,
   getProductTrend,
+  getAggregatedProductTrend,
+  getAggregatedTopCountries,
   getCountryTreemapData,
   getTreemapData,
   MTI_NAMES,
@@ -269,10 +271,31 @@ export function extractKeywords(question: string): ExtractedKeywords {
 
   const productCodes: string[] = [];
   const productNames: string[] = [];
+
+  // 1단계: TREEMAP 품목명 매칭 (6단위 코드)
   for (const [name, code] of PRODUCT_LOOKUP.entries()) {
     if (question.includes(name) && !productCodes.includes(code)) {
       productCodes.push(code);
       productNames.push(name);
+    }
+  }
+
+  // 2단계: MTI_LOOKUP 매칭 — TREEMAP에 없는 품목도 인식 (완구, 악기 등)
+  if (productCodes.length === 0) {
+    const mtiLookup = MTI_LOOKUP as Record<string, string>;
+    const mtiMatches: { code: string; name: string }[] = [];
+    for (const [code, name] of Object.entries(mtiLookup)) {
+      if (name.length >= 2 && isExactWordMatch(question, name)) {
+        mtiMatches.push({ code, name });
+      }
+    }
+    // 가장 짧은 코드(상위 카테고리) 우선, 같은 길이면 이름 짧은 것 우선
+    mtiMatches.sort((a, b) => a.code.length - b.code.length || a.name.length - b.name.length);
+    for (const m of mtiMatches) {
+      if (!productCodes.includes(m.code)) {
+        productCodes.push(m.code);
+        productNames.push(m.name);
+      }
     }
   }
 
@@ -400,19 +423,26 @@ export function buildChatContext(question: string): string {
     sections.push(section);
   }
 
-  // 품목별 데이터
+  // 품목별 데이터 (6단위 미만 코드는 하위 품목 합산)
   for (let i = 0; i < productCodes.length; i++) {
     const code = productCodes[i];
     const name = productNames[i];
-    const topCountries = getProductTopCountries(code, year, tradeType);
-    const trend = getProductTrend(code, tradeType);
+    const topCountries = code.length < 6
+      ? getAggregatedTopCountries(code, year, tradeType)
+      : getProductTopCountries(code, year, tradeType);
+    const trend = code.length < 6
+      ? getAggregatedProductTrend(code, tradeType)
+      : getProductTrend(code, tradeType);
 
     let section = `[${name} ${tradeType} 데이터]\n`;
     if (topCountries.length > 0) {
       section += `상위 ${tradeType}국: ${topCountries.slice(0, 5).map(c => `${c.country}(${c.value}억달러)`).join(", ")}\n`;
     }
     if (trend.length > 0) {
-      const recent = trend.slice(-3).map(t => `${t.year}년 ${t.value}억달러`).join(", ");
+      const recent = trend.slice(-3).map(t => {
+        const cleanYear = t.year.replace(/\(.*\)/, "").trim();
+        return `${cleanYear}년 ${t.value}억달러`;
+      }).join(", ");
       section += `연도별 추이: ${recent}`;
     }
     sections.push(section);

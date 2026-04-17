@@ -52,7 +52,7 @@ export default function PersistentChatBot() {
           <StableChatBot
             open={true}
             showInternalToggle={false}
-            initialMessage="글로벌 무역통계 대시보드입니다. 특정 국가나 품목에 대해 질문해주세요."
+            initialMessage="안녕하세요! K-stat AI 어시스턴트입니다. 국가·품목·거시경제 지표에 대해 질문해 보세요. 로그인하시면 대화 기록이 저장되어 맞춤형 분석을 받으실 수 있습니다."
           />
         </div>
       </div>
