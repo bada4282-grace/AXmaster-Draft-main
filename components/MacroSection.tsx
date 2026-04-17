@@ -29,23 +29,36 @@ export default function MacroSection() {
     <div className="macro-section">
       <div className="macro-title">거시경제 지표</div>
       <div className="macro-grid">
-        {data.map((item) => (
-          <div key={item.label} className="macro-card">
-            <div className="macro-card-label">{item.label}</div>
-            <div className="macro-card-value">{item.value}</div>
-            <div
-              className="macro-card-change"
-              style={{
-                color: item.change === "—" || /^\+?0(\.0+)?(%p?)?$/.test(item.change)
-                  ? "#999"
-                  : item.change === "실시간" ? "#16a34a"
-                  : item.up ? "#E02020" : "#185FA5"
-              }}
-            >
-              {item.change}
+        {data.map((item) => {
+          const loading = item.change === "로딩중";
+          return (
+            <div key={item.label} className="macro-card">
+              <div className="macro-card-label">{item.label}</div>
+              <div className="macro-card-value">{item.value}</div>
+              {loading ? (
+                <div className="macro-card-change" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4, color: "#999" }}>
+                  <svg width="12" height="12" viewBox="0 0 12 12" style={{ animation: "dash-spin 0.8s linear infinite", flexShrink: 0 }}>
+                    <circle cx="6" cy="6" r="4.5" fill="none" stroke="#999" strokeWidth="1.5"
+                      strokeDasharray="20 8" strokeLinecap="round" />
+                  </svg>
+                  <span>로딩중</span>
+                </div>
+              ) : (
+                <div
+                  className="macro-card-change"
+                  style={{
+                    color: item.change === "—" || /^\+?0(\.0+)?(%)?$/.test(item.change)
+                      ? "#999"
+                      : item.change === "실시간" ? "#16a34a"
+                      : item.up ? "#E02020" : "#185FA5"
+                  }}
+                >
+                  {item.change}
+                </div>
+              )}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
