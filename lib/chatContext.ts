@@ -4,6 +4,8 @@ import {
   getCountryTimeseries,
   getProductTopCountries,
   getProductTrend,
+  getAggregatedTopCountries,
+  getAggregatedProductTrend,
   getCountryTreemapData,
   getTreemapData,
   MTI_NAMES,
@@ -74,17 +76,18 @@ export interface RouteButton {
 // 한국어 조사 목록 (단어 경계 판별용)
 const KR_PARTICLES = ["이", "가", "은", "는", "을", "를", "의", "에", "에서", "로", "으로", "와", "과", "도", "만", "이고", "이며", "인", "까지", "부터", "한테", "에게"];
 
-// 질문에서 품목명이 독립된 단어로 포함되어 있는지 확인 (조사 허용)
+// 질문에서 품목명이 독립된 단어로 포함되어 있는지 확인 (조사 허용, 공백 포함 이름 지원)
 function isExactWordMatch(question: string, name: string): boolean {
-  const tokens = question.split(/\s+/);
-  return tokens.some(token => {
-    if (token === name) return true;
-    if (token.startsWith(name)) {
-      const suffix = token.slice(name.length);
-      return KR_PARTICLES.some(p => suffix === p || suffix.startsWith(p));
-    }
-    return false;
-  });
+  // 공백 포함 이름 (예: "플라스틱 제품") — question 안에 포함되는지 직접 확인
+  const idx = question.indexOf(name);
+  if (idx === -1) return false;
+  // 이름 뒤에 오는 문자가 조사이거나 끝이면 매칭
+  const after = question.slice(idx + name.length);
+  if (after === "") return true;
+  if (KR_PARTICLES.some(p => after.startsWith(p))) return true;
+  // 뒤에 공백/구두점이면 OK
+  if (/^[\s,?.!·。、]/.test(after)) return true;
+  return false;
 }
 
 // 질문에서 라우팅 가능한 버튼 목록 반환
@@ -269,10 +272,21 @@ export function extractKeywords(question: string): ExtractedKeywords {
 
   const productCodes: string[] = [];
   const productNames: string[] = [];
+  // TREEMAP 데이터에서 검색
   for (const [name, code] of PRODUCT_LOOKUP.entries()) {
     if (question.includes(name) && !productCodes.includes(code)) {
       productCodes.push(code);
       productNames.push(name);
+    }
+  }
+  // MTI_LOOKUP에서도 검색 (집계 카테고리명: "플라스틱 제품", "화학공업제품" 등)
+  if (productCodes.length === 0) {
+    const mtiLookup = MTI_LOOKUP as Record<string, string>;
+    for (const [code, name] of Object.entries(mtiLookup)) {
+      if (name.length >= 2 && question.includes(name) && !productCodes.includes(code)) {
+        productCodes.push(code);
+        productNames.push(name);
+      }
     }
   }
 
@@ -400,12 +414,16 @@ export function buildChatContext(question: string): string {
     sections.push(section);
   }
 
-  // 품목별 데이터
+  // 품목별 데이터 (6자리 코드는 직접 조회, 집계 코드는 하위 합산)
   for (let i = 0; i < productCodes.length; i++) {
     const code = productCodes[i];
     const name = productNames[i];
-    const topCountries = getProductTopCountries(code, year, tradeType);
-    const trend = getProductTrend(code, tradeType);
+    const topCountries = code.length >= 6
+      ? getProductTopCountries(code, year, tradeType)
+      : getAggregatedTopCountries(code, year, tradeType);
+    const trend = code.length >= 6
+      ? getProductTrend(code, tradeType)
+      : getAggregatedProductTrend(code, tradeType);
 
     let section = `[${name} ${tradeType} 데이터]\n`;
     if (topCountries.length > 0) {

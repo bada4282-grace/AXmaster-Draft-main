@@ -35,34 +35,29 @@ export async function POST(request: NextRequest) {
 
   const model = process.env.ANTHROPIC_MODEL ?? "claude-haiku-4-5-20251001";
 
-  // Anthropic API는 user로 시작하고 content가 비어있지 않은 메시지만 허용합니다
+  // 웰컴 메시지/FAQ 응답 감지 — 사용자의 첫 번째 메시지 이전 assistant 메시지만 맥락으로 사용
+  // 일반 질문에서는 history를 전송하지 않아 이전 토픽이 섞이는 것을 방지
   const validHistory = history
     .filter(m => m.content.trim().length > 0)
     .reduce<HistoryEntry[]>((acc, m) => {
-      // 연속된 같은 role 메시지 방지
       if (acc.length > 0 && acc[acc.length - 1].role === m.role) return acc;
       acc.push(m);
       return acc;
     }, []);
 
-  // 히스토리 앞부분의 assistant 메시지(웰컴 메시지 등)를 시스템 프롬프트에
-  // 맥락으로 포함시켜 사용자의 후속 응답("네!" 등)이 맥락을 유지하도록 함
+  // 웰컴/FAQ 맥락: 첫 user 메시지 이전의 assistant 메시지만 추출
   const firstUserIdx = validHistory.findIndex(m => m.role === "user");
   let priorContext = "";
-  let userStartHistory = validHistory;
   if (firstUserIdx > 0) {
     priorContext = validHistory.slice(0, firstUserIdx)
       .map(m => m.content).join("\n");
-    userStartHistory = validHistory.slice(firstUserIdx);
   } else if (firstUserIdx < 0) {
     priorContext = validHistory.map(m => m.content).join("\n");
-    userStartHistory = [];
   }
 
-  // cleanHistory가 assistant로 끝나면 마지막 assistant 제거 (user가 뒤에 추가됨)
-  const finalHistory = userStartHistory.length > 0 && userStartHistory[userStartHistory.length - 1].role === "assistant"
-    ? userStartHistory.slice(0, -1)
-    : userStartHistory;
+  // 일반 질문에서는 history를 보내지 않음 — 각 질문을 독립적으로 처리
+  // 이전 OLED 질문 후 플라스틱 질문 시 OLED가 섞이는 문제 완전 차단
+  const finalHistory: HistoryEntry[] = [];
 
   const systemPrompt = `당신은 한국 무역통계 전문 AI 어시스턴트입니다. 아래 데이터를 기반으로 사용자 질문에 한국어로 자연스럽게 답변하세요.
 
