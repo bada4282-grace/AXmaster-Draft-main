@@ -9,6 +9,7 @@ import { saveChatLog, getChatLogs } from "@/lib/chat";
 import { resolveRouteButtons } from "@/lib/chatContext";
 import type { RouteButton } from "@/lib/chatContext";
 import type { User } from "@supabase/supabase-js";
+import { getCountryData, getTreemapData, DEFAULT_YEAR } from "@/lib/data";
 
 function TypingIndicator() {
   return (
@@ -59,11 +60,60 @@ interface ChatBotProps {
   showInternalToggle?: boolean;
 }
 
-const FAQ_QUESTIONS = [
-  "올해 수출 1위 국가는?",
-  "반도체 수출 현황 알려줘",
-  "최근 무역수지는?",
+const GUEST_FAQ_KEY = "kstat_guest_faq";
+const USER_FAQ_KEY = "kstat_user_faq";
+
+function getOrBuildGuestFaq(): string[] {
+  try {
+    const cached = sessionStorage.getItem(GUEST_FAQ_KEY);
+    if (cached) return JSON.parse(cached);
+  } catch { /* SSR or parse error */ }
+
+  const countries = getCountryData(DEFAULT_YEAR, "수출").slice(0, 10);
+  const products = getTreemapData(DEFAULT_YEAR, "수출").slice(0, 10);
+  const rc = countries[Math.floor(Math.random() * countries.length)];
+  const rp = products[Math.floor(Math.random() * products.length)];
+  const faq = [
+    rc ? `올해 대${rc.name} 수출입 현황은?` : "올해 수출 1위 국가는?",
+    rp ? `${rp.name} 수출 추이와 상위 국가는?` : "반도체 수출 현황 알려줘",
+    "최근 거시경제 지표 요약해줘",
+  ];
+  try { sessionStorage.setItem(GUEST_FAQ_KEY, JSON.stringify(faq)); } catch {}
+  return faq;
+}
+
+function getCachedUserFaq(): string[] | null {
+  try {
+    const cached = sessionStorage.getItem(USER_FAQ_KEY);
+    return cached ? JSON.parse(cached) : null;
+  } catch { return null; }
+}
+
+/** 로그인했지만 채팅 로그가 없을 때 — 게스트 FAQ와 다른 질문 */
+const LOGGED_IN_DEFAULT_FAQ = [
+  "올해 한국 수출입 총액은?",
+  "최근 무역수지 흑자 추이는?",
+  "주요 거시경제 지표 변동 알려줘",
 ];
+
+/** 로그인 사용자의 채��� 로그를 AI에 보내 맞춤 FAQ 3개를 생성 */
+async function fetchUserFaq(logs: { role: string; content: string }[]): Promise<string[]> {
+  try {
+    const res = await fetch("/api/faq", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ logs }),
+    });
+    const { questions } = await res.json();
+    if (Array.isArray(questions) && questions.length === 3) {
+      try { sessionStorage.setItem(USER_FAQ_KEY, JSON.stringify(questions)); } catch {}
+      return questions;
+    }
+    return LOGGED_IN_DEFAULT_FAQ;
+  } catch {
+    return LOGGED_IN_DEFAULT_FAQ;
+  }
+}
 
 export default function ChatBot({
   open,
@@ -77,6 +127,8 @@ export default function ChatBot({
   const [input, setInput] = useState("");
   const [fontSize, setFontSize] = useState(12);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [guestFaq] = useState(() => getOrBuildGuestFaq());
+  const [userFaq, setUserFaq] = useState<string[] | null>(() => getCachedUserFaq());
   const [welcomeLoading, setWelcomeLoading] = useState(false);
   const [welcomeTrigger, setWelcomeTrigger] = useState(0);
   const currentUserIdRef = useRef<string | null>(null);
@@ -119,12 +171,42 @@ export default function ChatBot({
         }
       } else if (event === "SIGNED_OUT") {
         setUser(null);
+        setUserFaq(null);
         welcomeFetchedRef.current = true;
         setMessages([{ role: "bot", text: initialMessageRef.current }]);
       }
     });
     return () => subscription.unsubscribe();
   }, []);
+
+  // 로그인 사용자: AI 기반 맞춤 FAQ 로드 (세션 캐시 우선)
+  useEffect(() => {
+    if (!user) {
+      setUserFaq(null);
+      try { sessionStorage.removeItem(USER_FAQ_KEY); } catch {}
+      return;
+    }
+    // 캐시가 있으면 API 호출 생략
+    const cached = getCachedUserFaq();
+    if (cached) { setUserFaq(cached); return; }
+
+    let cancelled = false;
+    getChatLogs(30).then(logs => {
+      if (cancelled) return;
+      const hasUserMsgs = logs.filter(l => l.role === "user").length > 0;
+      if (!hasUserMsgs) {
+        // 채팅 로그 없음 → 로그인 전용 기본 FAQ
+        if (!cancelled) setUserFaq(LOGGED_IN_DEFAULT_FAQ);
+        return;
+      }
+      return fetchUserFaq(logs);
+    }).then(faq => {
+      if (!cancelled && faq) setUserFaq(faq);
+    }).catch(() => {
+      if (!cancelled) setUserFaq(LOGGED_IN_DEFAULT_FAQ);
+    });
+    return () => { cancelled = true; };
+  }, [user]);
 
   useEffect(() => {
     if (!open || welcomeFetchedRef.current) return;
@@ -395,10 +477,10 @@ export default function ChatBot({
         <div ref={bottomRef} />
       </div>
 
-      {/* FAQ 버튼 */}
+      {/* FAQ 버튼 — 비로그인: 고정 3개, 로그인: 추후 맞춤 FAQ */}
       {!messages.some(m => m.role === "user") && (
       <div style={{ display: "flex", flexDirection: "column", gap: 6, padding: "0 12px 8px" }}>
-        {FAQ_QUESTIONS.map((q, i) => (
+        {(user && userFaq ? userFaq : guestFaq).map((q, i) => (
           <button
             key={i}
             onClick={() => send(q)}
@@ -423,6 +505,7 @@ export default function ChatBot({
           className="chatbot-input"
           placeholder={isStreaming ? "답변 생성 중..." : "질문을 입력하세요..."}
           value={input}
+          disabled={isStreaming}
           rows={1}
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => {
@@ -438,9 +521,10 @@ export default function ChatBot({
             maxHeight: "120px",
             overflowY: "hidden",
             fontFamily: "inherit",
+            ...(isStreaming ? { opacity: 0.5, cursor: "not-allowed" } : {}),
           }}
         />
-        <button className="chatbot-send-btn" onClick={() => send()}>
+        <button className="chatbot-send-btn" onClick={() => send()} disabled={isStreaming} style={isStreaming ? { opacity: 0.5, cursor: "not-allowed" } : {}}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: "block", transform: "translate(-2px, 1px)" }}>
             <path d="M22 2L11 13" />
             <path d="M22 2L15 22L11 13L2 9L22 2Z" />
