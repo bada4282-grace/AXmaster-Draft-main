@@ -127,7 +127,11 @@ export default function ChatBot({
   const [input, setInput] = useState("");
   const [fontSize, setFontSize] = useState(12);
   const [isStreaming, setIsStreaming] = useState(false);
-  const [guestFaq] = useState(() => getOrBuildGuestFaq());
+  const [guestFaq, setGuestFaq] = useState<string[]>([]);
+
+  useEffect(() => {
+    setGuestFaq(getOrBuildGuestFaq());
+  }, []);
   const [userFaq, setUserFaq] = useState<string[] | null>(() => getCachedUserFaq());
   const [welcomeLoading, setWelcomeLoading] = useState(false);
   const [welcomeTrigger, setWelcomeTrigger] = useState(0);
