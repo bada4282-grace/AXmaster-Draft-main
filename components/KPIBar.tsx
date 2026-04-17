@@ -231,15 +231,15 @@ export default function KPIBar({
       : "(전년 대비)";
 
   // 월 선택 시 Supabase 데이터가 커스텀 값보다 우선 (월별 KPI + 증감률 정확성)
-  // 연간 폴백: 사전 생성된 change 대신 자체 계산한 annualExportChange/annualImportChange 사용
-  const ev = useMom ? mom!.exportVal : (pEv ?? (useIncMom ? incMom!.exportVal : kpi.export.value));
+  // 불완전 연도 연간 조회: 금액은 KPI 누적 합계, 증감률만 전월 대비(incMom)
+  const ev = useMom ? mom!.exportVal : (pEv ?? kpi.export.value);
   const ec = useMom ? mom!.exportChange : (pEc ?? (useIncMom ? incMom!.exportChange : annualExportChange));
   const eu = useMom ? mom!.exportUp : (pEu ?? (useIncMom ? incMom!.exportUp : annualExportUp));
-  const iv = useMom ? mom!.importVal : (pIv ?? (useIncMom ? incMom!.importVal : kpi.import.value));
+  const iv = useMom ? mom!.importVal : (pIv ?? kpi.import.value);
   const ic = useMom ? mom!.importChange : (pIc ?? (useIncMom ? incMom!.importChange : annualImportChange));
   const iu = useMom ? mom!.importUp : (pIu ?? (useIncMom ? incMom!.importUp : annualImportUp));
-  const bv = useMom ? mom!.balanceVal : (pBv ?? (useIncMom ? incMom!.balanceVal : kpi.balance.value));
-  const bp = useMom ? mom!.balancePositive : (pBp ?? (useIncMom ? incMom!.balancePositive : kpi.balance.positive));
+  const bv = useMom ? mom!.balanceVal : (pBv ?? kpi.balance.value);
+  const bp = useMom ? mom!.balancePositive : (pBp ?? kpi.balance.positive);
 
   // 증감율 상태 판별:
   // loading: 불완전 연도 + 월 미선택 + 자동탐지 미완료 (비동기 로딩 중)
