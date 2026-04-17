@@ -358,12 +358,8 @@ export default function TreemapChart({
         )}
       </div>
 
-      {/* MTI 대분류 범례 바 — 균등 분할, 아이콘 배경=키컬러, 라인=흰색 */}
-      <div style={{
-        display: "flex",
-        width: "100%",
-        borderTop: "1px solid #e2e8f0",
-      }}>
+      {/* MTI 대분류 아이콘 필터 */}
+      <div style={{ display: "flex", width: "100%", flexShrink: 0, paddingTop: 4 }}>
         {Object.entries(MTI_COLORS).map(([mti, color]) => {
           const n = Number(mti);
           const isActive = zoomedMti === n || zoomedMti === null;
@@ -379,21 +375,12 @@ export default function TreemapChart({
               }}
               className="mti-icon-btn"
               style={{
+                "--mti-color": color as string,
                 flex: 1,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 4,
-                padding: "6px 0",
-                background: color as string,
-                opacity: isActive ? 1 : 0.35,
-                border: "none",
-                borderRight: "1px solid rgba(255,255,255,0.3)",
                 borderRadius: 0,
-                cursor: "pointer",
-                transition: "opacity 0.2s",
-                minWidth: 0,
-              }}
+                background: isActive ? (color as string) : undefined,
+                borderColor: isActive ? (color as string) : "transparent",
+              } as React.CSSProperties}
             >
               <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 {MTI_ICON_PATHS[n]}
@@ -412,6 +399,20 @@ export default function TreemapChart({
             </button>
           );
         })}
+        <button
+          data-tooltip="전체 보기"
+          onClick={() => { setZoomedMti(null); onCategoryChange?.(null); startTreemapAnimation(); }}
+          className={`mti-icon-btn${zoomedMti === null ? " mti-icon-btn--active" : ""}`}
+          style={{
+            "--mti-color": "#94A3B8",
+            flex: 1,
+            borderRadius: 0,
+            background: zoomedMti === null ? "#94A3B8" : undefined,
+            borderColor: zoomedMti === null ? "#94A3B8" : "transparent",
+          } as React.CSSProperties}
+        >
+          <span style={{ fontSize: 9, fontWeight: 700, color: zoomedMti === null ? "#fff" : "#64748b", lineHeight: 1 }}>ALL</span>
+        </button>
       </div>
 
       {/* 마우스 추적 툴팁 */}
