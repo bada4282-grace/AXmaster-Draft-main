@@ -383,11 +383,11 @@ export default function TreemapChart({
           onClick={() => { setZoomedMti(null); onCategoryChange?.(null); startTreemapAnimation(); }}
           className={`mti-icon-btn${zoomedMti === null ? " mti-icon-btn--active" : ""}`}
           style={{
-            "--mti-color": "#475569",
+            "--mti-color": "#94A3B8",
             flex: 1,
             borderRadius: 0,
-            background: zoomedMti === null ? "#475569" : undefined,
-            borderColor: zoomedMti === null ? "#475569" : "transparent",
+            background: zoomedMti === null ? "#94A3B8" : undefined,
+            borderColor: zoomedMti === null ? "#94A3B8" : "transparent",
           } as React.CSSProperties}
         >
           <span style={{ fontSize: 9, fontWeight: 700, color: zoomedMti === null ? "#fff" : "#64748b", lineHeight: 1 }}>ALL</span>
