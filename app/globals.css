@@ -52,21 +52,21 @@
 
 .app-chatbot-sidebar .chatbot-slider-btn {
   position: absolute;
-  left: -14px;
+  left: -22px;
   top: 50%;
   transform: translateY(-50%);
-  width: 28px;
-  height: 64px;
+  width: 22px;
+  height: 56px;
   border: 1px solid #E02020;
   border-right: none;
-  border-radius: 12px 0 0 12px;
+  border-radius: 10px 0 0 10px;
   background: #E02020;
   color: #fff;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
+  font-size: 14px;
   box-shadow: -2px 2px 8px rgba(0, 0, 0, 0.08);
   z-index: 20;
 }
@@ -360,21 +360,21 @@ header.w-full {
 
 .chatbot-slider-btn {
   position: absolute;
-  left: -14px;
+  left: -22px;
   top: 50%;
   transform: translateY(-50%);
-  width: 28px;
-  height: 64px;
+  width: 22px;
+  height: 56px;
   border: 1px solid #E02020;
   border-right: none;
-  border-radius: 12px 0 0 12px;
+  border-radius: 10px 0 0 10px;
   background: #E02020;
   color: #fff;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
+  font-size: 14px;
   box-shadow: -2px 2px 8px rgba(0, 0, 0, 0.08);
   z-index: 20;
 }
@@ -1105,4 +1105,15 @@ header.w-full {
   .breadcrumb-current {
     font-size: 10px;
   }
+}
+
+/* ── 챗봇 접혔을 때: 버튼이 사이드바 대신 화면 오른쪽 끝에 고정 ── */
+.app-chatbot-sidebar.collapsed .chatbot-slider-btn {
+  left: auto;
+  right: 0;
+}
+
+.chatbot-section.collapsed .chatbot-slider-btn {
+  left: auto;
+  right: 0;
 }
