@@ -64,7 +64,7 @@ function MacroCard({ item }: { item: MacroItem }) {
         <div
           className="macro-card-change"
           style={{
-            color: item.change === "—" || /^\+?0(\.0+)?(%)?$/.test(item.change)
+            color: item.change === "—" || /^[-–—]?\s*0(\.0+)?%?$/.test(item.change)
               ? "#999"
               : item.change === "실시간" ? "#16a34a"
               : item.up ? "#E02020" : "#185FA5"
