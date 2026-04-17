@@ -50,12 +50,28 @@ interface CustomContentProps {
   animKey?: number;
 }
 
+// MTI 대분류별 폰트 색상 (배경색 위 텍스트)
+const MTI_FONT_COLORS: Record<number, string> = {
+  0: "#FFFFFF",
+  1: "#FFFFFF",
+  2: "#FFFFFF",
+  3: "#FFFFFF",
+  4: "#FFFFFF",
+  5: "#FFFFFF",
+  6: "#FFFFFF",
+  7: "#FFFFFF",
+  8: "#FFFFFF",
+  9: "#FFFFFF",
+};
+
 function CustomContent({ x = 0, y = 0, width = 0, height = 0, name, value = 0, data, animKey = 0 }: CustomContentProps) {
   if (width < 10 || height < 10) return null;
   if (!name || name === "root") return null;
 
   const item = data.find((d) => d.name === name);
   const color = item?.color ?? "#3B82F6";
+  const mti = item?.mti ?? 0;
+  const fontColor = MTI_FONT_COLORS[mti] ?? "#333";
   const fontSize = width > 120 ? 14 : width > 60 ? 11 : 9;
   const cx = x + width / 2;
   const cy = y + height / 2;
@@ -69,7 +85,7 @@ function CustomContent({ x = 0, y = 0, width = 0, height = 0, name, value = 0, d
         animation: `tcell-${animKey} 0.5s cubic-bezier(0.22, 1, 0.36, 1) both`,
       }}
     >
-      <rect x={x + 1} y={y + 1} width={Math.max(width - 2, 0)} height={Math.max(height - 2, 0)} rx={6} ry={6} fill={color} stroke="#fff" strokeWidth={2} />
+      <rect x={x} y={y} width={width} height={height} fill={color} stroke="#fff" strokeWidth={1} />
       {width > 36 && height > 22 && (
         <foreignObject x={x + pad} y={y} width={width - pad * 2} height={height}>
           <div
@@ -86,7 +102,7 @@ function CustomContent({ x = 0, y = 0, width = 0, height = 0, name, value = 0, d
             }}
           >
             <span style={{
-              color: "#fff",
+              color: fontColor,
               fontSize,
               fontWeight: 600,
               lineHeight: 1.2,
@@ -101,7 +117,8 @@ function CustomContent({ x = 0, y = 0, width = 0, height = 0, name, value = 0, d
             </span>
             {height > 38 && (
               <span style={{
-                color: "rgba(255,255,255,0.85)",
+                color: fontColor,
+                opacity: 0.75,
                 fontSize: Math.max(fontSize - 2, 8),
                 marginTop: 2,
                 whiteSpace: "nowrap",

@@ -131,16 +131,16 @@ export const KPI_BY_YEAR = {
 } as const;
 
 export const MTI_COLORS: Record<number, string> = {
-  0: "#CAE8C8",
-  1: "#FFD576",
-  2: "#E8E2FF",
-  3: "#FF7029",
-  4: "#FFE2FF",
-  5: "#035063",
-  6: "#61A6F7",
-  7: "#C21047",
-  8: "#FFD6C9",
-  9: "#D4A87C",
+  0: "#4CAF50",
+  1: "#FF9800",
+  2: "#9C27B0",
+  3: "#00ACC1",
+  4: "#F44336",
+  5: "#2196F3",
+  6: "#78909C",
+  7: "#E91E63",
+  8: "#3F51B5",
+  9: "#FF6D00",
 };
 
 export const MTI_NAMES: Record<number, string> = {
