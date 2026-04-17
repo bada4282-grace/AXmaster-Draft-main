@@ -18,7 +18,6 @@ interface FilterBarProps {
   disableMonthPeriod?: boolean;
   mtiDepth?: number;
   onMtiDepthChange?: (depth: number) => void;
-  mtiDisabled?: boolean;
 }
 
 export default function FilterBar({
@@ -32,7 +31,6 @@ export default function FilterBar({
   disableMonthPeriod = false,
   mtiDepth,
   onMtiDepthChange,
-  mtiDisabled = false,
 }: FilterBarProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -134,10 +132,10 @@ export default function FilterBar({
       <div className="filter-section filter-section-divider">
         <div className="filter-group-inline">
           <select
-            className={`filter-select${mode === "product" ? " filter-select-mid" : ""}`}
+            className="filter-select"
             value={year}
             onChange={(e) => handleYear(e.target.value)}
-            style={mode !== "product" ? { width: 140 } : undefined}
+            style={{ width: 100 }}
           >
             <option value="2026">2026</option>
             <option value="2025">2025</option>
@@ -149,15 +147,13 @@ export default function FilterBar({
           </select>
 
           <select
-            className={`filter-select${mode === "product" ? " filter-select-mid" : ""}`}
+            className="filter-select"
             value={month}
             onChange={(e) => handleMonth(e.target.value)}
             disabled={disableMonthPeriod}
-            style={mode !== "product"
-              ? { width: 140, ...(disableMonthPeriod ? { opacity: 0.4, cursor: "not-allowed", pointerEvents: "none" as const } : {}) }
-              : disableMonthPeriod ? { opacity: 0.4, cursor: "not-allowed", pointerEvents: "none" as const } : undefined}
+            style={{ width: 120, ...(disableMonthPeriod ? { opacity: 0.4, cursor: "not-allowed", pointerEvents: "none" as const } : {}) }}
           >
-            <option value="">연간데이터</option>
+            <option value="">연간 데이터</option>
             {Array.from({ length: 12 }, (_, i) => (
               <option key={i} value={String(i + 1).padStart(2, "0")}>
                 {i + 1}월
@@ -165,19 +161,18 @@ export default function FilterBar({
             ))}
           </select>
 
-          {mtiDepth !== undefined && onMtiDepthChange && (
+          {mode === "product" && mtiDepth !== undefined && onMtiDepthChange && (
             <select
-              className="filter-select filter-select-mid"
+              className="filter-select"
               value={mtiDepth}
               onChange={(e) => onMtiDepthChange(Number(e.target.value))}
-              disabled={mtiDisabled}
-              style={mtiDisabled ? { opacity: 0.45, cursor: "not-allowed" } : undefined}
+              style={{ width: 130 }}
             >
-              <option value={1}>1단위(대분류)</option>
-              <option value={2}>2단위(중분류)</option>
-              <option value={3}>3단위(소분류)</option>
+              <option value={1}>1단위 (대분류)</option>
+              <option value={2}>2단위 (중분류)</option>
+              <option value={3}>3단위 (소분류)</option>
               <option value={4}>4단위</option>
-              <option value={6}>6단위(최소)</option>
+              <option value={6}>6단위 (최소분류)</option>
             </select>
           )}
         </div>
@@ -187,7 +182,7 @@ export default function FilterBar({
         <div className="filter-group-inline">
           {mode === "product" ? (
             <>
-              <select className="filter-select" style={{ width: 120 }}>
+              <select className="filter-select" style={{ width: 90 }}>
                 <option>한국</option>
               </select>
               <span className="filter-trade-arrow" aria-hidden="true">

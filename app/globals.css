@@ -3,10 +3,6 @@
 @tailwind components;
 @tailwind utilities;
 
-@keyframes dash-spin {
-  to { transform: rotate(360deg); }
-}
-
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 /* ── 앱 전체 shell: 대시보드(좌) + 챗봇 사이드바(우) ── */
@@ -28,18 +24,16 @@
   height: calc(100vh - 230px);
   width: clamp(280px, 22vw, 360px);
   flex-shrink: 0;
-  transition: width 0.3s ease, margin-left 0.3s ease;
+  transition: width 0.3s ease;
   overflow: visible;
   display: flex;
   flex-direction: column;
   align-self: flex-start;
   margin-top: clamp(200px, calc(100px + 10vw), 250px);
-  margin-left: 12px;
 }
 
 .app-chatbot-sidebar.collapsed {
   width: 0;
-  margin-left: 0;
 }
 
 .app-chatbot-inner {
@@ -58,29 +52,28 @@
 
 .app-chatbot-sidebar .chatbot-slider-btn {
   position: absolute;
-  right: 100%;
+  left: -14px;
   top: 50%;
   transform: translateY(-50%);
-  width: 18px;
-  height: 40px;
-  border: none;
-  border-radius: 6px 0 0 6px;
+  width: 28px;
+  height: 64px;
+  border: 1px solid #E02020;
+  border-right: none;
+  border-radius: 12px 0 0 12px;
   background: #E02020;
   color: #fff;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 11px;
-  line-height: 1;
-  box-shadow: -1px 1px 4px rgba(0, 0, 0, 0.1);
+  font-size: 16px;
+  box-shadow: -2px 2px 8px rgba(0, 0, 0, 0.08);
   z-index: 20;
-  transition: background 0.2s ease, width 0.2s ease;
 }
 
 .app-chatbot-sidebar .chatbot-slider-btn:hover {
   background: #c91c1c;
-  width: 22px;
+  border-color: #c91c1c;
 }
 
 body {
@@ -211,15 +204,15 @@ header.w-full {
 }
 .filter-section {
   flex: 1 1 0;
-  min-width: 0;
   display: flex;
   justify-content: center;
   align-items: center;
   padding: 0 14px;
+  min-width: 0;
   transition: flex 0.3s ease;
 }
 .filter-section-divider {
-  border-left: 1px solid #ddd;
+  border-left: 1px solid #f0f0f0;
 }
 .filter-group-inline {
   display: flex;
@@ -255,13 +248,6 @@ header.w-full {
   min-width: 72px;
 }
 .filter-select:focus { outline: none; border-color: #E02020; }
-
-/* 중앙 그룹(연도·기간·단위) — 버튼 크기 통일 & 축소 */
-.filter-select-mid {
-  width: 108px;
-  padding: 0 22px 0 8px;
-  font-size: 13px;
-}
 
 /* 수출/수입: 중앙 세로선 + 선택 구간만 회색 배경·진한 글자 */
 .toggle-btn-group {
@@ -307,14 +293,12 @@ header.w-full {
 .kpi-item {
   flex: 1;
   padding: 12px 20px;
-  border-right: 1px solid #ddd;
+  border-right: 1px solid #f0f0f0;
 }
 .kpi-item:last-child { border-right: none; }
 .kpi-label { font-size: 13px; color: #666; margin-bottom: 2px; }
 .kpi-value { font-size: 24px; font-weight: 700; color: #1a1a1a; }
-.kpi-change-up,
-.kpi-change-down { font-size: 12px; margin-top: 2px; display: flex; align-items: center; }
-.kpi-change-icon { font-size: 10px; line-height: 1; margin-right: 3px; }
+.kpi-change-up { font-size: 12px; color: #E02020; margin-top: 2px; }
 .kpi-change-neutral { font-size: 24px; font-weight: 700; color: #1a1a1a; }
 
 /* Split panel: 지도 영역이 flex에서 줄어들 수 있게 해 챗봇 고정 폭이 잘리지 않게 함 */
@@ -376,7 +360,7 @@ header.w-full {
 
 .chatbot-slider-btn {
   position: absolute;
-  right: 100%;
+  left: -14px;
   top: 50%;
   transform: translateY(-50%);
   width: 28px;
@@ -666,4 +650,279 @@ header.w-full {
   font-weight: 700;
   color: #E02020;
   white-space: nowrap;
+}
+
+/* ── 반응형: 좁은 화면에서 필터 섹션 구분선 제거 + 자유 wrap ── */
+@media (max-width: 1100px) {
+  .filter-section {
+    flex: 0 1 auto;
+  }
+  .filter-section-divider {
+    border-left: none;
+  }
+}
+
+/* ── 반응형: 아이패드 (≤1024px) ── */
+@media (max-width: 1024px) {
+  .filter-bar {
+    flex-wrap: wrap;
+    row-gap: 6px;
+    padding: 8px 0;
+  }
+  .filter-section {
+    flex: 0 1 auto;
+    padding: 0 10px;
+  }
+  .filter-select {
+    min-width: 60px;
+    font-size: 12px;
+    padding: 0 24px 0 8px;
+  }
+  .toggle-btn {
+    width: clamp(60px, 9vw, 100px);
+    font-size: 12px;
+  }
+}
+
+/* ── 반응형: 아이패드 세로 (≤820px) ── */
+@media (max-width: 820px) {
+  .filter-bar {
+    row-gap: 8px;
+    padding: 8px 4px;
+  }
+  .filter-section {
+    flex: 0 1 auto;
+    padding: 0 8px;
+  }
+  .filter-group-inline {
+    gap: 6px;
+  }
+  .filter-select {
+    height: 30px;
+    font-size: 11px;
+    min-width: 56px;
+    padding: 0 22px 0 6px;
+  }
+  .toggle-btn-group {
+    height: 30px;
+  }
+  .toggle-btn {
+    width: clamp(56px, 8vw, 90px);
+    font-size: 11px;
+    padding: 0 clamp(6px, 1.5vw, 16px);
+  }
+}
+
+@media (max-width: 700px) {
+  .filter-group-inline {
+    flex-wrap: wrap;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   iPad·태블릿·모바일 반응형 — 1100px 초과(웹)는 영향 없음
+   모든 규칙은 기존 데스크톱 스타일을 "덮어쓰는" 방식
+   ═══════════════════════════════════════════════════════ */
+
+/* ── 1. iPad 가로 (1100px 이하) ── */
+@media (max-width: 1100px) {
+  /* KPI 카드: 3열 유지, 숫자만 축소 */
+  .kpi-item {
+    padding: 10px 14px;
+    min-width: 0;
+  }
+  .kpi-value {
+    font-size: 20px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .kpi-label {
+    font-size: 12px;
+  }
+
+  /* 거시경제 지표: 8열 → 4열 */
+  .macro-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+  }
+  .macro-card {
+    padding: 10px;
+  }
+  .macro-card-value {
+    font-size: 14px;
+  }
+  .macro-card-label {
+    font-size: 10px;
+  }
+
+  /* 상세 페이지 왼쪽 카드: 폭 축소 */
+  .left-cards {
+    width: 90px;
+    padding: 6px 6px 8px;
+  }
+  .info-card {
+    padding: 6px 8px;
+  }
+  .info-card-value {
+    font-size: 16px;
+  }
+  .info-card-label {
+    font-size: 9px;
+  }
+
+  /* 1100px 이하에서도 대시보드 영역이 최소 높이 확보하도록 */
+  .split-panel {
+    min-height: 460px;
+  }
+  .dashboard-area {
+    min-height: 460px;
+  }
+}
+
+/* ── 2. iPad 세로 (900px 이하) ── */
+@media (max-width: 900px) {
+  /* KPI 카드 */
+  .kpi-item {
+    padding: 8px 10px;
+  }
+  .kpi-value {
+    font-size: 17px;
+  }
+  .kpi-change-up,
+  .kpi-change-down {
+    font-size: 11px;
+  }
+  .kpi-change-up > span:last-child,
+  .kpi-change-down > span:last-child {
+    display: none;
+  }
+
+  /* 거시경제 */
+  .macro-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* ★ 핵심 수정: split-panel을 세로 스택 + 명시적 높이
+     트리맵/지도는 ResponsiveContainer height="100%"라서 부모 높이가 없으면 0이 됨 */
+  .split-panel {
+    flex-direction: column;
+    height: auto;
+    min-height: 500px;
+  }
+  .dashboard-area {
+    min-height: 420px;
+    height: 420px;
+    flex: 0 0 auto;
+    width: 100%;
+  }
+
+  /* 상세 페이지 왼쪽 카드: 상단 가로 배치 */
+  .left-cards {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid #f0f0f0;
+    padding: 8px 10px;
+  }
+  .left-cards-stack {
+    flex-direction: row;
+    gap: 8px;
+  }
+  .info-card {
+    flex: 1;
+  }
+}
+
+/* ── 3. 모바일 가로 / 작은 태블릿 (700px 이하) ── */
+@media (max-width: 700px) {
+  /* KPI: 3열 유지하되 최소 크기 */
+  .kpi-item {
+    padding: 6px 8px;
+  }
+  .kpi-label {
+    font-size: 11px;
+    margin-bottom: 1px;
+  }
+  .kpi-value {
+    font-size: 14px;
+    font-weight: 700;
+  }
+  .kpi-change-up,
+  .kpi-change-down {
+    font-size: 10px;
+  }
+
+  /* 거시경제: 2열 유지 */
+  .macro-card-value {
+    font-size: 13px;
+  }
+
+  /* 대시보드 영역: 모바일에서 트리맵·지도 높이 보장 */
+  .split-panel {
+    min-height: 360px;
+    height: auto;
+    flex-direction: column;
+  }
+  .dashboard-area {
+    min-height: 360px;
+    height: 360px;
+    flex: 0 0 auto;
+    width: 100%;
+  }
+
+  /* 페이지 컨테이너 패딩 축소 */
+  .page-main-container {
+    padding: 12px 10px;
+  }
+
+  /* GNB 간격 축소 */
+  .header-gnb {
+    gap: 24px;
+  }
+  .gnb-item {
+    font-size: 12px;
+  }
+
+  /* 히어로 배너 텍스트 축소는 clamp로 이미 자동 처리됨 */
+}
+
+/* ── 4. 모바일 세로 (480px 이하) ── */
+@media (max-width: 480px) {
+  /* KPI: 2열 + 무역수지 하단 전체폭 */
+  .kpi-bar {
+    flex-wrap: wrap;
+  }
+  .kpi-item {
+    flex: 1 1 50%;
+    border-right: 1px solid #f0f0f0;
+  }
+  .kpi-item:nth-child(2) {
+    border-right: none;
+  }
+  .kpi-item:last-child {
+    flex: 1 1 100%;
+    border-top: 1px solid #f0f0f0;
+    border-right: none;
+  }
+
+  /* 거시경제: 2열 유지하되 카드 패딩 최소화 */
+  .macro-card {
+    padding: 8px;
+  }
+  .macro-card-value {
+    font-size: 12px;
+  }
+
+  /* 헤더 패딩 축소 */
+  .header-top {
+    padding: 0 12px;
+    height: 48px;
+  }
+  .header-gnb {
+    gap: 12px;
+    height: 38px;
+  }
+  .gnb-item {
+    font-size: 11px;
+  }
 }
