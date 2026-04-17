@@ -9,6 +9,7 @@ import MacroSection from "@/components/MacroSection";
 import {
   aggregateTreemapByDepth,
   DEFAULT_YEAR,
+  MTI_LOOKUP,
   type TradeType,
 } from "@/lib/data";
 import {
@@ -63,11 +64,27 @@ function ProductDetailContent() {
       // 1. 품목 코드 결정
       let code = codeParam;
       if (!code) {
+        // 트리맵에서 정확 매칭
         const treemap = await getTreemapDataAsync(DEFAULT_YEAR, tradeType);
         const found = treemap.find(p => p.name === name);
         if (!found) {
           const expTreemap = await getTreemapDataAsync(DEFAULT_YEAR, "수출");
-          code = expTreemap.find(p => p.name === name)?.code ?? "";
+          const expFound = expTreemap.find(p => p.name === name);
+          if (expFound) {
+            code = expFound.code;
+          } else {
+            // MTI_LOOKUP에서 이름→코드 역조회 (4자리 코드 우선)
+            const mti = MTI_LOOKUP as Record<string, string>;
+            let bestCode = "";
+            for (const [c, n] of Object.entries(mti)) {
+              if (n === name) {
+                if (!bestCode || c.length === 4 || (c.length < bestCode.length && bestCode.length !== 4)) {
+                  bestCode = c;
+                }
+              }
+            }
+            code = bestCode;
+          }
         } else {
           code = found.code;
         }

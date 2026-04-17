@@ -12,6 +12,7 @@ import {
   getCountryKpiAsync,
   getCountryTimeseriesAsync,
   getTreemapDataAsync,
+  getCountryTreemapDataAsync,
 } from "@/lib/dataSupabase";
 
 interface ExtractedKeywords {
@@ -451,6 +452,14 @@ export async function buildChatContext(question: string): Promise<string> {
         const recent = timeseries.slice(-3).map(m => `${m.month} 수출${m.export}억달러`).join(", ");
         section += `최근 월별: ${recent}`;
       }
+      // 국가별 상위 수출/수입 품목 (트리맵 데이터)
+      const countryProducts = await getCountryTreemapDataAsync(year, country, tradeType);
+      if (countryProducts.length > 0) {
+        const top10 = countryProducts.slice(0, 10);
+        const lines = top10.map((p, i) => `${i + 1}위: ${p.name} — ${p.value.toFixed(1)}억달러`);
+        section += `\n[${country} ${tradeType} 상위 품목]\n${lines.join("\n")}`;
+      }
+
       sections.push(section);
     } catch { /* 조회 실패 시 생략 */ }
   }
@@ -483,6 +492,46 @@ export async function buildChatContext(question: string): Promise<string> {
     if (topCountries.length === 0 && trend.length === 0) {
       section += `해당 품목의 ${tradeType} 데이터가 없습니다.`;
     }
+
+    // 하위 분류 데이터 (6자리 미만 코드일 때)
+    if (code.length < 6) {
+      try {
+        const mtiLookup = MTI_LOOKUP as Record<string, string>;
+        const subDepth = code.length + 1;
+        const amtCol = tradeType === "수입" ? "imp_amt" : "exp_amt";
+        const { data: subRows } = await supabase
+          .from("agg_product_trend")
+          .select(`code, name, ${amtCol}`)
+          .like("code", `${code}%`)
+          .eq("year", year);
+
+        if (subRows && subRows.length > 0) {
+          // 한 단계 아래 코드로 집계
+          const subMap = new Map<string, { name: string; amt: number }>();
+          for (const r of subRows as Record<string, unknown>[]) {
+            const subCode = String(r.code).slice(0, subDepth <= 6 ? subDepth : 6);
+            const existing = subMap.get(subCode);
+            const amt = Number(r[amtCol]) || 0;
+            if (existing) {
+              existing.amt += amt;
+            } else {
+              subMap.set(subCode, { name: mtiLookup[subCode] ?? String(r.name), amt });
+            }
+          }
+          const sorted = Array.from(subMap.entries())
+            .map(([c, { name: n, amt }]) => ({ code: c, name: n, value: Math.round(amt / 1e8 * 10) / 10 }))
+            .filter(s => s.value > 0)
+            .sort((a, b) => b.value - a.value)
+            .slice(0, 10);
+
+          if (sorted.length > 0) {
+            section += `\n[${name} 하위 분류 (${year}년 ${tradeType})]\n`;
+            section += sorted.map((s, idx) => `${idx + 1}. ${s.name}(${s.code}) — ${s.value}억달러`).join("\n");
+          }
+        }
+      } catch { /* 하위 분류 조회 실패 시 무시 */ }
+    }
+
     sections.push(section);
   }
 
