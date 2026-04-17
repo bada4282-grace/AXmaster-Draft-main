@@ -32,11 +32,23 @@ function CountryDetailContent() {
   const searchParams = useSearchParams();
   const name = decodeURIComponent(params.name as string);
 
-  const initialTradeType: TradeType = searchParams.get("mode") === "import" ? "수입" : "수출";
-  const initialYear = searchParams.get("year") ?? DEFAULT_YEAR;
+  const urlMode = searchParams.get("mode");
+  const urlYear = searchParams.get("year");
+  const initialTradeType: TradeType = urlMode === "import" ? "수입" : "수출";
+  const initialYear = urlYear ?? DEFAULT_YEAR;
   const [year, setYear] = useState(initialYear);
   const [month, setMonth] = useState("");
   const [tradeType, setTradeType] = useState<TradeType>(initialTradeType);
+
+  // URL 파라미터 변경 시 state 동기화 (같은 페이지에서 mode/year만 바뀔 때)
+  useEffect(() => {
+    const newTradeType: TradeType = urlMode === "import" ? "수입" : "수출";
+    setTradeType(newTradeType);
+  }, [urlMode]);
+
+  useEffect(() => {
+    if (urlYear) setYear(urlYear);
+  }, [urlYear]);
   const [subTab, setSubTab] = useState<"품목별" | "시계열 추이">(
     searchParams.get("tab") === "timeseries" ? "시계열 추이" : "품목별"
   );
