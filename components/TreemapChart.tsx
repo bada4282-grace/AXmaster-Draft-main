@@ -358,41 +358,60 @@ export default function TreemapChart({
         )}
       </div>
 
-      {/* MTI 대분류 아이콘 필터 */}
-      <div className="flex items-center justify-center gap-1.5 pt-2 flex-wrap">
+      {/* MTI 대분류 범례 바 — 균등 분할, 아이콘 배경=키컬러, 라인=흰색 */}
+      <div style={{
+        display: "flex",
+        width: "100%",
+        borderTop: "1px solid #e2e8f0",
+      }}>
         {Object.entries(MTI_COLORS).map(([mti, color]) => {
           const n = Number(mti);
-          const isActive = zoomedMti === n;
+          const isActive = zoomedMti === n || zoomedMti === null;
           return (
             <button
               key={mti}
               data-tooltip={MTI_NAMES[n]}
-              onClick={() => { const next = isActive ? null : n; setZoomedMti(next); onCategoryChange?.(next); startTreemapAnimation(); }}
-              className={`mti-icon-btn${isActive ? " mti-icon-btn--active" : ""}`}
+              onClick={() => {
+                const next = zoomedMti === n ? null : n;
+                setZoomedMti(next);
+                onCategoryChange?.(next);
+                startTreemapAnimation();
+              }}
+              className="mti-icon-btn"
               style={{
-                "--mti-color": color as string,
-                background: isActive ? (color as string) : undefined,
-                borderColor: isActive ? (color as string) : "transparent",
-              } as React.CSSProperties}
+                flex: 1,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 4,
+                padding: "6px 0",
+                background: color as string,
+                opacity: isActive ? 1 : 0.35,
+                border: "none",
+                borderRight: "1px solid rgba(255,255,255,0.3)",
+                borderRadius: 0,
+                cursor: "pointer",
+                transition: "opacity 0.2s",
+                minWidth: 0,
+              }}
             >
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke={isActive ? "#fff" : (color as string)} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 {MTI_ICON_PATHS[n]}
               </svg>
+              <span style={{
+                fontSize: 9,
+                fontWeight: 600,
+                color: "#fff",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                maxWidth: 60,
+              }}>
+                {MTI_NAMES[n]}
+              </span>
             </button>
           );
         })}
-        <button
-          data-tooltip="전체 보기"
-          onClick={() => { setZoomedMti(null); onCategoryChange?.(null); startTreemapAnimation(); }}
-          className={`mti-icon-btn${zoomedMti === null ? " mti-icon-btn--active" : ""}`}
-          style={{
-            "--mti-color": "#475569",
-            background: zoomedMti === null ? "#475569" : undefined,
-            borderColor: zoomedMti === null ? "#475569" : "transparent",
-          } as React.CSSProperties}
-        >
-          <span style={{ fontSize: 9, fontWeight: 700, color: zoomedMti === null ? "#fff" : "#64748b", lineHeight: 1 }}>ALL</span>
-        </button>
       </div>
 
       {/* 마우스 추적 툴팁 */}
