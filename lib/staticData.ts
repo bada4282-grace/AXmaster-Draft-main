@@ -136,7 +136,7 @@ export const MTI_COLORS: Record<number, string> = {
   2: "#8E24AA",
   3: "#00ACC1",
   4: "#E8755A",
-  5: "#5BBCE6",
+  5: "#8D6E63",
   6: "#FFD600",
   7: "#E91E63",
   8: "#64B5F6",
