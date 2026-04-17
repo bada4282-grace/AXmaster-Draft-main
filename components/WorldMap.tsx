@@ -632,7 +632,7 @@ export default function WorldMap({
       if (matched) p = matched.properties ?? p;
     }
 
-    if (p.country_name) {
+    if (p.country_name && p.rank && Number(p.rank) < 999) {
       const mode = tradeType === "수입" ? "import" : "export";
       router.push(`/country/${encodeURIComponent(p.country_name as string)}?mode=${mode}&year=${year}`);
     }
@@ -671,7 +671,7 @@ export default function WorldMap({
           onMouseMove={onMouseMove as any}
           onMouseLeave={onMouseLeave}
           onClick={onClick as any}
-          cursor={tooltip?.country ? "pointer" : "grab"}
+          cursor={tooltip?.rank ? "pointer" : "grab"}
           onZoom={(e) => {
             const z = e.viewState.zoom;
             setZoomPct(Math.round((Math.pow(2, z) / Math.pow(2, BASE_ZOOM)) * 100));
@@ -931,7 +931,12 @@ export default function WorldMap({
                 <p className="tooltip-shell-hint">클릭 → 상세페이지</p>
               </>
             ) : (
-              <p className="tooltip-shell-hint">클릭 → 상세페이지</p>
+              <p
+                className="tooltip-shell-sub"
+                style={{ margin: 0, color: "#94a3b8" }}
+              >
+                교역 데이터 없음
+              </p>
             )}
           </div>,
           document.body
