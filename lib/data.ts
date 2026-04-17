@@ -262,6 +262,8 @@ export const TOP5_COUNTRIES_SEMICONDUCTOR: CountryValue[] =
 export interface CountryKPI {
   export: string;
   import: string;
+  rawExport: number;
+  rawImport: number;
   balance: string;
   positive: boolean;
   exportChange: number;

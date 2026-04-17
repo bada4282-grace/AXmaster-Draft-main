@@ -5,8 +5,8 @@ import { KPI_BY_YEAR, DEFAULT_YEAR } from "@/lib/data";
 import { getMonthlyCountryMapData, type MonthlyCountryMapItem } from "@/lib/supabase";
 
 type KpiEntry = {
-  export: { value: string; change: number; up: boolean };
-  import: { value: string; change: number; up: boolean };
+  export: { value: string; raw: number; change: number; up: boolean };
+  import: { value: string; raw: number; change: number; up: boolean };
   balance: { value: string; positive: boolean };
 };
 const KPI: Record<string, KpiEntry> = KPI_BY_YEAR as unknown as Record<string, KpiEntry>;
@@ -64,7 +64,16 @@ function fmtBillion(v: number) {
 
 function pctChange(cur: number, prev: number): number {
   if (!prev) return 0;
-  return parseFloat(Math.abs(((cur - prev) / prev) * 100).toFixed(1));
+  return Math.round(Math.abs((cur - prev) / prev * 10000)) / 100;
+}
+
+/** 증감률 표시: 소수점 2자리, 단 .00은 .0으로 축약 (예: 0 → "0.0", 3.76 → "3.76", 0.02 → "0.02") */
+function fmtRate(v: number): string {
+  const s = v.toFixed(2);
+  // 1.00 → "1.0", 3.80 → "3.8", but 0.02 → "0.02"
+  if (s.endsWith("0") && !s.endsWith("00")) return s;
+  if (s.endsWith("00")) return v.toFixed(1);
+  return s;
 }
 
 function buildMomState(
@@ -199,6 +208,17 @@ export default function KPIBar({
     return () => { mounted = false; };
   }, [year, effectiveMonth, hasCustom, isIncompleteYear, currentCountry]);
 
+  // ─── 연간 증감률 자체 계산 (raw 금액 기반, 정밀도 유지) ───
+  const curExpRaw = kpi.export.raw;
+  const prevExpRaw = prevYearKpi ? prevYearKpi.export.raw : 0;
+  const curImpRaw = kpi.import.raw;
+  const prevImpRaw = prevYearKpi ? prevYearKpi.import.raw : 0;
+
+  const annualExportChange = prevExpRaw > 0 ? pctChange(curExpRaw, prevExpRaw) : 0;
+  const annualExportUp = curExpRaw >= prevExpRaw;
+  const annualImportChange = prevImpRaw > 0 ? pctChange(curImpRaw, prevImpRaw) : 0;
+  const annualImportUp = curImpRaw >= prevImpRaw;
+
   // ─── 값 결정 ───
   // 월 선택 시: Supabase 월별 데이터 (전년 동기 대비) 우선
   const useMom = !!effectiveMonth && !!mom;
@@ -211,26 +231,27 @@ export default function KPIBar({
       : "(전년 대비)";
 
   // 월 선택 시 Supabase 데이터가 커스텀 값보다 우선 (월별 KPI + 증감률 정확성)
+  // 연간 폴백: 사전 생성된 change 대신 자체 계산한 annualExportChange/annualImportChange 사용
   const ev = useMom ? mom!.exportVal : (pEv ?? (useIncMom ? incMom!.exportVal : kpi.export.value));
-  const ec = useMom ? mom!.exportChange : (pEc ?? (useIncMom ? incMom!.exportChange : kpi.export.change));
-  const eu = useMom ? mom!.exportUp : (pEu ?? (useIncMom ? incMom!.exportUp : kpi.export.up));
+  const ec = useMom ? mom!.exportChange : (pEc ?? (useIncMom ? incMom!.exportChange : annualExportChange));
+  const eu = useMom ? mom!.exportUp : (pEu ?? (useIncMom ? incMom!.exportUp : annualExportUp));
   const iv = useMom ? mom!.importVal : (pIv ?? (useIncMom ? incMom!.importVal : kpi.import.value));
-  const ic = useMom ? mom!.importChange : (pIc ?? (useIncMom ? incMom!.importChange : kpi.import.change));
-  const iu = useMom ? mom!.importUp : (pIu ?? (useIncMom ? incMom!.importUp : kpi.import.up));
+  const ic = useMom ? mom!.importChange : (pIc ?? (useIncMom ? incMom!.importChange : annualImportChange));
+  const iu = useMom ? mom!.importUp : (pIu ?? (useIncMom ? incMom!.importUp : annualImportUp));
   const bv = useMom ? mom!.balanceVal : (pBv ?? (useIncMom ? incMom!.balanceVal : kpi.balance.value));
   const bp = useMom ? mom!.balancePositive : (pBp ?? (useIncMom ? incMom!.balancePositive : kpi.balance.positive));
 
   // 증감율 숨김 조건:
   // 1. 불완전 연도 + 월 미선택 + 자동탐지 미완료
-  // 2. 변화율 0% (전년도 데이터 없거나 변화 미미)
+  // 2. 전년도 데이터 자체가 없는 경우 (noPrevYear)
   const hideExportChange = (!effectiveMonth && isIncompleteYear && !incMom && !hasCustom)
-    || (!useMom && !useIncMom && ec === 0);
+    || (!useMom && !useIncMom && noPrevYear);
   const hideImportChange = (!effectiveMonth && isIncompleteYear && !incMom && !hasCustom)
-    || (!useMom && !useIncMom && ic === 0);
+    || (!useMom && !useIncMom && noPrevYear);
 
-  // 상승: 빨간색, 하락: 파란색 (한국 금융 관례)
-  const expColor = eu ? "#E02020" : "#185FA5";
-  const impColor = iu ? "#E02020" : "#185FA5";
+  // 상승: 빨간색, 하락: 파란색, 변화 없음(0.0%): 회색 (한국 금융 관례)
+  const expColor = ec === 0 ? "#999" : eu ? "#E02020" : "#185FA5";
+  const impColor = ic === 0 ? "#999" : iu ? "#E02020" : "#185FA5";
 
   const exportCard = (
     <div className="kpi-item">
@@ -243,9 +264,9 @@ export default function KPIBar({
           </span>
         </div>
       ) : (
-        <div className={eu ? "kpi-change-up" : "kpi-change-down"} style={{ color: expColor }}>
-          <span className="kpi-change-icon">{eu ? "▲" : "▼"}</span>
-          <span>{ec}%</span>
+        <div className={ec === 0 ? "" : eu ? "kpi-change-up" : "kpi-change-down"} style={{ color: expColor }}>
+          <span className="kpi-change-icon">{ec === 0 ? "—" : eu ? "▲" : "▼"}</span>
+          <span>{fmtRate(ec)}%</span>
           <span style={{ fontSize: 10, color: expColor, opacity: 0.55, marginLeft: 4, fontWeight: 400 }}>
             {periodLabel}
           </span>
@@ -265,9 +286,9 @@ export default function KPIBar({
           </span>
         </div>
       ) : (
-        <div className={iu ? "kpi-change-up" : "kpi-change-down"} style={{ color: impColor }}>
-          <span className="kpi-change-icon">{iu ? "▲" : "▼"}</span>
-          <span>{ic}%</span>
+        <div className={ic === 0 ? "" : iu ? "kpi-change-up" : "kpi-change-down"} style={{ color: impColor }}>
+          <span className="kpi-change-icon">{ic === 0 ? "—" : iu ? "▲" : "▼"}</span>
+          <span>{fmtRate(ic)}%</span>
           <span style={{ fontSize: 10, color: impColor, opacity: 0.55, marginLeft: 4, fontWeight: 400 }}>
             {periodLabel}
           </span>

@@ -239,19 +239,24 @@ function ProductDetailContent() {
 
                 <div className="info-card">
                   <div className="info-card-label">전년 대비</div>
-                  {changeRate !== null ? (
-                    <>
-                      <div style={{
-                        fontSize: 18, fontWeight: 900,
-                        color: parseFloat(changeRate) >= 0 ? "#E02020" : "#185FA5",
-                      }}>
-                        {Math.abs(parseFloat(changeRate))}%
-                      </div>
-                      <div style={{ fontSize: 10, color: parseFloat(changeRate) >= 0 ? "#E02020" : "#185FA5", fontWeight: 500 }}>
-                        {parseFloat(changeRate) >= 0 ? "상승" : "하락"}
-                      </div>
-                    </>
-                  ) : (
+                  {changeRate !== null ? (() => {
+                    const rv = parseFloat(changeRate);
+                    const absV = Math.abs(rv);
+                    const isZero = absV === 0;
+                    const color = isZero ? "#999" : rv >= 0 ? "#E02020" : "#185FA5";
+                    // 소수점 2자리, .00은 .0으로 축약
+                    const fmt = absV.toFixed(2).replace(/0$/, "").replace(/\.$/, ".0");
+                    return (
+                      <>
+                        <div style={{ fontSize: 18, fontWeight: 900, color }}>
+                          {fmt}%
+                        </div>
+                        <div style={{ fontSize: 10, color, fontWeight: 500 }}>
+                          {isZero ? "변동 없음" : rv >= 0 ? "상승" : "하락"}
+                        </div>
+                      </>
+                    );
+                  })() : (
                     <>
                       <div style={{ fontSize: 18, fontWeight: 900, color: "#999" }}>-</div>
                       <div style={{ fontSize: 10, color: "#999", fontWeight: 500 }}>⚠️데이터 불충분</div>
