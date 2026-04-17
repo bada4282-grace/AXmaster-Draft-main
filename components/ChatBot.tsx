@@ -6,7 +6,6 @@ import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
 import { supabase } from "@/lib/supabase";
 import { saveChatLog, getChatLogs } from "@/lib/chat";
-import { resolveRouteButtons } from "@/lib/chatContext";
 import type { RouteButton } from "@/lib/chatContext";
 import type { User } from "@supabase/supabase-js";
 import { DEFAULT_YEAR } from "@/lib/data";
@@ -21,7 +20,11 @@ function TypingIndicator() {
 }
 
 function renderBotText(text: string): React.ReactNode {
-  const processed = text.replace(/==([^=]+)==/g, "<mark>$1</mark>");
+  // ==하이라이트== → <mark> 변환
+  // **bold** → <strong> 변환 (ReactMarkdown이 놓치는 경우 대비)
+  const processed = text
+    .replace(/==([^=]+)==/g, "<mark>$1</mark>")
+    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
   return (
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
@@ -146,8 +149,16 @@ export default function ChatBot({
   const [input, setInput] = useState("");
   const [fontSize, setFontSize] = useState(12);
   const [isStreaming, setIsStreaming] = useState(false);
-  const [guestFaq, setGuestFaq] = useState(() => getOrBuildGuestFaq());
-  const [userFaq, setUserFaq] = useState<string[] | null>(() => getCachedUserFaq());
+  const [guestFaq, setGuestFaq] = useState(DEFAULT_GUEST_FAQ);
+  const [userFaq, setUserFaq] = useState<string[] | null>(null);
+
+  // Hydrate FAQ from sessionStorage on client to avoid SSR mismatch
+  useEffect(() => {
+    const cached = getOrBuildGuestFaq();
+    if (cached !== DEFAULT_GUEST_FAQ) setGuestFaq(cached);
+    const cachedUser = getCachedUserFaq();
+    if (cachedUser) setUserFaq(cachedUser);
+  }, []);
 
   // 게스트 FAQ: 세션 캐시가 없으면 Supabase에서 동적 생성
   useEffect(() => {
@@ -349,14 +360,26 @@ export default function ChatBot({
 
       saveResponse = true;
 
-      // 스트리밍 완료 후 라우팅 버튼 계산해서 마지막 봇 메시지에 추가
-      const routeButtons = await resolveRouteButtons(userMsg);
-      if (routeButtons.length > 0) {
-        setMessages(prev => [
-          ...prev.slice(0, -1),
-          { role: "bot", text: fullResponse, routeButtons },
-        ]);
-      }
+      // 스트리밍 완료 후 AI 기반 라우팅 버튼 생성
+      try {
+        const btnRes = await fetch("/api/route-buttons", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ question: userMsg, answer: fullResponse }),
+        });
+        const { buttons } = await btnRes.json();
+        if (Array.isArray(buttons) && buttons.length > 0) {
+          const routeButtons: RouteButton[] = buttons.map((b: { label: string; href: string }) => ({
+            label: b.label,
+            href: b.href,
+            type: "exact" as const,
+          }));
+          setMessages(prev => [
+            ...prev.slice(0, -1),
+            { role: "bot", text: fullResponse, routeButtons },
+          ]);
+        }
+      } catch { /* 버튼 생성 실패 시 무시 */ }
     } catch {
       fullResponse = "답변 생성 중 오류가 발생했습니다.";
       setMessages(prev => [

@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback, Suspense } from "react";
+import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import Header from "@/components/Header";
@@ -32,11 +32,23 @@ function CountryDetailContent() {
   const searchParams = useSearchParams();
   const name = decodeURIComponent(params.name as string);
 
-  const initialTradeType: TradeType = searchParams.get("mode") === "import" ? "수입" : "수출";
-  const initialYear = searchParams.get("year") ?? DEFAULT_YEAR;
+  const urlMode = searchParams.get("mode");
+  const urlYear = searchParams.get("year");
+  const initialTradeType: TradeType = urlMode === "import" ? "수입" : "수출";
+  const initialYear = urlYear ?? DEFAULT_YEAR;
   const [year, setYear] = useState(initialYear);
   const [month, setMonth] = useState("");
   const [tradeType, setTradeType] = useState<TradeType>(initialTradeType);
+
+  // URL 파라미터 변경 시 state 동기화 (같은 페이지에서 mode/year만 바뀔 때)
+  useEffect(() => {
+    const newTradeType: TradeType = urlMode === "import" ? "수입" : "수출";
+    setTradeType(newTradeType);
+  }, [urlMode]);
+
+  useEffect(() => {
+    if (urlYear) setYear(urlYear);
+  }, [urlYear]);
   const [subTab, setSubTab] = useState<"품목별" | "시계열 추이">(
     searchParams.get("tab") === "timeseries" ? "시계열 추이" : "품목별"
   );
@@ -140,19 +152,38 @@ function CountryDetailContent() {
   const minBal = balScale.min;
   const maxBal = balScale.max;
 
-  const flatData = timeseries.map((d) => ({
-    ...d,
-    export: minVal,
-    import: minVal,
-    balance: minBal,
-  }));
-
-  const [displayData, setDisplayData] = useState(flatData);
+  const [displayData, setDisplayData] = useState<MonthlyData[]>([]);
   const [lineAnimActive, setLineAnimActive] = useState(false);
+  const [tsVersion, setTsVersion] = useState(0);
+  const prevTsLen = useRef(0);
 
+  // timeseries 길이/내용 변경 감지 → 버전 증가
   useEffect(() => {
+    if (timeseries.length !== prevTsLen.current) {
+      prevTsLen.current = timeseries.length;
+      setTsVersion(v => v + 1);
+    }
+  }, [timeseries]);
+
+  // subTab 변경 시에도 애니메이션
+  useEffect(() => {
+    setTsVersion(v => v + 1);
+  }, [subTab]);
+
+  // 애니메이션 실행
+  useEffect(() => {
+    if (timeseries.length === 0) {
+      setDisplayData([]);
+      return;
+    }
+
     setLineAnimActive(false);
-    setDisplayData(flatData);
+    setDisplayData(timeseries.map((d) => ({
+      ...d,
+      export: minVal,
+      import: minVal,
+      balance: minBal,
+    })));
 
     const startTimeout = setTimeout(() => {
       setLineAnimActive(true);
@@ -168,7 +199,7 @@ function CountryDetailContent() {
       clearTimeout(stopTimeout);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [year, subTab]);
+  }, [tsVersion]);
 
   return (
     <div style={{ minHeight: "100vh", background: "#f8f8f8" }}>

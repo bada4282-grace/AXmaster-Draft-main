@@ -43,15 +43,16 @@ function HomeContent() {
       <HeroBanner />
 
       <div className="page-main-container">
-        {/* Main tabs */}
-        <div style={{ display: "flex", gap: 8, marginBottom: 4 }}>
-          {(["국가별", "품목별"] as const).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => handleTabChange(tab)}
-              className={mainTab === tab ? "main-tab-active" : "main-tab-inactive"}
-            >{tab}</button>
-          ))}
+        {/* Main tabs — 국가별/품목별 (dashboard-card 바깥 위쪽) */}
+        <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+          <button
+            className={mainTab === "국가별" ? "main-tab-active" : "main-tab-inactive"}
+            onClick={() => handleTabChange("국가별")}
+          >국가별</button>
+          <button
+            className={mainTab === "품목별" ? "main-tab-active" : "main-tab-inactive"}
+            onClick={() => handleTabChange("품목별")}
+          >품목별</button>
         </div>
 
         <div className="main-content-layout">
@@ -66,7 +67,6 @@ function HomeContent() {
               onTradeTypeChange={setTradeType}
               mtiDepth={mainTab === "품목별" ? mtiDepth : undefined}
               onMtiDepthChange={setMtiDepth}
-              mtiDisabled={mtiCategoryActive}
               onCountryChange={setProductCountry}
             />
 

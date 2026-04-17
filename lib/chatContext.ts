@@ -2,12 +2,9 @@ import {
   MTI_NAMES,
   DEFAULT_YEAR,
   KPI_BY_YEAR,
-} from "@/lib/data";
-import {
-  MACRO_INDICATORS,
-  MACRO_META,
   MTI_LOOKUP,
-} from "@/lib/tradeData.generated";
+} from "@/lib/data";
+import { supabase } from "@/lib/supabase";
 import {
   getProductTrendAsync,
   getProductTopCountriesAsync,
@@ -15,6 +12,7 @@ import {
   getCountryKpiAsync,
   getCountryTimeseriesAsync,
   getTreemapDataAsync,
+  getCountryTreemapDataAsync,
 } from "@/lib/dataSupabase";
 
 interface ExtractedKeywords {
@@ -29,8 +27,8 @@ function buildProductLookup(): Map<string, string> {
   const lookup = new Map<string, string>();
   const mti = MTI_LOOKUP as Record<string, string>;
   for (const [code, name] of Object.entries(mti)) {
-    // 6자리 코드 우선, 이미 있으면 덮어쓰지 않음
-    if (code.length === 6 && !lookup.has(name)) {
+    // 6자리 코드 우선, 2글자 이상 이름만, 이미 있으면 덮어쓰지 않음
+    if (code.length === 6 && name.length >= 2 && !lookup.has(name)) {
       lookup.set(name, code);
     }
   }
@@ -106,9 +104,9 @@ export async function resolveRouteButtons(question: string): Promise<RouteButton
   const { year } = await extractKeywords(question);
   const detectedYear = year !== DEFAULT_YEAR ? year : null;
 
-  // 국가 버튼 (정확 매칭, 수입/수출 + 탭 + 연도 반영)
-  if (countries.length > 0) {
-    const tradeType = detectTradeType(question);
+  // 국가 버튼 — 언급된 모든 국가에 대해 개별 생성, 국가별 수출/수입 판단
+  for (const country of countries) {
+    const tradeType = detectTradeTypeForCountry(question, country);
     const params = new URLSearchParams();
     if (tradeType === "수입") params.set("mode", "import");
     if (isTimeseriesQuery) params.set("tab", "timeseries");
@@ -116,8 +114,8 @@ export async function resolveRouteButtons(question: string): Promise<RouteButton
     if (detectedMtiDepth) params.set("mtiDepth", detectedMtiDepth);
     const queryString = params.toString() ? `?${params.toString()}` : "";
     buttons.push({
-      label: `${countries[0]} ${tradeType} 데이터 확인하기`,
-      href: `/country/${encodeURIComponent(countries[0])}${queryString}`,
+      label: `${country} ${tradeType} 데이터 확인하기`,
+      href: `/country/${encodeURIComponent(country)}${queryString}`,
       type: "exact",
     });
   }
@@ -159,7 +157,9 @@ export async function resolveRouteButtons(question: string): Promise<RouteButton
     });
   } else {
     // 2단계: 유사 후보 탐색 (질문 단어 안에 MTI값이 포함된 경우)
-    const tokens = question.split(/[\s,·.?!、。]+/).filter(t => t.length >= 2);
+    // 무역 일반 용어는 제외 (품목이 아닌 단어가 매칭되는 것 방지)
+    const EXCLUDE_TOKENS = new Set(["무역", "무역수지", "수지", "수출", "수입", "수출입", "증감", "증감률", "현황", "추이", "데이터"]);
+    const tokens = question.split(/[\s,·.?!、。]+/).filter(t => t.length >= 2 && !EXCLUDE_TOKENS.has(t));
     const candidateMap = new Map<string, string>(); // code → name
 
     for (const [code, name] of Object.entries(mtiLookup)) {
@@ -198,6 +198,15 @@ export async function resolveRouteButtons(question: string): Promise<RouteButton
     }
   }
 
+  // 무역수지/전체 현황 질문 시 메인 대시보드 버튼
+  if (/무역수지|무역 현황|전체 현황|총 수출|총 수입/.test(question) && buttons.length === 0) {
+    buttons.push({
+      label: "전체 무역 현황 대시보드",
+      href: "/",
+      type: "exact",
+    });
+  }
+
   return buttons;
 }
 
@@ -205,6 +214,27 @@ export async function resolveRouteButtons(question: string): Promise<RouteButton
 function detectTradeType(question: string): "수출" | "수입" {
   if (question.includes("수입")) return "수입";
   return "수출";
+}
+
+// 특정 국가명 주변 맥락에서 수출/수입 감지 (국가별 개별 판단)
+function detectTradeTypeForCountry(question: string, country: string): "수출" | "수입" {
+  // 국가명 근처(10글자 이내)에서 수출/수입 감지
+  const idx = question.indexOf(country);
+  if (idx >= 0) {
+    // 국가명 앞 10글자 + 뒤 10글자 범위에서 탐색
+    const before = question.slice(Math.max(0, idx - 10), idx);
+    const after = question.slice(idx, idx + country.length + 10);
+    const context = before + after;
+    if (/수출/.test(context)) return "수출";
+    if (/수입/.test(context)) return "수입";
+  }
+  // "대{국가}" 패턴
+  if (question.includes(`대${country}`)) {
+    const afterDae = question.slice(question.indexOf(`대${country}`) + country.length + 1, question.indexOf(`대${country}`) + country.length + 5);
+    if (afterDae.includes("수출")) return "수출";
+    if (afterDae.includes("수입")) return "수입";
+  }
+  return detectTradeType(question);
 }
 
 // 분석/원인 질문인지 감지
@@ -273,9 +303,9 @@ export async function extractKeywords(question: string): Promise<ExtractedKeywor
   const productCodes: string[] = [];
   const productNames: string[] = [];
 
-  // 1단계: TREEMAP 품목명 매칭 (6단위 코드)
+  // 1단계: TREEMAP 품목명 매칭 (6단위 코드, 단어 경계 확인)
   for (const [name, code] of PRODUCT_LOOKUP.entries()) {
-    if (question.includes(name) && !productCodes.includes(code)) {
+    if (isExactWordMatch(question, name) && !productCodes.includes(code)) {
       productCodes.push(code);
       productNames.push(name);
     }
@@ -308,58 +338,54 @@ export async function extractKeywords(question: string): Promise<ExtractedKeywor
   return { countries, productCodes, productNames, year };
 }
 
-// 거시경제 지표 컨텍스트 조립
-function buildMacroContext(question: string, year: string): string {
-  const indicators = MACRO_INDICATORS as Record<string, Record<string, number | null>>;
-  if (!indicators || Object.keys(indicators).length === 0) return "";
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type MacroRow = Record<string, any>;
+
+// 거시경제 지표 컨텍스트 조립 — Supabase에서 직접 조회
+async function buildMacroContext(question: string, year: string): Promise<string> {
+  const { data: allRows, error } = await supabase
+    .from("macro_indicators")
+    .select("*")
+    .order("YYMM", { ascending: false });
+
+  if (error || !allRows || allRows.length === 0) return "";
 
   const macroKeys = detectMacroKeywords(question);
   const analysis = isAnalysisQuery(question);
 
-  let targetYymms: string[];
+  let filtered: MacroRow[];
   if (macroKeys.length > 0) {
-    targetYymms = Object.keys(indicators).sort().reverse();
+    filtered = allRows;
   } else if (analysis) {
     const prevYear = String(parseInt(year) - 1);
-    targetYymms = Object.keys(indicators)
-      .filter(ym => ym.startsWith(year) || ym.startsWith(prevYear))
-      .sort().reverse();
+    filtered = allRows.filter((r: MacroRow) => {
+      const ym = String(r.YYMM);
+      return ym.startsWith(year) || ym.startsWith(prevYear);
+    });
   } else {
-    targetYymms = Object.keys(indicators)
-      .filter(ym => ym.startsWith(year))
-      .sort().reverse();
+    filtered = allRows.filter((r: MacroRow) => String(r.YYMM).startsWith(year));
   }
 
-  if (targetYymms.length === 0) return "";
+  if (filtered.length === 0) return "";
 
-  const fmtPct = (v: number | null) => v == null ? "-" : `${(v * 100).toFixed(1)}%`;
-  const fmtNum = (v: number | null, d = 1) => v == null ? "-" : v.toFixed(d);
+  const fmtPct = (v: number | null) => v == null ? "-" : `${(Number(v) * 100).toFixed(1)}%`;
+  const fmtNum = (v: number | null, d = 1) => v == null ? "-" : Number(v).toFixed(d);
 
   const header = "기준년월 | 한국금리 | 제조업BSI | 비제조BSI | EBSI | 산업생산 | CPI | 미국금리 | 미국PMI | 중국금리 | 중국PMI | 브렌트유 | SCFI";
-  const rows = targetYymms.map(ym => {
-    const d = indicators[ym];
-    return `${ym} | ${fmtPct(d.KR_BASE_RATE)} | ${fmtNum(d.KR_BSI_MFG, 0)} | ${fmtNum(d.KR_BSI_NON_MFG, 0)} | ${fmtNum(d.KR_EBSI, 1)} | ${fmtPct(d.KR_PROD_YOY)} | ${fmtPct(d.KR_CPI_YOY)} | ${fmtPct(d.US_BASE_RATE)} | ${fmtNum(d.US_PMI_MFG, 1)} | ${fmtPct(d.CN_BASE_RATE)} | ${fmtNum(d.CN_PMI_MFG, 1)} | $${fmtNum(d.BRENT_OIL, 1)} | ${fmtNum(d.SCFI, 0)}`;
-  });
+  const dataRows = filtered.map((d: MacroRow) =>
+    `${d.YYMM} | ${fmtPct(d.KR_BASE_RATE)} | ${fmtNum(d.KR_BSI_MFG, 0)} | ${fmtNum(d.KR_BSI_NON_MFG, 0)} | ${fmtNum(d.KR_EBSI, 1)} | ${fmtPct(d.KR_PROD_YOY)} | ${fmtPct(d.KR_CPI_YOY)} | ${fmtPct(d.US_BASE_RATE)} | ${fmtNum(d.US_PMI_MFG, 1)} | ${fmtPct(d.CN_BASE_RATE)} | ${fmtNum(d.CN_PMI_MFG, 1)} | $${fmtNum(d.BRENT_OIL, 1)} | ${fmtNum(d.SCFI, 0)}`
+  );
 
   const guide = `[지표 해석 가이드 — 반드시 준수]
 ※ 아래 기준을 정확히 적용하세요. 잘못 해석하면 안 됩니다.
-- BSI/EBSI: 기준선은 100입니다. 100 이상 = 긍정적(경기 확장 전망), 100 미만 = 부정적(경기 위축 전망). 예: BSI 71은 100 미만이므로 "부정적 전망"입니다. 절대로 100 미만을 긍정으로 해석하지 마세요.
-- PMI: 기준선은 50입니다. 50 이상 = 경기 확장, 50 미만 = 경기 위축. 예: PMI 49는 "위축 국면"입니다.
+- BSI/EBSI: 기준선은 100입니다. 100 이상 = 긍정적(경기 확장 전망), 100 미만 = 부정적(경기 위축 전망).
+- PMI: 기준선은 50입니다. 50 이상 = 경기 확장, 50 미만 = 경기 위축.
 - 금리: 소수로 표기됩니다 (0.025 = 2.5%). 답변 시 백분율로 변환하세요.
 - 산업생산/CPI: 전년 동기 대비 증감률(소수). 0.07 = 7% 증가, -0.003 = 0.3% 감소.
 - 브렌트유: 달러/배럴($/bbl) 단위.
 - SCFI: 상하이컨테이너운임지수. 숫자가 클수록 해운 운임이 높음.`;
 
-  let metaSection = "";
-  if (macroKeys.length > 0) {
-    const meta = (MACRO_META as { key: string; label: string; desc: string }[])
-      .filter(m => macroKeys.includes(m.key));
-    if (meta.length > 0) {
-      metaSection = "\n\n[언급된 지표 설명]\n" + meta.map(m => `- ${m.label}: ${m.desc}`).join("\n");
-    }
-  }
-
-  return `[거시경제 지표]\n${header}\n${rows.join("\n")}\n\n${guide}${metaSection}`;
+  return `[거시경제 지표]\n${header}\n${dataRows.join("\n")}\n\n${guide}`;
 }
 
 // 추출된 키워드 기반으로 무역 데이터 조회 후 컨텍스트 문자열 조립
@@ -426,6 +452,14 @@ export async function buildChatContext(question: string): Promise<string> {
         const recent = timeseries.slice(-3).map(m => `${m.month} 수출${m.export}억달러`).join(", ");
         section += `최근 월별: ${recent}`;
       }
+      // 국가별 상위 수출/수입 품목 (트리맵 데이터)
+      const countryProducts = await getCountryTreemapDataAsync(year, country, tradeType);
+      if (countryProducts.length > 0) {
+        const top10 = countryProducts.slice(0, 10);
+        const lines = top10.map((p, i) => `${i + 1}위: ${p.name} — ${p.value.toFixed(1)}억달러`);
+        section += `\n[${country} ${tradeType} 상위 품목]\n${lines.join("\n")}`;
+      }
+
       sections.push(section);
     } catch { /* 조회 실패 시 생략 */ }
   }
@@ -458,6 +492,46 @@ export async function buildChatContext(question: string): Promise<string> {
     if (topCountries.length === 0 && trend.length === 0) {
       section += `해당 품목의 ${tradeType} 데이터가 없습니다.`;
     }
+
+    // 하위 분류 데이터 (6자리 미만 코드일 때)
+    if (code.length < 6) {
+      try {
+        const mtiLookup = MTI_LOOKUP as Record<string, string>;
+        const subDepth = code.length + 1;
+        const amtCol = tradeType === "수입" ? "imp_amt" : "exp_amt";
+        const { data: subRows } = await supabase
+          .from("agg_product_trend")
+          .select(`code, name, ${amtCol}`)
+          .like("code", `${code}%`)
+          .eq("year", year);
+
+        if (subRows && subRows.length > 0) {
+          // 한 단계 아래 코드로 집계
+          const subMap = new Map<string, { name: string; amt: number }>();
+          for (const r of subRows as Record<string, unknown>[]) {
+            const subCode = String(r.code).slice(0, subDepth <= 6 ? subDepth : 6);
+            const existing = subMap.get(subCode);
+            const amt = Number(r[amtCol]) || 0;
+            if (existing) {
+              existing.amt += amt;
+            } else {
+              subMap.set(subCode, { name: mtiLookup[subCode] ?? String(r.name), amt });
+            }
+          }
+          const sorted = Array.from(subMap.entries())
+            .map(([c, { name: n, amt }]) => ({ code: c, name: n, value: Math.round(amt / 1e8 * 10) / 10 }))
+            .filter(s => s.value > 0)
+            .sort((a, b) => b.value - a.value)
+            .slice(0, 10);
+
+          if (sorted.length > 0) {
+            section += `\n[${name} 하위 분류 (${year}년 ${tradeType})]\n`;
+            section += sorted.map((s, idx) => `${idx + 1}. ${s.name}(${s.code}) — ${s.value}억달러`).join("\n");
+          }
+        }
+      } catch { /* 하위 분류 조회 실패 시 무시 */ }
+    }
+
     sections.push(section);
   }
 
@@ -482,7 +556,7 @@ export async function buildChatContext(question: string): Promise<string> {
   }
 
   // 거시경제 지표 컨텍스트
-  const macroCtx = buildMacroContext(question, year);
+  const macroCtx = await buildMacroContext(question, year);
   if (macroCtx) {
     sections.push(macroCtx);
   }

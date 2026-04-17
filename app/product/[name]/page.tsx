@@ -1,5 +1,5 @@
 "use client";
-import { Suspense, useState, useEffect } from "react";
+import { Suspense, useState, useEffect, useRef } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Header from "@/components/Header";
 import HeroBanner from "@/components/HeroBanner";
@@ -9,6 +9,7 @@ import MacroSection from "@/components/MacroSection";
 import {
   aggregateTreemapByDepth,
   DEFAULT_YEAR,
+  MTI_LOOKUP,
   type TradeType,
 } from "@/lib/data";
 import {
@@ -63,11 +64,27 @@ function ProductDetailContent() {
       // 1. 품목 코드 결정
       let code = codeParam;
       if (!code) {
+        // 트리맵에서 정확 매칭
         const treemap = await getTreemapDataAsync(DEFAULT_YEAR, tradeType);
         const found = treemap.find(p => p.name === name);
         if (!found) {
           const expTreemap = await getTreemapDataAsync(DEFAULT_YEAR, "수출");
-          code = expTreemap.find(p => p.name === name)?.code ?? "";
+          const expFound = expTreemap.find(p => p.name === name);
+          if (expFound) {
+            code = expFound.code;
+          } else {
+            // MTI_LOOKUP에서 이름→코드 역조회 (4자리 코드 우선)
+            const mti = MTI_LOOKUP as Record<string, string>;
+            let bestCode = "";
+            for (const [c, n] of Object.entries(mti)) {
+              if (n === name) {
+                if (!bestCode || c.length === 4 || (c.length < bestCode.length && bestCode.length !== 4)) {
+                  bestCode = c;
+                }
+              }
+            }
+            code = bestCode;
+          }
         } else {
           code = found.code;
         }
@@ -161,18 +178,39 @@ function ProductDetailContent() {
     return () => { cancelled = true; };
   }, [productCode, year, tradeType]);
 
-  // ── 애니메이션: 국가 상세 페이지와 동일한 패턴 ──
-  const flatTrend = trend.map((d) => ({ ...d, value: trendMin }));
-  const flatCountries = topCountries.map((d) => ({ ...d, value: 0 }));
-
-  const [displayTrend, setDisplayTrend] = useState(flatTrend);
-  const [displayCountries, setDisplayCountries] = useState(flatCountries);
+  // ── 애니메이션: 데이터 로드 완료를 명시적으로 추적 ──
+  const [displayTrend, setDisplayTrend] = useState<{ year: string; value: number }[]>([]);
+  const [displayCountries, setDisplayCountries] = useState<{ country: string; value: number }[]>([]);
   const [animActive, setAnimActive] = useState(false);
+  const [dataVersion, setDataVersion] = useState(0);
 
+  // rawTrend/topCountries가 변경될 때 버전 증가 → 애니메이션 트리거
+  const prevRawTrendLen = useRef(0);
+  const prevTopCountriesLen = useRef(0);
   useEffect(() => {
+    if (rawTrend.length !== prevRawTrendLen.current || topCountries.length !== prevTopCountriesLen.current) {
+      prevRawTrendLen.current = rawTrend.length;
+      prevTopCountriesLen.current = topCountries.length;
+      setDataVersion(v => v + 1);
+    }
+  }, [rawTrend, topCountries]);
+
+  // subTab 변경 시에도 애니메이션
+  useEffect(() => {
+    setDataVersion(v => v + 1);
+  }, [subTab]);
+
+  // dataVersion 변경 시 애니메이션 실행
+  useEffect(() => {
+    if (trend.length === 0 && topCountries.length === 0) {
+      setDisplayTrend([]);
+      setDisplayCountries([]);
+      return;
+    }
+
     setAnimActive(false);
-    setDisplayTrend(flatTrend);
-    setDisplayCountries(flatCountries);
+    setDisplayTrend(trend.map((d) => ({ ...d, value: trendMin })));
+    setDisplayCountries(topCountries.map((d) => ({ ...d, value: 0 })));
 
     const startId = setTimeout(() => {
       setAnimActive(true);
@@ -189,7 +227,7 @@ function ProductDetailContent() {
       clearTimeout(stopId);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [subTab, year, tradeType, country]);
+  }, [dataVersion]);
 
   // 현재 연도 금액 & 전년 대비 증감 — 추이 데이터에서 직접 조회 (Top30 제한 없음)
   const prevYear = String(parseInt(year) - 1);
