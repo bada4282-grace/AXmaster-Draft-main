@@ -365,11 +365,21 @@ export default function WorldMap({
     let mounted = true;
     if (!month) { return () => { mounted = false; }; }
     onLoadingChange?.(true);
+    let loadingReleased = false;
+    const releaseLoading = () => {
+      if (!loadingReleased) {
+        loadingReleased = true;
+        onLoadingChange?.(false);
+      }
+    };
     getMonthlyCountryMapData(year, month, tradeType)
       .then((rows) => { if (mounted) setMonthlyRanks(rows); })
       .catch(() => { if (mounted) setMonthlyRanks(null); })
-      .finally(() => { if (mounted) onLoadingChange?.(false); });
-    return () => { mounted = false; };
+      .finally(() => { releaseLoading(); });
+    return () => {
+      mounted = false;
+      releaseLoading();
+    };
   }, [year, month, tradeType]);
 
   // ─ 연간 집계: 정적 데이터 사용 (Supabase 호출 불필요) ─
