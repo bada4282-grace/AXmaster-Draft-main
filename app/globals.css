@@ -778,6 +778,22 @@ header.w-full {
   .dashboard-area {
     min-height: 460px;
   }
+
+  /* 상단바: 로고와 오른쪽 메뉴 겹침 방지 — 중앙 정렬 해제, absolute 해제 */
+  .header-top {
+    justify-content: space-between !important;
+    padding: 0 20px;
+  }
+  .header-top > div[style*="position: absolute"] {
+    position: static !important;
+    right: auto !important;
+    font-size: 12px !important;
+  }
+
+  /* 하단 GNB 간격 축소 */
+  .header-gnb {
+    gap: 40px;
+  }
 }
 
 /* ── 2. iPad 세로 (900px 이하) ── */
@@ -831,6 +847,38 @@ header.w-full {
   .info-card {
     flex: 1;
   }
+
+  /* iPad 세로: 로고와 오른쪽 메뉴가 겹치지 않도록 상단바 재구성.
+     중앙 정렬 해제 → 로고 왼쪽, 메뉴 오른쪽 */
+  .header-top {
+    justify-content: space-between !important;
+    padding: 0 16px;
+    height: 50px;
+  }
+  /* 오른쪽 메뉴: absolute 해제 → 일반 플로우로 */
+  .header-top > div[style*="position: absolute"] {
+    position: static !important;
+    right: auto !important;
+    font-size: 11px !important;
+    gap: 0 !important;
+  }
+  /* 오른쪽 메뉴 안 구분선("|") 여백 축소 — 전체 span 간 간격 균일화 */
+  .header-top > div[style*="position: absolute"] > span {
+    font-size: 11px;
+  }
+  /* 마지막 2개 메뉴(업데이트 현황, 공지사항) 숨김 */
+  .header-top > div[style*="position: absolute"] > span:nth-last-child(-n+2) {
+    display: none;
+  }
+
+  /* 하단 GNB */
+  .header-gnb {
+    gap: 20px;
+    height: 40px;
+  }
+  .gnb-item {
+    font-size: 13px;
+  }
 }
 
 /* ── 3. 모바일 가로 / 작은 태블릿 (700px 이하) ── */
@@ -875,12 +923,34 @@ header.w-full {
     padding: 12px 10px;
   }
 
-  /* GNB 간격 축소 */
+  /* 모바일: 상단바는 로고만 남김, 오른쪽 메뉴 전체 숨김 */
+  .header-top {
+    padding: 0 12px;
+    height: 48px;
+    justify-content: center !important;
+  }
+  .header-top > div[style*="position: absolute"] {
+    display: none !important;
+  }
+
+  /* 하단 GNB: 가로 스크롤 허용 */
   .header-gnb {
-    gap: 24px;
+    gap: 14px;
+    height: 36px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    justify-content: flex-start;
+    padding: 0 12px;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .header-gnb::-webkit-scrollbar {
+    display: none;
   }
   .gnb-item {
     font-size: 12px;
+    flex-shrink: 0;
   }
 
   /* 히어로 배너 텍스트 축소는 clamp로 이미 자동 처리됨 */
@@ -924,5 +994,115 @@ header.w-full {
   }
   .gnb-item {
     font-size: 11px;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   GNB 겹침 방지 — 최후 강제 오버라이드 (1100px 이하)
+   .header-top의 두 번째 자식(오른쪽 메뉴)을 직접 타겟팅
+   ═══════════════════════════════════════════════════════ */
+@media (max-width: 1100px) {
+  .header-top {
+    justify-content: space-between !important;
+    padding: 0 20px !important;
+  }
+  .header-top > div:nth-child(2) {
+    position: static !important;
+    right: auto !important;
+    font-size: 12px !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .header-top {
+    padding: 0 16px !important;
+    height: 50px !important;
+  }
+  .header-top > div:nth-child(2) {
+    font-size: 11px !important;
+  }
+  /* 마지막 2개 메뉴(업데이트 현황, 공지사항) 숨김 */
+  .header-top > div:nth-child(2) > span:nth-last-child(-n+2) {
+    display: none !important;
+  }
+}
+
+@media (max-width: 540px) {
+  .header-top {
+    justify-content: center !important;
+    padding: 0 12px !important;
+    height: 48px !important;
+  }
+  .header-top > div:nth-child(2) {
+    display: none !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   브레드크럼 바 반응형 — 1100px 초과(웹)는 영향 없음
+   ═══════════════════════════════════════════════════════ */
+
+/* iPad 가로 이하: 내용이 넘칠 때 가로 스크롤 허용 */
+@media (max-width: 1100px) {
+  .breadcrumb-bar {
+    height: auto;
+    min-height: 36px;
+    padding: 6px 12px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .breadcrumb-bar::-webkit-scrollbar {
+    display: none;
+  }
+  .breadcrumb-back-btn,
+  .breadcrumb-sep,
+  .breadcrumb-text,
+  .breadcrumb-current {
+    flex-shrink: 0;
+  }
+}
+
+/* iPad 세로 이하: 폰트 축소 */
+@media (max-width: 900px) {
+  .breadcrumb-bar {
+    padding: 5px 10px;
+    gap: 4px;
+  }
+  .breadcrumb-back-btn {
+    height: 24px;
+    padding: 0 10px;
+    font-size: 11px;
+  }
+  .breadcrumb-sep {
+    margin: 0 4px;
+    font-size: 11px;
+  }
+  .breadcrumb-text,
+  .breadcrumb-current {
+    font-size: 11px;
+  }
+}
+
+/* 모바일: 구분자 간격 최소화 */
+@media (max-width: 540px) {
+  .breadcrumb-bar {
+    padding: 4px 8px;
+    gap: 3px;
+  }
+  .breadcrumb-back-btn {
+    height: 22px;
+    padding: 0 8px;
+    font-size: 10px;
+  }
+  .breadcrumb-sep {
+    margin: 0 2px;
+    font-size: 10px;
+  }
+  .breadcrumb-text,
+  .breadcrumb-current {
+    font-size: 10px;
   }
 }
