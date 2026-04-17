@@ -175,8 +175,13 @@ export default function TreemapChart({
           ? await getCountryTreemapDataAsync(year, countryName, tradeType)
           : await getTreemapDataAsync(year, tradeType);
         if (!mounted) return;
-        setNoData(false);
-        setTreemapData(data);
+        if (data.length === 0) {
+          setNoData(true);
+          setTreemapData([]);
+        } else {
+          setNoData(false);
+          setTreemapData(data);
+        }
       } else {
         // 월별: 기존 Supabase RPC
         const data = forCountry && countryName
