@@ -44,7 +44,7 @@ function HomeContent() {
 
       <div className="page-main-container">
         {/* Main tabs */}
-        <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+        <div style={{ display: "flex", gap: 8, marginBottom: 4 }}>
           {(["국가별", "품목별"] as const).map((tab) => (
             <button
               key={tab}
