@@ -50,12 +50,28 @@ interface CustomContentProps {
   animKey?: number;
 }
 
+// MTI 대분류별 폰트 색상 (배경색 위 텍스트)
+const MTI_FONT_COLORS: Record<number, string> = {
+  0: "#FFFFFF",
+  1: "#FFFFFF",
+  2: "#FFFFFF",
+  3: "#FFFFFF",
+  4: "#FFFFFF",
+  5: "#FFFFFF",
+  6: "#FFFFFF",
+  7: "#FFFFFF",
+  8: "#FFFFFF",
+  9: "#FFFFFF",
+};
+
 function CustomContent({ x = 0, y = 0, width = 0, height = 0, name, value = 0, data, animKey = 0 }: CustomContentProps) {
   if (width < 10 || height < 10) return null;
   if (!name || name === "root") return null;
 
   const item = data.find((d) => d.name === name);
   const color = item?.color ?? "#3B82F6";
+  const mti = item?.mti ?? 0;
+  const fontColor = MTI_FONT_COLORS[mti] ?? "#333";
   const fontSize = width > 120 ? 14 : width > 60 ? 11 : 9;
   const cx = x + width / 2;
   const cy = y + height / 2;
@@ -86,7 +102,7 @@ function CustomContent({ x = 0, y = 0, width = 0, height = 0, name, value = 0, d
             }}
           >
             <span style={{
-              color: "#fff",
+              color: fontColor,
               fontSize,
               fontWeight: 600,
               lineHeight: 1.2,
@@ -101,7 +117,8 @@ function CustomContent({ x = 0, y = 0, width = 0, height = 0, name, value = 0, d
             </span>
             {height > 38 && (
               <span style={{
-                color: "rgba(255,255,255,0.85)",
+                color: fontColor,
+                opacity: 0.75,
                 fontSize: Math.max(fontSize - 2, 8),
                 marginTop: 2,
                 whiteSpace: "nowrap",
@@ -182,8 +199,13 @@ export default function TreemapChart({
           ? await getCountryTreemapDataAsync(year, countryName, tradeType)
           : await getTreemapDataAsync(year, tradeType);
         if (!mounted) return;
-        setNoData(false);
-        setTreemapData(data);
+        if (data.length === 0) {
+          setNoData(true);
+          setTreemapData([]);
+        } else {
+          setNoData(false);
+          setTreemapData(data);
+        }
       } else {
         // 월별: 기존 Supabase RPC
         const data = forCountry && countryName
@@ -259,7 +281,7 @@ export default function TreemapChart({
     if (!data?.name) return;
     const item = displayData.find((d) => d.name === data.name);
     if (!item) return;
-    const params = new URLSearchParams({ code: item.code });
+    const params = new URLSearchParams({ code: item.code, year });
     router.push(`/product/${encodeURIComponent(item.name)}?${params.toString()}`);
   };
 
@@ -354,25 +376,43 @@ export default function TreemapChart({
       </div>
 
       {/* MTI 대분류 아이콘 필터 */}
-      <div className="flex items-center justify-center gap-1.5 pt-2 flex-wrap" style={{ flexShrink: 0 }}>
+      <div style={{ display: "flex", width: "100%", flexShrink: 0, paddingTop: 4 }}>
         {Object.entries(MTI_COLORS).map(([mti, color]) => {
           const n = Number(mti);
-          const isActive = zoomedMti === n;
+          const isActive = zoomedMti === n || zoomedMti === null;
           return (
             <button
               key={mti}
               data-tooltip={MTI_NAMES[n]}
-              onClick={() => { const next = isActive ? null : n; setZoomedMti(next); onCategoryChange?.(next); startTreemapAnimation(); }}
-              className={`mti-icon-btn${isActive ? " mti-icon-btn--active" : ""}`}
+              onClick={() => {
+                const next = zoomedMti === n ? null : n;
+                setZoomedMti(next);
+                onCategoryChange?.(next);
+                startTreemapAnimation();
+              }}
+              className="mti-icon-btn"
               style={{
                 "--mti-color": color as string,
+                flex: 1,
+                borderRadius: 0,
                 background: isActive ? (color as string) : undefined,
                 borderColor: isActive ? (color as string) : "transparent",
               } as React.CSSProperties}
             >
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke={isActive ? "#fff" : (color as string)} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 {MTI_ICON_PATHS[n]}
               </svg>
+              <span style={{
+                fontSize: 9,
+                fontWeight: 600,
+                color: "#fff",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                maxWidth: 60,
+              }}>
+                {MTI_NAMES[n]}
+              </span>
             </button>
           );
         })}
@@ -381,9 +421,11 @@ export default function TreemapChart({
           onClick={() => { setZoomedMti(null); onCategoryChange?.(null); startTreemapAnimation(); }}
           className={`mti-icon-btn${zoomedMti === null ? " mti-icon-btn--active" : ""}`}
           style={{
-            "--mti-color": "#475569",
-            background: zoomedMti === null ? "#475569" : undefined,
-            borderColor: zoomedMti === null ? "#475569" : "transparent",
+            "--mti-color": "#94A3B8",
+            flex: 1,
+            borderRadius: 0,
+            background: zoomedMti === null ? "#94A3B8" : undefined,
+            borderColor: zoomedMti === null ? "#94A3B8" : "transparent",
           } as React.CSSProperties}
         >
           <span style={{ fontSize: 9, fontWeight: 700, color: zoomedMti === null ? "#fff" : "#64748b", lineHeight: 1 }}>ALL</span>

@@ -16,9 +16,9 @@ interface FilterBarProps {
   defaultYear?: string;
   /** 월·기간 셀렉트 비활성화 (연간 데이터만 사용하는 페이지용) */
   disableMonthPeriod?: boolean;
-  mtiDisabled?: boolean;
   mtiDepth?: number;
   onMtiDepthChange?: (depth: number) => void;
+  mtiDisabled?: boolean;
 }
 
 export default function FilterBar({
@@ -111,7 +111,7 @@ export default function FilterBar({
   const handleCountry = (name: string) => {
     if (!name) return;
     const mode = tradeType === "수입" ? "import" : "export";
-    router.push(`/country/${encodeURIComponent(name)}?mode=${mode}`);
+    router.push(`/country/${encodeURIComponent(name)}?mode=${mode}&year=${year}`);
   };
 
   return (

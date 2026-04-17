@@ -86,15 +86,12 @@ export async function getCountryTreemapDataAsync(
     .limit(5000);
 
   if (error) { console.error("[getCountryTreemapDataAsync]", error.message); }
-  if (error || !data || data.length === 0) {
-    return await getTreemapDataAsync(year, tradeType);
-  }
+  if (error || !data || data.length === 0) return setCache(key, []);
 
   const result = (data as DbRow[])
     .map(row => toProductNode(row, amtCol))
     .filter((n): n is ProductNode => n !== null);
 
-  if (result.length === 0) return await getTreemapDataAsync(year, tradeType);
   return setCache(key, result);
 }
 

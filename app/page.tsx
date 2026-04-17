@@ -67,7 +67,6 @@ function HomeContent() {
               onTradeTypeChange={setTradeType}
               mtiDepth={mainTab === "품목별" ? mtiDepth : undefined}
               onMtiDepthChange={setMtiDepth}
-              mtiDisabled={mtiCategoryActive}
               onCountryChange={setProductCountry}
             />
 

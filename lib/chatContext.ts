@@ -12,6 +12,7 @@ import {
   getCountryKpiAsync,
   getCountryTimeseriesAsync,
   getTreemapDataAsync,
+  getCountryTreemapDataAsync,
 } from "@/lib/dataSupabase";
 
 interface ExtractedKeywords {
@@ -26,8 +27,8 @@ function buildProductLookup(): Map<string, string> {
   const lookup = new Map<string, string>();
   const mti = MTI_LOOKUP as Record<string, string>;
   for (const [code, name] of Object.entries(mti)) {
-    // 6자리 코드 우선, 이미 있으면 덮어쓰지 않음
-    if (code.length === 6 && !lookup.has(name)) {
+    // 6자리 코드 우선, 2글자 이상 이름만, 이미 있으면 덮어쓰지 않음
+    if (code.length === 6 && name.length >= 2 && !lookup.has(name)) {
       lookup.set(name, code);
     }
   }
@@ -217,13 +218,22 @@ function detectTradeType(question: string): "수출" | "수입" {
 
 // 특정 국가명 주변 맥락에서 수출/수입 감지 (국가별 개별 판단)
 function detectTradeTypeForCountry(question: string, country: string): "수출" | "수입" {
-  // "대{국가} 수출", "{국가} 수입" 등 국가명 근처의 수출/수입 감지
-  const patterns = [
-    new RegExp(`대${country}\\s*수입|${country}.*수입|수입.*${country}`),
-    new RegExp(`대${country}\\s*수출|${country}.*수출|수출.*${country}`),
-  ];
-  if (patterns[0].test(question)) return "수입";
-  if (patterns[1].test(question)) return "수출";
+  // 국가명 근처(10글자 이내)에서 수출/수입 감지
+  const idx = question.indexOf(country);
+  if (idx >= 0) {
+    // 국가명 앞 10글자 + 뒤 10글자 범위에서 탐색
+    const before = question.slice(Math.max(0, idx - 10), idx);
+    const after = question.slice(idx, idx + country.length + 10);
+    const context = before + after;
+    if (/수출/.test(context)) return "수출";
+    if (/수입/.test(context)) return "수입";
+  }
+  // "대{국가}" 패턴
+  if (question.includes(`대${country}`)) {
+    const afterDae = question.slice(question.indexOf(`대${country}`) + country.length + 1, question.indexOf(`대${country}`) + country.length + 5);
+    if (afterDae.includes("수출")) return "수출";
+    if (afterDae.includes("수입")) return "수입";
+  }
   return detectTradeType(question);
 }
 
@@ -293,9 +303,9 @@ export async function extractKeywords(question: string): Promise<ExtractedKeywor
   const productCodes: string[] = [];
   const productNames: string[] = [];
 
-  // 1단계: TREEMAP 품목명 매칭 (6단위 코드)
+  // 1단계: TREEMAP 품목명 매칭 (6단위 코드, 단어 경계 확인)
   for (const [name, code] of PRODUCT_LOOKUP.entries()) {
-    if (question.includes(name) && !productCodes.includes(code)) {
+    if (isExactWordMatch(question, name) && !productCodes.includes(code)) {
       productCodes.push(code);
       productNames.push(name);
     }
@@ -442,6 +452,14 @@ export async function buildChatContext(question: string): Promise<string> {
         const recent = timeseries.slice(-3).map(m => `${m.month} 수출${m.export}억달러`).join(", ");
         section += `최근 월별: ${recent}`;
       }
+      // 국가별 상위 수출/수입 품목 (트리맵 데이터)
+      const countryProducts = await getCountryTreemapDataAsync(year, country, tradeType);
+      if (countryProducts.length > 0) {
+        const top10 = countryProducts.slice(0, 10);
+        const lines = top10.map((p, i) => `${i + 1}위: ${p.name} — ${p.value.toFixed(1)}억달러`);
+        section += `\n[${country} ${tradeType} 상위 품목]\n${lines.join("\n")}`;
+      }
+
       sections.push(section);
     } catch { /* 조회 실패 시 생략 */ }
   }
@@ -474,6 +492,46 @@ export async function buildChatContext(question: string): Promise<string> {
     if (topCountries.length === 0 && trend.length === 0) {
       section += `해당 품목의 ${tradeType} 데이터가 없습니다.`;
     }
+
+    // 하위 분류 데이터 (6자리 미만 코드일 때)
+    if (code.length < 6) {
+      try {
+        const mtiLookup = MTI_LOOKUP as Record<string, string>;
+        const subDepth = code.length + 1;
+        const amtCol = tradeType === "수입" ? "imp_amt" : "exp_amt";
+        const { data: subRows } = await supabase
+          .from("agg_product_trend")
+          .select(`code, name, ${amtCol}`)
+          .like("code", `${code}%`)
+          .eq("year", year);
+
+        if (subRows && subRows.length > 0) {
+          // 한 단계 아래 코드로 집계
+          const subMap = new Map<string, { name: string; amt: number }>();
+          for (const r of subRows as Record<string, unknown>[]) {
+            const subCode = String(r.code).slice(0, subDepth <= 6 ? subDepth : 6);
+            const existing = subMap.get(subCode);
+            const amt = Number(r[amtCol]) || 0;
+            if (existing) {
+              existing.amt += amt;
+            } else {
+              subMap.set(subCode, { name: mtiLookup[subCode] ?? String(r.name), amt });
+            }
+          }
+          const sorted = Array.from(subMap.entries())
+            .map(([c, { name: n, amt }]) => ({ code: c, name: n, value: Math.round(amt / 1e8 * 10) / 10 }))
+            .filter(s => s.value > 0)
+            .sort((a, b) => b.value - a.value)
+            .slice(0, 10);
+
+          if (sorted.length > 0) {
+            section += `\n[${name} 하위 분류 (${year}년 ${tradeType})]\n`;
+            section += sorted.map((s, idx) => `${idx + 1}. ${s.name}(${s.code}) — ${s.value}억달러`).join("\n");
+          }
+        }
+      } catch { /* 하위 분류 조회 실패 시 무시 */ }
+    }
+
     sections.push(section);
   }
 
