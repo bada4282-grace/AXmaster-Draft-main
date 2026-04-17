@@ -76,17 +76,18 @@ export interface RouteButton {
 // 한국어 조사 목록 (단어 경계 판별용)
 const KR_PARTICLES = ["이", "가", "은", "는", "을", "를", "의", "에", "에서", "로", "으로", "와", "과", "도", "만", "이고", "이며", "인", "까지", "부터", "한테", "에게"];
 
-// 질문에서 품목명이 독립된 단어로 포함되어 있는지 확인 (조사 허용)
+// 질문에서 품목명이 독립된 단어로 포함되어 있는지 확인 (조사 허용, 공백 포함 이름 지원)
 function isExactWordMatch(question: string, name: string): boolean {
-  const tokens = question.split(/\s+/);
-  return tokens.some(token => {
-    if (token === name) return true;
-    if (token.startsWith(name)) {
-      const suffix = token.slice(name.length);
-      return KR_PARTICLES.some(p => suffix === p || suffix.startsWith(p));
-    }
-    return false;
-  });
+  // 공백 포함 이름 (예: "플라스틱 제품") — question 안에 포함되는지 직접 확인
+  const idx = question.indexOf(name);
+  if (idx === -1) return false;
+  // 이름 뒤에 오는 문자가 조사이거나 끝이면 매칭
+  const after = question.slice(idx + name.length);
+  if (after === "") return true;
+  if (KR_PARTICLES.some(p => after.startsWith(p))) return true;
+  // 뒤에 공백/구두점이면 OK
+  if (/^[\s,?.!·。、]/.test(after)) return true;
+  return false;
 }
 
 // 질문에서 라우팅 가능한 버튼 목록 반환
@@ -279,8 +280,7 @@ export function extractKeywords(question: string): ExtractedKeywords {
       productNames.push(name);
     }
   }
-
-  // 2단계: MTI_LOOKUP 매칭 — TREEMAP에 없는 품목도 인식 (완구, 악기 등)
+  // 2단계: MTI_LOOKUP 매칭 — TREEMAP에 없는 품목도 인식 (완구, 악기, 플라스틱 제품 등)
   if (productCodes.length === 0) {
     const mtiLookup = MTI_LOOKUP as Record<string, string>;
     const mtiMatches: { code: string; name: string }[] = [];
