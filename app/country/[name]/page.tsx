@@ -229,8 +229,8 @@ function CountryDetailContent() {
                   {subTab === "시계열 추이" && (
                     <>
                       {year === "2026" && (
-                        <span style={{ fontSize: 10, color: "#f59e0b", fontWeight: 600 }}>
-                          ⚠ 불완전 연도 (1~2월)
+                        <span style={{ fontSize: 12, color: "#f59e0b", fontWeight: 600 }}>
+                          ⚠ 데이터 불충분
                         </span>
                       )}
                     </>

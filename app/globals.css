@@ -496,8 +496,7 @@ header.w-full {
   padding: 0 2px;
   font-weight: 600;
   color: #333;
-}
-.chatbot-typing { display: flex; gap: 4px; align-items: center; padding: 2px 0; }
+}.chatbot-typing { display: flex; gap: 4px; align-items: center; padding: 2px 0; }
 .chatbot-typing span { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #aaa; animation: chatbot-bounce 1.2s ease-in-out infinite; }
 .chatbot-typing span:nth-child(2) { animation-delay: 0.2s; }
 .chatbot-typing span:nth-child(3) { animation-delay: 0.4s; }

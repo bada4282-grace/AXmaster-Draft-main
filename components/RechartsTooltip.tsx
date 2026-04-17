@@ -38,8 +38,8 @@ export function RechartsPayloadTooltip({
       <p className="tooltip-shell-title">{title}</p>
       {sub && <p className="tooltip-shell-sub">{sub}</p>}
       {isIncomplete && monthRange && (
-        <p style={{ margin: "4px 0", padding: "2px 6px", background: "#FEF3C7", color: "#92400E", fontSize: 10, fontWeight: 600, borderRadius: 3, textAlign: "center" }}>
-          ⚠ 불완전 연도({monthRange})
+        <p style={{ margin: "4px 0", padding: "2px 6px", background: "#FEF3C7", color: "#92400E", fontSize: 12, fontWeight: 600, borderRadius: 3, textAlign: "center" }}>
+          ⚠ 데이터 불충분
         </p>
       )}
       {payload.map((p, i) => (
