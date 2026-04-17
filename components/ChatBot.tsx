@@ -20,7 +20,11 @@ function TypingIndicator() {
 }
 
 function renderBotText(text: string): React.ReactNode {
-  const processed = text.replace(/==([^=]+)==/g, "<mark>$1</mark>");
+  // ==하이라이트== → <mark> 변환
+  // **bold** → <strong> 변환 (ReactMarkdown이 놓치는 경우 대비)
+  const processed = text
+    .replace(/==([^=]+)==/g, "<mark>$1</mark>")
+    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
   return (
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
