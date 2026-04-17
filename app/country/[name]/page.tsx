@@ -254,7 +254,7 @@ function CountryDetailContent() {
             </div>
 
             {/* Main viz */}
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+            <div className="dashboard-area" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
               {/* Sub tabs */}
               <div className="subtab-bar">
                 {(["품목별", "시계열 추이"] as const).map((tab) => (
@@ -292,7 +292,7 @@ function CountryDetailContent() {
                 </div>
               </div>
 
-              <div style={{ flex: 1, padding: 8, overflow: "hidden" }}>
+              <div style={{ flex: "1 1 auto", padding: 8, minHeight: 360, position: "relative" }}>
                 {subTab === "품목별" ? (
                   <TreemapChart forCountry countryName={country.name} year={year} month={month} tradeType={tradeType} mtiDepth={mtiDepth} onLoadingChange={handleLoadingChange} onCategoryChange={(mti) => setMtiCategoryActive(mti !== null)} />
                 ) : timeseries.length > 0 ? (

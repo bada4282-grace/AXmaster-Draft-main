@@ -167,6 +167,13 @@ export default function TreemapChart({
   useEffect(() => {
     let mounted = true;
     onLoadingChange?.(true);
+    let loadingReleased = false;
+    const releaseLoading = () => {
+      if (!loadingReleased) {
+        loadingReleased = true;
+        onLoadingChange?.(false);
+      }
+    };
 
     const loadData = async () => {
       if (!month) {
@@ -195,9 +202,15 @@ export default function TreemapChart({
 
     loadData()
       .catch(() => { if (mounted) { setNoData(false); setTreemapData([]); } })
-      .finally(() => { if (mounted) { startTreemapAnimation(); onLoadingChange?.(false); } });
+      .finally(() => {
+        if (mounted) startTreemapAnimation();
+        releaseLoading();
+      });
 
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+      releaseLoading();
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [year, month, tradeType, countryName, forCountry]);
 
@@ -251,7 +264,11 @@ export default function TreemapChart({
   };
 
   return (
-    <div className="w-full h-full flex flex-col relative" onMouseLeave={onTreemapMouseLeave}>
+    <div
+      className="w-full flex flex-col relative"
+      style={{ height: "100%", minHeight: 320 }}
+      onMouseLeave={onTreemapMouseLeave}
+    >
       <style>{`
         @keyframes tcell-${animKey} {
           from { opacity: 0; transform: scale(0.97); }
@@ -311,7 +328,7 @@ export default function TreemapChart({
         }
       `}</style>
 
-      <div className="flex-1 min-h-0">
+      <div style={{ flex: "1 1 auto", minHeight: 260, position: "relative" }}>
         {noData || displayData.filter((d) => d.value > 0).length === 0 ? (
           <div style={{
             display: "flex", alignItems: "center", justifyContent: "center",
@@ -337,7 +354,7 @@ export default function TreemapChart({
       </div>
 
       {/* MTI 대분류 아이콘 필터 */}
-      <div className="flex items-center justify-center gap-1.5 pt-2 flex-wrap">
+      <div className="flex items-center justify-center gap-1.5 pt-2 flex-wrap" style={{ flexShrink: 0 }}>
         {Object.entries(MTI_COLORS).map(([mti, color]) => {
           const n = Number(mti);
           const isActive = zoomedMti === n;
