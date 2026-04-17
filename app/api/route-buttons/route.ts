@@ -42,19 +42,21 @@ export async function POST(request: NextRequest) {
 위 질문만 분석하세요. 답변 내용은 무시하세요.
 
 사용자가 질문에서 명시적으로 요청한 항목만 추출하세요:
-- 국가+수출/수입: {"type":"country","name":"국가명","trade":"export 또는 import"}
-- 품목: {"type":"product","name":"품목명"}
-- 무역수지/전체현황: {"type":"home"}
+- 국가 페이지: {"type":"country","name":"국가명","trade":"export 또는 import"}
+- 품목 페이지: {"type":"product","name":"실제 품목명"}
+- 메인 대시보드: {"type":"home"}
 
 핵심 규칙:
 1. 질문에 명시된 것만. 추론/추천 금지
-2. "대중국 수출" → country, 중국, export
-3. "대미국 수입" → country, 미국, import
-4. "수출입" 또는 방향 미지정 → export
-5. "무역수지", "전체", "총" → home
-6. "반도체 수출" → product, 반도체
-7. 질문에 없는 국가/품목 절대 생성 금지
-8. 최대 4개
+2. "대중국 수출" → {"type":"country","name":"중국","trade":"export"}
+3. "대미국 수입" → {"type":"country","name":"미국","trade":"import"}
+4. "중국이 수출을 많이 한 품목" → {"type":"country","name":"중국","trade":"export"} (국가 페이지에서 품목 확인)
+5. "반도체 세부 항목" → {"type":"product","name":"반도체"}
+6. "무역수지", "전체", "총" → {"type":"home"}
+7. product의 name은 반드시 실제 무역 품목명이어야 함 (반도체, 자동차, 석유제품 등). "중국 수출 품목" 같은 설명문은 품목명이 아님 — 절대 사용 금지
+8. "수출입" 또는 방향 미지정 → export
+9. 질문에 없는 국가/품목 절대 생성 금지
+10. 최대 4개
 
 JSON 배열만 출력:
 [{"type":"...","name":"...","trade":"..."}]`,
@@ -101,12 +103,11 @@ JSON 배열만 출력:
               }
             }
           }
-          const params = new URLSearchParams();
-          if (bestCode) params.set("code", bestCode);
-          const qs = params.toString();
+          // 실제 MTI에 존재하지 않는 품목명이면 버튼 생성 안 함
+          if (!bestCode) return null;
           return {
             label: `${b.name} 데이터 확인하기`,
-            href: `/product/${encodeURIComponent(b.name)}${qs ? "?" + qs : ""}`,
+            href: `/product/${encodeURIComponent(b.name)}?code=${bestCode}`,
             type: "exact" as const,
           };
         }
