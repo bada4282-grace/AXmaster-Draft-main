@@ -160,7 +160,7 @@ const fmt1 = v => Math.round(v / 1e8 * 10) / 10;
 const fmtStr = v => fmt1(v).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 function changeRate(cur, prev) {
   if (!prev) return 0;
-  return Math.round((cur - prev) / prev * 1000) / 10;
+  return Math.round((cur - prev) / prev * 10000) / 100;
 }
 
 // ─── KPI ─────────────────────────────────────────────────────────────────
@@ -171,11 +171,13 @@ for (const yr of YEARS) {
   kpiOut[yr] = {
     export: {
       value: fmtStr(kpi[yr].exp),
+      raw: kpi[yr].exp,
       change: hasPrev ? Math.abs(changeRate(kpi[yr].exp, kpi[prevYr].exp)) : 0,
       up: hasPrev ? kpi[yr].exp >= kpi[prevYr].exp : true,
     },
     import: {
       value: fmtStr(kpi[yr].imp),
+      raw: kpi[yr].imp,
       change: hasPrev ? Math.abs(changeRate(kpi[yr].imp, kpi[prevYr].imp)) : 0,
       up: hasPrev ? kpi[yr].imp >= kpi[prevYr].imp : true,
     },
@@ -362,6 +364,8 @@ for (const yr of YEARS) {
     countryKpiOut[yr][ctr] = {
       export: String(fmt1(expAmt)),
       import: String(fmt1(impAmt)),
+      rawExport: expAmt,
+      rawImport: impAmt,
       balance: String(fmt1(Math.abs(expAmt - impAmt))),
       positive: expAmt >= impAmt,
       exportChange: hasPrevExp ? Math.abs(changeRate(expAmt, prevExpAmt)) : 0,
@@ -519,7 +523,8 @@ export const PRODUCT_IMP_TOP_COUNTRIES_BY_CODE: Record<string, Record<string, {
 }[]>> = ${JSON.stringify(productImpTopCtrsOut, null, 2)};
 
 export const COUNTRY_KPI_BY_YEAR: Record<string, Record<string, {
-  export: string; import: string; balance: string; positive: boolean;
+  export: string; import: string; rawExport: number; rawImport: number;
+  balance: string; positive: boolean;
   exportChange: number; exportUp: boolean; importChange: number; importUp: boolean;
 }>> = ${JSON.stringify(countryKpiOut, null, 2)};
 

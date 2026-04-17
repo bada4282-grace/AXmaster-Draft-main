@@ -36,10 +36,10 @@ function fmtNum(v: number | null, decimals = 1): string {
 
 function calcChange(cur: number | null, prev: number | null): { change: string; up: boolean } {
   if (cur == null || prev == null || prev === 0) return { change: "—", up: true };
-  const diff = cur - prev;
-  const up = diff >= 0;
+  const rate = (cur - prev) / prev * 100;
+  const up = rate >= 0;
   return {
-    change: `${up ? "+" : ""}${diff >= 1 || diff <= -1 ? fmtNum(diff, 1) : (diff * 100).toFixed(1) + "%p"}`,
+    change: `${up ? "+" : ""}${Math.abs(rate).toFixed(1)}%`,
     up,
   };
 }

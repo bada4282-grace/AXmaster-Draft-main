@@ -10,11 +10,6 @@ const HIDDEN_PATHS = ["/login", "/signup"];
 
 export default function PersistentChatBot() {
   const pathname = usePathname();
-
-  // 로그인/회원가입 페이지에서는 챗봇 숨김
-  if (HIDDEN_PATHS.includes(pathname)) {
-    return null;
-  }
   const [chatOpen, setChatOpen] = useState(true);
   const asideRef = useRef<HTMLElement>(null);
 
@@ -36,6 +31,11 @@ export default function PersistentChatBot() {
     // 트랜지션 완료 후 resize 이벤트 발생 (transitionend 이벤트와 함께 보완)
     setTimeout(() => window.dispatchEvent(new Event("resize")), 350);
   }, []);
+
+  // 로그인/회원가입 페이지에서는 챗봇 숨김 (Hook 뒤에 위치해야 함)
+  if (HIDDEN_PATHS.includes(pathname)) {
+    return null;
+  }
 
   return (
     <aside ref={asideRef} className={`app-chatbot-sidebar${chatOpen ? "" : " collapsed"}`}>

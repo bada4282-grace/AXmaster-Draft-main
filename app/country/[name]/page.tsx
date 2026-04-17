@@ -53,8 +53,27 @@ function CountryDetailContent() {
     topProducts: [], nameEn: name, share: 0,
   };
 
-  // 해당 국가의 연도별 KPI
+  // 해당 국가의 연도별 KPI — 증감률은 사전 생성 값 대신 자체 계산
   const kpi = getCountryKpi(year, name);
+  const prevYearStr = String(parseInt(year) - 1);
+  const prevKpi = getCountryKpi(prevYearStr, name);
+
+  const pctChg = (cur: number, prev: number) =>
+    prev > 0 ? Math.round(Math.abs((cur - prev) / prev * 10000)) / 100 : 0;
+
+  const countryExportChange = (kpi && prevKpi && prevKpi.rawExport > 0)
+    ? pctChg(kpi.rawExport, prevKpi.rawExport)
+    : 0;
+  const countryExportUp = (kpi && prevKpi)
+    ? kpi.rawExport >= prevKpi.rawExport
+    : true;
+  const countryImportChange = (kpi && prevKpi && prevKpi.rawImport > 0)
+    ? pctChg(kpi.rawImport, prevKpi.rawImport)
+    : 0;
+  const countryImportUp = (kpi && prevKpi)
+    ? kpi.rawImport >= prevKpi.rawImport
+    : true;
+
   const timeseries = getCountryTimeseries(year, name);
 
   // Y축 깔끔한 눈금 계산 (50, 100, 150… 같은 round number)
@@ -162,11 +181,11 @@ function CountryDetailContent() {
                 month={month}
                 tradeType={tradeType}
                 exportVal={kpi.export}
-                exportChange={kpi.exportChange}
-                exportUp={kpi.exportUp}
+                exportChange={countryExportChange}
+                exportUp={countryExportUp}
                 importVal={kpi.import}
-                importChange={kpi.importChange}
-                importUp={kpi.importUp}
+                importChange={countryImportChange}
+                importUp={countryImportUp}
                 balance={kpi.balance}
                 balancePositive={kpi.positive}
               />
