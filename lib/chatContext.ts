@@ -2,12 +2,9 @@ import {
   MTI_NAMES,
   DEFAULT_YEAR,
   KPI_BY_YEAR,
-} from "@/lib/data";
-import {
-  MACRO_INDICATORS,
-  MACRO_META,
   MTI_LOOKUP,
-} from "@/lib/tradeData.generated";
+} from "@/lib/data";
+import { supabase } from "@/lib/supabase";
 import {
   getProductTrendAsync,
   getProductTopCountriesAsync,
@@ -308,58 +305,54 @@ export async function extractKeywords(question: string): Promise<ExtractedKeywor
   return { countries, productCodes, productNames, year };
 }
 
-// 거시경제 지표 컨텍스트 조립
-function buildMacroContext(question: string, year: string): string {
-  const indicators = MACRO_INDICATORS as Record<string, Record<string, number | null>>;
-  if (!indicators || Object.keys(indicators).length === 0) return "";
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type MacroRow = Record<string, any>;
+
+// 거시경제 지표 컨텍스트 조립 — Supabase에서 직접 조회
+async function buildMacroContext(question: string, year: string): Promise<string> {
+  const { data: allRows, error } = await supabase
+    .from("macro_indicators")
+    .select("*")
+    .order("YYMM", { ascending: false });
+
+  if (error || !allRows || allRows.length === 0) return "";
 
   const macroKeys = detectMacroKeywords(question);
   const analysis = isAnalysisQuery(question);
 
-  let targetYymms: string[];
+  let filtered: MacroRow[];
   if (macroKeys.length > 0) {
-    targetYymms = Object.keys(indicators).sort().reverse();
+    filtered = allRows;
   } else if (analysis) {
     const prevYear = String(parseInt(year) - 1);
-    targetYymms = Object.keys(indicators)
-      .filter(ym => ym.startsWith(year) || ym.startsWith(prevYear))
-      .sort().reverse();
+    filtered = allRows.filter((r: MacroRow) => {
+      const ym = String(r.YYMM);
+      return ym.startsWith(year) || ym.startsWith(prevYear);
+    });
   } else {
-    targetYymms = Object.keys(indicators)
-      .filter(ym => ym.startsWith(year))
-      .sort().reverse();
+    filtered = allRows.filter((r: MacroRow) => String(r.YYMM).startsWith(year));
   }
 
-  if (targetYymms.length === 0) return "";
+  if (filtered.length === 0) return "";
 
-  const fmtPct = (v: number | null) => v == null ? "-" : `${(v * 100).toFixed(1)}%`;
-  const fmtNum = (v: number | null, d = 1) => v == null ? "-" : v.toFixed(d);
+  const fmtPct = (v: number | null) => v == null ? "-" : `${(Number(v) * 100).toFixed(1)}%`;
+  const fmtNum = (v: number | null, d = 1) => v == null ? "-" : Number(v).toFixed(d);
 
   const header = "기준년월 | 한국금리 | 제조업BSI | 비제조BSI | EBSI | 산업생산 | CPI | 미국금리 | 미국PMI | 중국금리 | 중국PMI | 브렌트유 | SCFI";
-  const rows = targetYymms.map(ym => {
-    const d = indicators[ym];
-    return `${ym} | ${fmtPct(d.KR_BASE_RATE)} | ${fmtNum(d.KR_BSI_MFG, 0)} | ${fmtNum(d.KR_BSI_NON_MFG, 0)} | ${fmtNum(d.KR_EBSI, 1)} | ${fmtPct(d.KR_PROD_YOY)} | ${fmtPct(d.KR_CPI_YOY)} | ${fmtPct(d.US_BASE_RATE)} | ${fmtNum(d.US_PMI_MFG, 1)} | ${fmtPct(d.CN_BASE_RATE)} | ${fmtNum(d.CN_PMI_MFG, 1)} | $${fmtNum(d.BRENT_OIL, 1)} | ${fmtNum(d.SCFI, 0)}`;
-  });
+  const dataRows = filtered.map((d: MacroRow) =>
+    `${d.YYMM} | ${fmtPct(d.KR_BASE_RATE)} | ${fmtNum(d.KR_BSI_MFG, 0)} | ${fmtNum(d.KR_BSI_NON_MFG, 0)} | ${fmtNum(d.KR_EBSI, 1)} | ${fmtPct(d.KR_PROD_YOY)} | ${fmtPct(d.KR_CPI_YOY)} | ${fmtPct(d.US_BASE_RATE)} | ${fmtNum(d.US_PMI_MFG, 1)} | ${fmtPct(d.CN_BASE_RATE)} | ${fmtNum(d.CN_PMI_MFG, 1)} | $${fmtNum(d.BRENT_OIL, 1)} | ${fmtNum(d.SCFI, 0)}`
+  );
 
   const guide = `[지표 해석 가이드 — 반드시 준수]
 ※ 아래 기준을 정확히 적용하세요. 잘못 해석하면 안 됩니다.
-- BSI/EBSI: 기준선은 100입니다. 100 이상 = 긍정적(경기 확장 전망), 100 미만 = 부정적(경기 위축 전망). 예: BSI 71은 100 미만이므로 "부정적 전망"입니다. 절대로 100 미만을 긍정으로 해석하지 마세요.
-- PMI: 기준선은 50입니다. 50 이상 = 경기 확장, 50 미만 = 경기 위축. 예: PMI 49는 "위축 국면"입니다.
+- BSI/EBSI: 기준선은 100입니다. 100 이상 = 긍정적(경기 확장 전망), 100 미만 = 부정적(경기 위축 전망).
+- PMI: 기준선은 50입니다. 50 이상 = 경기 확장, 50 미만 = 경기 위축.
 - 금리: 소수로 표기됩니다 (0.025 = 2.5%). 답변 시 백분율로 변환하세요.
 - 산업생산/CPI: 전년 동기 대비 증감률(소수). 0.07 = 7% 증가, -0.003 = 0.3% 감소.
 - 브렌트유: 달러/배럴($/bbl) 단위.
 - SCFI: 상하이컨테이너운임지수. 숫자가 클수록 해운 운임이 높음.`;
 
-  let metaSection = "";
-  if (macroKeys.length > 0) {
-    const meta = (MACRO_META as { key: string; label: string; desc: string }[])
-      .filter(m => macroKeys.includes(m.key));
-    if (meta.length > 0) {
-      metaSection = "\n\n[언급된 지표 설명]\n" + meta.map(m => `- ${m.label}: ${m.desc}`).join("\n");
-    }
-  }
-
-  return `[거시경제 지표]\n${header}\n${rows.join("\n")}\n\n${guide}${metaSection}`;
+  return `[거시경제 지표]\n${header}\n${dataRows.join("\n")}\n\n${guide}`;
 }
 
 // 추출된 키워드 기반으로 무역 데이터 조회 후 컨텍스트 문자열 조립
@@ -482,7 +475,7 @@ export async function buildChatContext(question: string): Promise<string> {
   }
 
   // 거시경제 지표 컨텍스트
-  const macroCtx = buildMacroContext(question, year);
+  const macroCtx = await buildMacroContext(question, year);
   if (macroCtx) {
     sections.push(macroCtx);
   }

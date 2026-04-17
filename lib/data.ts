@@ -1,16 +1,14 @@
 /**
  * 경량 데이터 레이어 — 클라이언트 번들에 포함되는 최소 데이터
- *
- * Heavy 데이터(트리맵, 국가별, 품목별)는 Supabase agg 테이블에서 조회:
- *   → lib/dataSupabase.ts (대시보드 컴포넌트용)
- *   → lib/chatContext.ts  (챗봇용, tradeData.generated에서 직접 import)
+ * KPI (~2KB), MTI 룩업 (~39KB), MTI 색상/이름 (~1KB)
+ * 모든 Heavy 데이터는 Supabase에서 조회 (lib/dataSupabase.ts)
  */
 import {
   KPI_BY_YEAR,
   MTI_COLORS as MTI_COLORS_RAW,
   MTI_NAMES as MTI_NAMES_RAW,
   MTI_LOOKUP as MTI_LOOKUP_RAW,
-} from "./tradeData.generated";
+} from "./staticData";
 
 export type TradeType = "수출" | "수입";
 
