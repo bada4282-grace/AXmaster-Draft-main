@@ -18,6 +18,7 @@ interface FilterBarProps {
   disableMonthPeriod?: boolean;
   mtiDepth?: number;
   onMtiDepthChange?: (depth: number) => void;
+  mtiDisabled?: boolean;
 }
 
 export default function FilterBar({
