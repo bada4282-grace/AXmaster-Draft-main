@@ -36,7 +36,7 @@ function calcChange(cur: number | null, prev: number | null): { change: string; 
   const rate = (cur - prev) / prev * 100;
   const up = rate >= 0;
   return {
-    change: `${up ? "+" : "-"}${Math.abs(rate).toFixed(1)}%`,
+    change: `${up ? "▲" : "▼"}${Math.abs(rate).toFixed(1)}%`,
     up,
   };
 }
