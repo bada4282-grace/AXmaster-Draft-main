@@ -45,7 +45,7 @@ export default function PersistentChatBot() {
         title={chatOpen ? "챗봇 접기" : "챗봇 펼치기"}
         aria-label={chatOpen ? "챗봇 접기" : "챗봇 펼치기"}
       >
-        {chatOpen ? "〉" : "〈"}
+        {chatOpen ? "›" : "‹"}
       </button>
       <div className="app-chatbot-inner">
         <div className="dashboard-card chatbot-card">
