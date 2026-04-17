@@ -168,6 +168,39 @@ function ProductDetailContent() {
   const isComplete = !resolvedIncompleteYears.has(year) && !resolvedIncompleteYears.has(prevYear);
   const changeRate = (isComplete && prevVal) ? ((currentVal - prevVal) / prevVal * 100).toFixed(1) : null;
   const tradeLabel = tradeType === "수입" ? "수입" : "수출";
+
+  // ─── 품목별 KPI: 수출·수입 양쪽 데이터로 KPIBar에 전달 ───
+  const getProductYearValue = (tt: TradeType, yr: string): number => {
+    if (!productCode) return 0;
+    if (country) {
+      const base = getCountryTreemapData(yr, country, tt);
+      if (isAggregated) {
+        const agg = aggregateTreemapByDepth(base, codeParam.length).find((p) => p.code === codeParam);
+        return agg?.value ?? 0;
+      }
+      return base.find((p) => p.name === name)?.value ?? 0;
+    }
+    const t = getAggregatedProductTrend(productCode, tt);
+    const clean = (s: string) => s.replace(/\(.*\)/, "").trim();
+    return t.find((d) => clean(d.year) === yr)?.value ?? 0;
+  };
+
+  const prodExpCur = getProductYearValue("수출", year);
+  const prodExpPrev = getProductYearValue("수출", prevYear);
+  const prodImpCur = getProductYearValue("수입", year);
+  const prodImpPrev = getProductYearValue("수입", prevYear);
+
+  const pctChg = (cur: number, prev: number) =>
+    prev > 0 ? Math.round(Math.abs((cur - prev) / prev * 10000)) / 100 : 0;
+
+  const prodExpVal = prodExpCur.toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  const prodImpVal = prodImpCur.toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  const prodBalance = Math.abs(prodExpCur - prodImpCur);
+  const prodBalVal = prodBalance.toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  const prodExpChange = (isComplete && prodExpPrev > 0) ? pctChg(prodExpCur, prodExpPrev) : 0;
+  const prodExpUp = prodExpCur >= prodExpPrev;
+  const prodImpChange = (isComplete && prodImpPrev > 0) ? pctChg(prodImpCur, prodImpPrev) : 0;
+  const prodImpUp = prodImpCur >= prodImpPrev;
   const tooltipFollowProps = {
     ...rechartsTooltipSurfaceProps,
     isAnimationActive: false,
@@ -213,7 +246,17 @@ function ProductDetailContent() {
           {/* Dashboard card */}
           <div className="dashboard-card dashboard-main-card">
             <FilterBar mode="product" defaultYear={initialYear} onYearChange={setYear} onTradeTypeChange={setTradeType} onCountryChange={setCountry} disableMonthPeriod />
-            <KPIBar year={year} />
+            <KPIBar
+              year={year}
+              exportVal={prodExpVal}
+              exportChange={prodExpChange}
+              exportUp={prodExpUp}
+              importVal={prodImpVal}
+              importChange={prodImpChange}
+              importUp={prodImpUp}
+              balance={prodBalVal}
+              balancePositive={prodExpCur >= prodImpCur}
+            />
 
             <div className="split-panel" style={{ height: 380 }}>
             {/* Left info cards */}
