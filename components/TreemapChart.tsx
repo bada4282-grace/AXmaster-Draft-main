@@ -1,10 +1,10 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
-import { Treemap, ResponsiveContainer, Tooltip } from "recharts";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
+import { Treemap, ResponsiveContainer } from "recharts";
 import { getTreemapData, getCountryTreemapData, aggregateTreemapByDepth, MTI_COLORS, MTI_NAMES, ProductNode, DEFAULT_YEAR, type TradeType } from "@/lib/data";
 import { getMonthlyTreemapData, getCountryMonthlyTreemapData } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
-import { rechartsTooltipSurfaceProps } from "@/components/RechartsTooltip";
 
 /** MTI 대분류별 SVG 아이콘 path */
 const MTI_ICON_PATHS: Record<number, React.ReactNode> = {
@@ -55,81 +55,70 @@ function CustomContent({ x = 0, y = 0, width = 0, height = 0, name, value = 0, d
 
   const item = data.find((d) => d.name === name);
   const color = item?.color ?? "#3B82F6";
-  const baseFontSize = width > 120 ? 14 : width > 60 ? 11 : 9;
-  // 이름이 길면 폰트를 줄여서 여백 확보 (글자당 ~7px 기준, 양쪽 패딩 12px)
-  const nameLen = (name ?? "").length;
-  const maxFitSize = width > 80 ? Math.floor((width - 12) / (nameLen * 0.6)) : baseFontSize;
-  const fontSize = Math.max(8, Math.min(baseFontSize, maxFitSize));
+  const fontSize = width > 120 ? 14 : width > 60 ? 11 : 9;
   const cx = x + width / 2;
   const cy = y + height / 2;
+  const pad = 4;
 
   return (
     <g
       style={{
+        cursor: "pointer",
         transformOrigin: `${cx}px ${cy}px`,
         animation: `tcell-${animKey} 0.5s cubic-bezier(0.22, 1, 0.36, 1) both`,
       }}
     >
       <rect x={x} y={y} width={width} height={height} fill={color} stroke="#fff" strokeWidth={1} />
-      {width > 40 && height > 25 && (
-        <>
-          <text
-            x={x + width / 2} y={y + height / 2 - (width > 80 ? 8 : 4)}
-            textAnchor="middle" fill="white" fontSize={fontSize} fontWeight={600}
-            style={{ pointerEvents: "none" }}
+      {width > 36 && height > 22 && (
+        <foreignObject x={x + pad} y={y} width={width - pad * 2} height={height}>
+          <div
+            style={{
+              width: "100%",
+              height: "100%",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              overflow: "hidden",
+              pointerEvents: "none",
+              padding: `${pad}px 0`,
+            }}
           >
-            {width > 80 ? name : (name?.slice(0, 4) ?? "")}
-          </text>
-          {width > 50 && height > 40 && (
-            <text
-              x={x + width / 2} y={y + height / 2 + (width > 80 ? 10 : 8)}
-              textAnchor="middle" fill="rgba(255,255,255,0.85)" fontSize={Math.max(fontSize - 2, 8)}
-              style={{ pointerEvents: "none" }}
-            >
-              {formatAmount(value)}
-            </text>
-          )}
-        </>
+            <span style={{
+              color: "#fff",
+              fontSize,
+              fontWeight: 600,
+              lineHeight: 1.2,
+              textAlign: "center",
+              wordBreak: "break-all",
+              overflow: "hidden",
+              display: "-webkit-box",
+              WebkitLineClamp: height > 50 ? 3 : 2,
+              WebkitBoxOrient: "vertical",
+            }}>
+              {name}
+            </span>
+            {height > 38 && (
+              <span style={{
+                color: "rgba(255,255,255,0.85)",
+                fontSize: Math.max(fontSize - 2, 8),
+                marginTop: 2,
+                whiteSpace: "nowrap",
+              }}>
+                {formatAmount(value)}
+              </span>
+            )}
+          </div>
+        </foreignObject>
       )}
     </g>
   );
 }
 
-function CustomTooltip({
-  active, payload, data, tradeType, forCountry,
-}: {
-  active?: boolean; payload?: { payload?: { name?: string } }[]; data: ProductNode[]; tradeType: TradeType; forCountry?: boolean;
-}) {
-  if (!active || !payload?.length) return null;
-  const item = data.find((d) => d.name === payload[0]?.payload?.name);
-  if (!item) return null;
-  const label = tradeType === "수입" ? "수입액" : "수출액";
-  const ctrlabel = tradeType === "수입" ? "상위 수입국" : "상위 수출국";
-  return (
-    <div className="tooltip-shell">
-      <p className="tooltip-shell-title">{item.name}</p>
-      <p className="tooltip-shell-line">
-        {label}: <strong>{formatAmount(item.value)}</strong>
-      </p>
-      {item.topCountries && item.topCountries.length > 0 && (
-        <>
-          <p className="tooltip-shell-line" style={{ marginTop: 8, fontWeight: 600, color: "#64748b" }}>
-            {ctrlabel}:
-          </p>
-          <ul className="tooltip-shell-list">
-            {item.topCountries.map((c) => (
-              <li key={c}>• {c}</li>
-            ))}
-          </ul>
-        </>
-      )}
-      {!forCountry && (
-        <p className="tooltip-shell-hint" style={{ marginTop: 10 }}>
-          클릭하면 상세 페이지로 이동
-        </p>
-      )}
-    </div>
-  );
+interface TooltipState {
+  x: number;
+  y: number;
+  item: ProductNode;
 }
 
 interface TreemapChartProps {
@@ -165,6 +154,7 @@ export default function TreemapChart({
   const [animKey, setAnimKey] = useState(0);
   const [animating, setAnimating] = useState(false);
   const animTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [tooltip, setTooltip] = useState<TooltipState | null>(null);
 
   const startTreemapAnimation = () => {
     if (animTimeoutRef.current) {
@@ -225,6 +215,24 @@ export default function TreemapChart({
         .slice(0, 30)
     : aggregatedData;
 
+  const onTreemapMouseMove = useCallback((e: React.MouseEvent) => {
+    const target = e.target as SVGElement;
+    const g = target.closest?.("g");
+    const rect = g?.querySelector?.("rect");
+    if (!rect) { setTooltip(null); return; }
+    const fill = rect.getAttribute("fill");
+    if (!fill || fill === "#fff" || fill === "transparent") { setTooltip(null); return; }
+    const fo = g?.querySelector?.("foreignObject");
+    const nameSpan = fo?.querySelector?.("span");
+    const cellName = nameSpan?.textContent;
+    if (!cellName) { setTooltip(null); return; }
+    const item = displayData.find((d) => d.name === cellName);
+    if (!item) { setTooltip(null); return; }
+    setTooltip({ x: e.clientX, y: e.clientY, item });
+  }, [displayData]);
+
+  const onTreemapMouseLeave = useCallback(() => { setTooltip(null); }, []);
+
   const chartData = [{
     name: "root",
     children: displayData.filter((d) => d.value > 0).map((d) => ({ name: d.name, size: d.value })),
@@ -239,7 +247,7 @@ export default function TreemapChart({
   };
 
   return (
-    <div className="w-full h-full flex flex-col relative">
+    <div className="w-full h-full flex flex-col relative" onMouseLeave={onTreemapMouseLeave}>
       <style>{`
         @keyframes tcell-${animKey} {
           from { opacity: 0; transform: scale(0.97); }
@@ -309,21 +317,18 @@ export default function TreemapChart({
             데이터가 없습니다.
           </div>
         ) : (
-          <ResponsiveContainer width="100%" height="100%">
-            <Treemap
-              data={chartData}
-              dataKey="size"
-              aspectRatio={4 / 3}
-              isAnimationActive={false}
-              onClick={handleClick}
-              content={<CustomContent data={displayData} animKey={animating ? animKey : -1} />}
-            >
-              <Tooltip
-                content={<CustomTooltip data={displayData} tradeType={tradeType} forCountry={forCountry} />}
-                {...rechartsTooltipSurfaceProps}
+          <div onMouseMove={onTreemapMouseMove} onMouseLeave={onTreemapMouseLeave} style={{ width: "100%", height: "100%" }}>
+            <ResponsiveContainer width="100%" height="100%" style={{ cursor: "pointer" }}>
+              <Treemap
+                data={chartData}
+                dataKey="size"
+                aspectRatio={4 / 3}
+                isAnimationActive={false}
+                onClick={handleClick}
+                content={<CustomContent data={displayData} animKey={animating ? animKey : -1} />}
               />
-            </Treemap>
-          </ResponsiveContainer>
+            </ResponsiveContainer>
+          </div>
         )}
       </div>
 
@@ -363,6 +368,40 @@ export default function TreemapChart({
           <span style={{ fontSize: 9, fontWeight: 700, color: zoomedMti === null ? "#fff" : "#64748b", lineHeight: 1 }}>ALL</span>
         </button>
       </div>
+
+      {/* 마우스 추적 툴팁 */}
+      {tooltip && typeof document !== "undefined" && createPortal(
+        <div
+          className="tooltip-shell tooltip-shell--fixed"
+          style={{
+            left: tooltip.x,
+            top: tooltip.y,
+            transform: "translate(-50%, calc(-100% - 12px))",
+          }}
+        >
+          <p className="tooltip-shell-title">{tooltip.item.name}</p>
+          <p className="tooltip-shell-line">
+            {tradeType === "수입" ? "수입액" : "수출액"}:{" "}
+            <strong>{formatAmount(tooltip.item.value)}</strong>
+          </p>
+          {tooltip.item.topCountries && tooltip.item.topCountries.length > 0 && (
+            <>
+              <p className="tooltip-shell-line" style={{ marginTop: 8, fontWeight: 600, color: "#64748b" }}>
+                {tradeType === "수입" ? "상위 수입국" : "상위 수출국"}:
+              </p>
+              <ul className="tooltip-shell-list">
+                {tooltip.item.topCountries.map((c) => (
+                  <li key={c}>• {c}</li>
+                ))}
+              </ul>
+            </>
+          )}
+          {!forCountry && (
+            <p className="tooltip-shell-hint">클릭 → 상세페이지</p>
+          )}
+        </div>,
+        document.body,
+      )}
     </div>
   );
 }

@@ -83,6 +83,9 @@ const ISO_NUM_TO_ALPHA2: Record<string, string> = {
   "862": "VE",
   // 오세아니아
   "090": "SB", "242": "FJ", "540": "NC", "548": "VU", "598": "PG",
+  // GeoJSON 110m 누락분
+  "051": "AM", "044": "BS", "084": "BZ", "204": "BJ", "626": "TL",
+  "630": "PR", "854": "BF",
 };
 
 // 한국어 국가명 → ISO alpha-2 (Supabase monthly 데이터의 ctr_name 매핑용)
@@ -118,6 +121,37 @@ const KO_NAME_TO_ISO: Record<string, string> = {
   "세르비아": "RS", "아제르바이잔": "AZ",
   "케냐": "KE", "가나": "GH", "탄자니아": "TZ", "에티오피아": "ET",
   "모로코": "MA", "튀니지": "TN", "알제리": "DZ",
+  // 유럽 추가
+  "아일랜드": "IE", "룩셈부르크": "LU", "몰타": "MT", "키프로스": "CY",
+  "아이슬란드": "IS", "벨라루스": "BY", "몰도바": "MD",
+  "보스니아-헤르체고비나": "BA", "보스니아헤르체고비나": "BA", "보스니아": "BA",
+  "몬테네그로": "ME", "북마케도니아": "MK", "알바니아": "AL",
+  "리히텐슈타인": "LI",
+  // 아시아 추가
+  "몽골": "MN", "조지아": "GE", "브루나이": "BN",
+  "아프가니스탄": "AF", "부탄": "BT",
+  "키르기스스탄": "KG", "키르기즈스탄": "KG",
+  "타지키스탄": "TJ", "투르크메니스탄": "TM",
+  "시리아": "SY", "예멘": "YE", "북한": "KP",
+  "마카오": "MO", "동티모르": "TL",
+  "인도(인디아)": "IN",
+  // 아메리카 추가
+  "볼리비아": "BO", "파라과이": "PY", "코스타리카": "CR",
+  "파나마": "PA", "쿠바": "CU", "도미니카공화국": "DO", "도미니카 공화국": "DO",
+  "과테말라": "GT", "온두라스": "HN", "엘살바도르": "SV",
+  "니카라과": "NI", "자메이카": "JM", "트리니다드토바고": "TT",
+  "가이아나": "GY", "수리남": "SR", "베네수엘라": "VE", "아이티": "HT",
+  // 아프리카 추가
+  "앙골라": "AO", "카메룬": "CM", "콩고민주공화국": "CD", "콩고": "CG",
+  "코트디부아르": "CI", "세네갈": "SN", "르완다": "RW", "우간다": "UG",
+  "잠비아": "ZM", "짐바브웨": "ZW", "모잠비크": "MZ", "마다가스카르": "MG",
+  "수단": "SD", "남수단": "SS", "리비아": "LY", "말리": "ML",
+  "보츠와나": "BW", "나미비아": "NA", "시에라리온": "SL", "소말리아": "SO",
+  // 오세아니아
+  "파푸아뉴기니": "PG", "피지": "FJ",
+  // ISO_NUM_TO_ALPHA2 추가분 대응
+  "아르메니아": "AM", "바하마": "BS", "벨리즈": "BZ",
+  "베냉": "BJ", "부르키나파소": "BF", "푸에르토리코": "PR",
 };
 
 // TOP5 레이블 위치 (지리적 중심 좌표)
@@ -208,6 +242,31 @@ function getKoreanName(alpha2?: string, fallback?: string): string {
     } catch { /* invalid code */ }
   }
   return fallback ?? "";
+}
+
+// ─── Point-in-polygon (ray casting) ─────────────────────────────────────────
+// 낮은 줌에서 queryRenderedFeatures의 simplified geometry 오차를 보정하기 위해
+// 원본 GeoJSON 좌표 기반으로 정확한 국가를 판별
+function pointInRing(lng: number, lat: number, ring: number[][]): boolean {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [xi, yi] = ring[i];
+    const [xj, yj] = ring[j];
+    if (((yi > lat) !== (yj > lat)) && (lng < (xj - xi) * (lat - yi) / (yj - yi) + xi)) {
+      inside = !inside;
+    }
+  }
+  return inside;
+}
+
+function pointInGeometry(lng: number, lat: number, geom: GeoJSON.Geometry): boolean {
+  if (geom.type === "Polygon") {
+    return pointInRing(lng, lat, geom.coordinates[0]);
+  }
+  if (geom.type === "MultiPolygon") {
+    return geom.coordinates.some((poly) => pointInRing(lng, lat, poly[0]));
+  }
+  return false;
 }
 
 // ─── 타입 ────────────────────────────────────────────────────────────────────
@@ -433,27 +492,51 @@ export default function WorldMap({
 
   const clearHover = useCallback(() => {
     const map = mapRef.current?.getMap();
-    if (map && hoverIdRef.current !== null) {
+    if (map && hoverIdRef.current !== null && map.getSource("countries")) {
       map.setFeatureState({ source: "countries", id: hoverIdRef.current }, { hover: false });
       hoverIdRef.current = null;
     }
-    // 마커 위에 호버 중이면 툴팁 유지
-    if (!markerHoverRef.current) setTooltip(null);
+    setTooltip(null);
   }, []);
 
   const onMouseMove = useCallback((e: MapLayerMouseEvent) => {
     if (markerHoverRef.current) return;
     const map = mapRef.current?.getMap();
-    if (!map) return;
+    if (!map || !map.getLayer("countries-fill")) return;
 
-    const features = (e as any).features as any[] | undefined;
+    const features = map.queryRenderedFeatures(e.point, { layers: ["countries-fill"] });
     if (!features || features.length === 0) {
       clearHover();
       return;
     }
 
-    const f  = features[0];
-    const id = f.id as number | undefined;
+    // 커서의 실제 경위도를 [-180, 180] 범위로 정규화
+    let lng = e.lngLat.lng % 360;
+    if (lng > 180) lng -= 360;
+    if (lng < -180) lng += 360;
+    const lat = e.lngLat.lat;
+
+    // point-in-polygon으로 정확한 국가 판별 (낮은 줌에서 simplified geometry 오차 보정)
+    let p: Record<string, any> = features[0].properties ?? {};
+    let id: number | undefined = features[0].id as number | undefined;
+
+    if (coloredGeoJSON) {
+      const candidateAlphas = new Set(
+        features.map((feat) => feat.properties?.alpha2 as string).filter(Boolean)
+      );
+      // 1차: queryRenderedFeatures 후보 중 실제 포인트를 포함하는 피처
+      let matched = coloredGeoJSON.features.find(
+        (feat) => candidateAlphas.has(feat.properties?.alpha2) && pointInGeometry(lng, lat, feat.geometry)
+      );
+      // 2차: 후보에 없으면 전체 GeoJSON에서 검색
+      if (!matched) {
+        matched = coloredGeoJSON.features.find((feat) => pointInGeometry(lng, lat, feat.geometry));
+      }
+      if (matched) {
+        p = matched.properties ?? p;
+        id = typeof matched.id === "number" ? matched.id : id;
+      }
+    }
 
     // 이전 hover 해제
     if (hoverIdRef.current !== null && hoverIdRef.current !== id) {
@@ -464,7 +547,6 @@ export default function WorldMap({
       hoverIdRef.current = id;
     }
 
-    const p           = f.properties ?? {};
     const countryName = p.country_name || getKoreanName(p.alpha2 || undefined);
     const oe          = e.originalEvent as MouseEvent;
     setTooltip({
@@ -478,20 +560,41 @@ export default function WorldMap({
         : [],
       isTop30: !!p.is_top30,
     });
-  }, [clearHover]);
+  }, [clearHover, coloredGeoJSON]);
 
   const onMouseLeave = useCallback(() => clearHover(), [clearHover]);
 
   const onClick = useCallback((e: MapLayerMouseEvent) => {
     if (markerHoverRef.current) return;
-    const features = (e as any).features as any[] | undefined;
+    const map = mapRef.current?.getMap();
+    if (!map || !map.getLayer("countries-fill")) return;
+    const features = map.queryRenderedFeatures(e.point, { layers: ["countries-fill"] });
     if (!features || features.length === 0) return;
-    const p = features[0].properties ?? {};
+
+    // point-in-polygon으로 정확한 국가 판별
+    let p: Record<string, any> = features[0].properties ?? {};
+    if (coloredGeoJSON) {
+      let lng = e.lngLat.lng % 360;
+      if (lng > 180) lng -= 360;
+      if (lng < -180) lng += 360;
+      const lat = e.lngLat.lat;
+      const candidateAlphas = new Set(
+        features.map((feat) => feat.properties?.alpha2 as string).filter(Boolean)
+      );
+      let matched = coloredGeoJSON.features.find(
+        (feat) => candidateAlphas.has(feat.properties?.alpha2) && pointInGeometry(lng, lat, feat.geometry)
+      );
+      if (!matched) {
+        matched = coloredGeoJSON.features.find((feat) => pointInGeometry(lng, lat, feat.geometry));
+      }
+      if (matched) p = matched.properties ?? p;
+    }
+
     if (p.is_top30 && p.country_name) {
       const mode = tradeType === "수입" ? "import" : "export";
       router.push(`/country/${encodeURIComponent(p.country_name as string)}?mode=${mode}`);
     }
-  }, [router, tradeType]);
+  }, [router, tradeType, coloredGeoJSON]);
 
   // ─ 로드 후 컨테이너 너비 기반 minZoom 동적 설정 ─
   // MapLibre 타일 기준: zoom z 에서 세계 너비 = 512 * 2^z px
@@ -512,7 +615,7 @@ export default function WorldMap({
   return (
     <div className="flex flex-col w-full h-full" style={{ minHeight: 340 }}>
       {/* 지도 영역 */}
-      <div className="relative flex-1 bg-[#F2FBFF]" onMouseLeave={() => { markerHoverRef.current = false; setTooltip(null); }}>
+      <div className="relative flex-1 bg-[#F2FBFF]" onMouseLeave={() => { markerHoverRef.current = false; clearHover(); setTooltip(null); }}>
         <ReactMap
           ref={mapRef}
           mapStyle={MAP_STYLE}

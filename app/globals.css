@@ -312,7 +312,9 @@ header.w-full {
 .kpi-item:last-child { border-right: none; }
 .kpi-label { font-size: 13px; color: #666; margin-bottom: 2px; }
 .kpi-value { font-size: 24px; font-weight: 700; color: #1a1a1a; }
-.kpi-change-up { font-size: 12px; color: #E02020; margin-top: 2px; }
+.kpi-change-up,
+.kpi-change-down { font-size: 12px; margin-top: 2px; display: flex; align-items: center; }
+.kpi-change-icon { font-size: 10px; line-height: 1; margin-right: 3px; }
 .kpi-change-neutral { font-size: 24px; font-weight: 700; color: #1a1a1a; }
 
 /* Split panel: 지도 영역이 flex에서 줄어들 수 있게 해 챗봇 고정 폭이 잘리지 않게 함 */

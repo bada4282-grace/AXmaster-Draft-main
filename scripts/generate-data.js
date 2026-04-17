@@ -167,16 +167,17 @@ function changeRate(cur, prev) {
 const kpiOut = {};
 for (const yr of YEARS) {
   const prevYr = String(parseInt(yr) - 1);
+  const hasPrev = kpi[prevYr] && kpi[prevYr].exp > 0;
   kpiOut[yr] = {
     export: {
       value: fmtStr(kpi[yr].exp),
-      change: Math.abs(changeRate(kpi[yr].exp, kpi[prevYr]?.exp || 0)),
-      up: kpi[yr].exp >= (kpi[prevYr]?.exp || 0),
+      change: hasPrev ? Math.abs(changeRate(kpi[yr].exp, kpi[prevYr].exp)) : 0,
+      up: hasPrev ? kpi[yr].exp >= kpi[prevYr].exp : true,
     },
     import: {
       value: fmtStr(kpi[yr].imp),
-      change: Math.abs(changeRate(kpi[yr].imp, kpi[prevYr]?.imp || 0)),
-      up: kpi[yr].imp >= (kpi[prevYr]?.imp || 0),
+      change: hasPrev ? Math.abs(changeRate(kpi[yr].imp, kpi[prevYr].imp)) : 0,
+      up: hasPrev ? kpi[yr].imp >= kpi[prevYr].imp : true,
     },
     balance: {
       value: fmtStr(Math.abs(kpi[yr].exp - kpi[yr].imp)),
@@ -349,15 +350,24 @@ for (const cd of allProdCodes) {
 const countryKpiOut = {};
 for (const yr of YEARS) {
   countryKpiOut[yr] = {};
+  const prevYr = String(parseInt(yr) - 1);
   const allCtrs = new Set([...Object.keys(ctrExp[yr]), ...Object.keys(ctrImp[yr])]);
   for (const ctr of allCtrs) {
     const expAmt = ctrExp[yr][ctr] || 0;
     const impAmt = ctrImp[yr][ctr] || 0;
+    const prevExpAmt = ctrExp[prevYr]?.[ctr] || 0;
+    const prevImpAmt = ctrImp[prevYr]?.[ctr] || 0;
+    const hasPrevExp = prevExpAmt > 0;
+    const hasPrevImp = prevImpAmt > 0;
     countryKpiOut[yr][ctr] = {
       export: String(fmt1(expAmt)),
       import: String(fmt1(impAmt)),
       balance: String(fmt1(Math.abs(expAmt - impAmt))),
       positive: expAmt >= impAmt,
+      exportChange: hasPrevExp ? Math.abs(changeRate(expAmt, prevExpAmt)) : 0,
+      exportUp: hasPrevExp ? expAmt >= prevExpAmt : true,
+      importChange: hasPrevImp ? Math.abs(changeRate(impAmt, prevImpAmt)) : 0,
+      importUp: hasPrevImp ? impAmt >= prevImpAmt : true,
     };
   }
 }
@@ -510,6 +520,7 @@ export const PRODUCT_IMP_TOP_COUNTRIES_BY_CODE: Record<string, Record<string, {
 
 export const COUNTRY_KPI_BY_YEAR: Record<string, Record<string, {
   export: string; import: string; balance: string; positive: boolean;
+  exportChange: number; exportUp: boolean; importChange: number; importUp: boolean;
 }>> = ${JSON.stringify(countryKpiOut, null, 2)};
 
 export const COUNTRY_TREEMAP_EXP_BY_YEAR: Record<string, Record<string, {
