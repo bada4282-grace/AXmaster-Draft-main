@@ -354,7 +354,7 @@ export default function TreemapChart({
       </div>
 
       {/* MTI 대분류 아이콘 필터 */}
-      <div className="flex items-center justify-center gap-1.5 pt-2 flex-wrap">
+      <div style={{ display: "flex", width: "100%", flexShrink: 0, paddingTop: 4 }}>
         {Object.entries(MTI_COLORS).map(([mti, color]) => {
           const n = Number(mti);
           const isActive = zoomedMti === n;
@@ -366,6 +366,8 @@ export default function TreemapChart({
               className={`mti-icon-btn${isActive ? " mti-icon-btn--active" : ""}`}
               style={{
                 "--mti-color": color as string,
+                flex: 1,
+                borderRadius: 0,
                 background: isActive ? (color as string) : undefined,
                 borderColor: isActive ? (color as string) : "transparent",
               } as React.CSSProperties}
@@ -382,6 +384,8 @@ export default function TreemapChart({
           className={`mti-icon-btn${zoomedMti === null ? " mti-icon-btn--active" : ""}`}
           style={{
             "--mti-color": "#475569",
+            flex: 1,
+            borderRadius: 0,
             background: zoomedMti === null ? "#475569" : undefined,
             borderColor: zoomedMti === null ? "#475569" : "transparent",
           } as React.CSSProperties}
