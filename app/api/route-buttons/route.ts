@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
+import { MTI_LOOKUP } from "@/lib/data";
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -90,9 +91,22 @@ JSON 배열만 출력:
           };
         }
         if (b.type === "product" && b.name) {
+          // MTI_LOOKUP에서 이름→코드 역조회 (4자리 우선)
+          const mti = MTI_LOOKUP as Record<string, string>;
+          let bestCode = "";
+          for (const [c, n] of Object.entries(mti)) {
+            if (n === b.name) {
+              if (!bestCode || c.length === 4 || (c.length < bestCode.length && bestCode.length !== 4)) {
+                bestCode = c;
+              }
+            }
+          }
+          const params = new URLSearchParams();
+          if (bestCode) params.set("code", bestCode);
+          const qs = params.toString();
           return {
             label: `${b.name} 데이터 확인하기`,
-            href: `/product/${encodeURIComponent(b.name)}`,
+            href: `/product/${encodeURIComponent(b.name)}${qs ? "?" + qs : ""}`,
             type: "exact" as const,
           };
         }
