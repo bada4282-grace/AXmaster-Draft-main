@@ -1,24 +1,21 @@
 import {
-  getCountryData,
-  getCountryKpi,
-  getCountryTimeseries,
-  getProductTopCountries,
-  getProductTrend,
-  getAggregatedProductTrend,
-  getAggregatedTopCountries,
-  getCountryTreemapData,
-  getTreemapData,
   MTI_NAMES,
   DEFAULT_YEAR,
   KPI_BY_YEAR,
 } from "@/lib/data";
 import {
-  TREEMAP_EXP_DATA_BY_YEAR,
-  COUNTRY_DATA_BY_YEAR,
   MACRO_INDICATORS,
   MACRO_META,
   MTI_LOOKUP,
 } from "@/lib/tradeData.generated";
+import {
+  getProductTrendAsync,
+  getProductTopCountriesAsync,
+  getCountryRankingAsync,
+  getCountryKpiAsync,
+  getCountryTimeseriesAsync,
+  getTreemapDataAsync,
+} from "@/lib/dataSupabase";
 
 interface ExtractedKeywords {
   countries: string[];
@@ -27,44 +24,46 @@ interface ExtractedKeywords {
   year: string;
 }
 
-// TREEMAP 데이터에서 품목명 → 코드 역조회 맵 구성
+// MTI_LOOKUP에서 품목명 → 코드 역조회 맵 구성 (경량, 전체 품목 포함)
 function buildProductLookup(): Map<string, string> {
   const lookup = new Map<string, string>();
-  for (const yearData of Object.values(TREEMAP_EXP_DATA_BY_YEAR)) {
-    for (const item of yearData) {
-      if (!lookup.has(item.name)) {
-        lookup.set(item.name, item.code);
-      }
+  const mti = MTI_LOOKUP as Record<string, string>;
+  for (const [code, name] of Object.entries(mti)) {
+    // 6자리 코드 우선, 이미 있으면 덮어쓰지 않음
+    if (code.length === 6 && !lookup.has(name)) {
+      lookup.set(name, code);
     }
   }
   return lookup;
 }
 
-// COUNTRY_DATA_BY_YEAR에서 국가명 목록 구성
-function buildCountryList(): string[] {
-  const names = new Set<string>();
-  for (const yearData of Object.values(COUNTRY_DATA_BY_YEAR)) {
-    for (const c of yearData) names.add(c.name);
-  }
-  return Array.from(names);
-}
-
-// 실제 트리맵 데이터가 있는 코드 접두사 세트 (1~6자리)
+// MTI_LOOKUP의 모든 코드로 접두사 세트 구성
 function buildValidCodePrefixes(): Set<string> {
   const prefixes = new Set<string>();
-  for (const yearData of Object.values(TREEMAP_EXP_DATA_BY_YEAR)) {
-    for (const item of yearData) {
-      for (let len = 1; len <= item.code.length; len++) {
-        prefixes.add(item.code.slice(0, len));
-      }
+  const mti = MTI_LOOKUP as Record<string, string>;
+  for (const code of Object.keys(mti)) {
+    for (let len = 1; len <= code.length; len++) {
+      prefixes.add(code.slice(0, len));
     }
   }
   return prefixes;
 }
 
 const PRODUCT_LOOKUP = buildProductLookup();
-const COUNTRY_LIST = buildCountryList();
 const VALID_CODE_PREFIXES = buildValidCodePrefixes();
+
+// 국가명 목록 — 캐시, Supabase에서 비동기 로드
+let _countryListCache: string[] | null = null;
+async function getCountryList(): Promise<string[]> {
+  if (_countryListCache) return _countryListCache;
+  try {
+    const ranks = await getCountryRankingAsync(DEFAULT_YEAR, "수출");
+    _countryListCache = ranks.map(r => r.country);
+    return _countryListCache;
+  } catch {
+    return [];
+  }
+}
 
 // 대시보드 라우팅 버튼 타입
 export interface RouteButton {
@@ -91,8 +90,8 @@ function isExactWordMatch(question: string, name: string): boolean {
 }
 
 // 질문에서 라우팅 가능한 버튼 목록 반환
-export function resolveRouteButtons(question: string): RouteButton[] {
-  const { countries, productNames } = extractKeywords(question);
+export async function resolveRouteButtons(question: string): Promise<RouteButton[]> {
+  const { countries, productNames } = await extractKeywords(question);
   const buttons: RouteButton[] = [];
 
   // 탭 키워드 감지
@@ -104,7 +103,7 @@ export function resolveRouteButtons(question: string): RouteButton[] {
   const detectedMtiDepth = mtiDepthMatch ? (mtiDepthMatch[1] ?? mtiDepthMatch[2]) : null;
 
   // 연도 감지 (DEFAULT_YEAR와 다를 때만 파라미터 추가)
-  const { year } = extractKeywords(question);
+  const { year } = await extractKeywords(question);
   const detectedYear = year !== DEFAULT_YEAR ? year : null;
 
   // 국가 버튼 (정확 매칭, 수입/수출 + 탭 + 연도 반영)
@@ -264,11 +263,12 @@ function isProductOverviewQuery(question: string): boolean {
 }
 
 // 질문에서 국가명, 품목명, 연도 추출 (부분 일치)
-export function extractKeywords(question: string): ExtractedKeywords {
+export async function extractKeywords(question: string): Promise<ExtractedKeywords> {
   const yearMatch = question.match(/\b(20\d{2})\b/);
   const year = yearMatch ? yearMatch[1] : DEFAULT_YEAR;
 
-  const countries = COUNTRY_LIST.filter(name => question.includes(name));
+  const countryList = await getCountryList();
+  const countries = countryList.filter(name => question.includes(name));
 
   const productCodes: string[] = [];
   const productNames: string[] = [];
@@ -289,12 +289,18 @@ export function extractKeywords(question: string): ExtractedKeywords {
         mtiMatches.push({ code, name });
       }
     }
-    // 가장 짧은 코드(상위 카테고리) 우선, 같은 길이면 이름 짧은 것 우선
-    mtiMatches.sort((a, b) => a.code.length - b.code.length || a.name.length - b.name.length);
+    // 4자리 코드 우선 (집계 단위, 하위 6자리 합산 가능), 그 다음 6자리, 그 외
+    mtiMatches.sort((a, b) => {
+      const aScore = a.code.length === 4 ? 0 : a.code.length === 6 ? 1 : 2;
+      const bScore = b.code.length === 4 ? 0 : b.code.length === 6 ? 1 : 2;
+      if (aScore !== bScore) return aScore - bScore;
+      return b.code.length - a.code.length;
+    });
     for (const m of mtiMatches) {
       if (!productCodes.includes(m.code)) {
         productCodes.push(m.code);
         productNames.push(m.name);
+        break; // 가장 적합한 1개만
       }
     }
   }
@@ -357,8 +363,8 @@ function buildMacroContext(question: string, year: string): string {
 }
 
 // 추출된 키워드 기반으로 무역 데이터 조회 후 컨텍스트 문자열 조립
-export function buildChatContext(question: string): string {
-  const { countries, productCodes, productNames, year } = extractKeywords(question);
+export async function buildChatContext(question: string): Promise<string> {
+  const { countries, productCodes, productNames, year } = await extractKeywords(question);
   const tradeType = detectTradeType(question);
   const sections: string[] = [];
 
@@ -374,65 +380,69 @@ export function buildChatContext(question: string): string {
     );
   }
 
-  // 품목 개요 — 품목별/MTI별 질문이거나 특정 품목이 지정되지 않은 경우 포함
+  // 품목 개요 — Supabase에서 조회
   if (isProductOverviewQuery(question) || (productCodes.length === 0 && countries.length === 0)) {
-    const products = getTreemapData(year, tradeType)
-      .slice()
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 15);
-    const mtiNames = MTI_NAMES as Record<number, string>;
-    const lines = products.map((p, i) =>
-      `${i + 1}위: ${p.name} (${mtiNames[p.mti] ?? "기타"}) — ${tradeType} ${p.value.toFixed(1)}억달러`
-    );
-    sections.push(`[${year}년 품목별 ${tradeType} TOP15]\n${lines.join("\n")}`);
+    try {
+      const products = await getTreemapDataAsync(year, tradeType);
+      const top15 = products.slice(0, 15);
+      const mtiNames = MTI_NAMES as Record<number, string>;
+      const lines = top15.map((p, i) =>
+        `${i + 1}위: ${p.name} (${mtiNames[p.mti] ?? "기타"}) — ${tradeType} ${p.value.toFixed(1)}억달러`
+      );
+      sections.push(`[${year}년 품목별 ${tradeType} TOP15]\n${lines.join("\n")}`);
+    } catch { /* 조회 실패 시 생략 */ }
   }
 
-  // 국가 순위 목록 — 순위 관련 질문이거나 특정 국가가 지정되지 않은 경우 포함
+  // 국가 순위 목록 — Supabase에서 조회
   if (isRankingQuery(question) || countries.length === 0) {
-    const ranked = getCountryData(year, tradeType)
-      .slice()
-      .sort((a, b) => a.rank - b.rank)
-      .slice(0, 15);
-    const lines = ranked.map(c =>
-      `${c.rank}위: ${c.name} — ${tradeType === "수입" ? "수입" : "수출"} ${tradeType === "수입" ? c.import : c.export}억달러`
-    );
-    sections.push(`[${year}년 국가별 ${tradeType} 순위 TOP15]\n${lines.join("\n")}`);
+    try {
+      const ranks = await getCountryRankingAsync(year, tradeType);
+      const top15 = ranks.slice(0, 15);
+      const fmt1 = (v: number) => (Math.round(v / 1e8 * 10) / 10).toFixed(1);
+      const lines = top15.map((c, i) =>
+        `${i + 1}위: ${c.country} — ${tradeType} ${fmt1(tradeType === "수입" ? c.imp_amt : c.exp_amt)}억달러`
+      );
+      sections.push(`[${year}년 국가별 ${tradeType} 순위 TOP15]\n${lines.join("\n")}`);
+    } catch { /* 조회 실패 시 생략 */ }
   }
 
-  // 특정 국가 상세 데이터
+  // 특정 국가 상세 데이터 — Supabase에서 조회
   for (const country of countries) {
-    const countryData = getCountryData(year, tradeType).find(c => c.name === country);
-    const kpiData = getCountryKpi(year, country);
-    const timeseries = getCountryTimeseries(year, country);
+    try {
+      const ranks = await getCountryRankingAsync(year, tradeType);
+      const countryRank = ranks.find(r => r.country === country);
+      const kpiData = await getCountryKpiAsync(year, country);
+      const timeseries = await getCountryTimeseriesAsync(year, country);
 
-    let section = `[${country} 교역 데이터 (${year}년)]\n`;
-    if (countryData) {
-      section += `수출순위: ${countryData.rank}위, 수출액: ${countryData.export}억달러, 수입액: ${countryData.import}억달러\n`;
-      section += `주요수출품: ${countryData.topProducts.join(", ")}\n`;
-      if (countryData.topImportProducts?.length) {
-        section += `주요수입품: ${countryData.topImportProducts.join(", ")}\n`;
+      let section = `[${country} 교역 데이터 (${year}년)]\n`;
+      if (countryRank) {
+        const fmt1 = (v: number) => (Math.round(v / 1e8 * 10) / 10).toFixed(1);
+        section += `수출순위: ${countryRank.rank_exp}위, 수출액: ${fmt1(countryRank.exp_amt)}억달러, 수입액: ${fmt1(countryRank.imp_amt)}억달러\n`;
       }
-    }
-    if (kpiData) {
-      section += `KPI — 수출: ${kpiData.export}, 수입: ${kpiData.import}, 수지: ${kpiData.balance}\n`;
-    }
-    if (timeseries.length > 0) {
-      const recent = timeseries.slice(-3).map(m => `${m.month} 수출${m.export}억달러`).join(", ");
-      section += `최근 월별: ${recent}`;
-    }
-    sections.push(section);
+      if (kpiData) {
+        section += `KPI — 수출: ${kpiData.export}억달러, 수입: ${kpiData.import}억달러, 수지: ${kpiData.balance}억달러\n`;
+      }
+      if (timeseries.length > 0) {
+        const recent = timeseries.slice(-3).map(m => `${m.month} 수출${m.export}억달러`).join(", ");
+        section += `최근 월별: ${recent}`;
+      }
+      sections.push(section);
+    } catch { /* 조회 실패 시 생략 */ }
   }
 
-  // 품목별 데이터 (6단위 미만 코드는 하위 품목 합산)
+  // 품목별 데이터 — Supabase 집계 테이블에서 조회 (전체 품목, Top N 제한 없음)
   for (let i = 0; i < productCodes.length; i++) {
     const code = productCodes[i];
     const name = productNames[i];
-    const topCountries = code.length < 6
-      ? getAggregatedTopCountries(code, year, tradeType)
-      : getProductTopCountries(code, year, tradeType);
-    const trend = code.length < 6
-      ? getAggregatedProductTrend(code, tradeType)
-      : getProductTrend(code, tradeType);
+
+    let trend: { year: string; value: number }[] = [];
+    let topCountries: { country: string; value: number }[] = [];
+    try {
+      [trend, topCountries] = await Promise.all([
+        getProductTrendAsync(code, tradeType),
+        getProductTopCountriesAsync(code, year, tradeType),
+      ]);
+    } catch { /* Supabase 조회 실패 시 빈 데이터로 진행 */ }
 
     let section = `[${name} ${tradeType} 데이터]\n`;
     if (topCountries.length > 0) {
@@ -440,25 +450,34 @@ export function buildChatContext(question: string): string {
     }
     if (trend.length > 0) {
       const recent = trend.slice(-3).map(t => {
-        const cleanYear = t.year.replace(/\(.*\)/, "").trim();
+        const cleanYear = String(t.year).replace(/\(.*\)/, "").trim();
         return `${cleanYear}년 ${t.value}억달러`;
       }).join(", ");
       section += `연도별 추이: ${recent}`;
     }
+    if (topCountries.length === 0 && trend.length === 0) {
+      section += `해당 품목의 ${tradeType} 데이터가 없습니다.`;
+    }
     sections.push(section);
   }
 
-  // 국가 × 품목 교차 데이터
+  // 국가 × 품목 교차 데이터 — Supabase에서 조회
   if (countries.length > 0 && productCodes.length > 0) {
     for (const country of countries) {
-      const treemap = getCountryTreemapData(year, country, tradeType);
-      const relevant = treemap.filter(p => productCodes.includes(p.code)).slice(0, 5);
-      if (relevant.length > 0) {
-        sections.push(
-          `[${country} × 품목 교차 데이터]\n` +
-          relevant.map(p => `${p.name}: ${p.value}억달러`).join(", ")
-        );
-      }
+      try {
+        const mtiLookup = MTI_LOOKUP as Record<string, string>;
+        const results: string[] = [];
+        for (const code of productCodes) {
+          const topCountries = await getProductTopCountriesAsync(code, year, tradeType);
+          const match = topCountries.find(c => c.country === country);
+          if (match && match.value > 0) {
+            results.push(`${mtiLookup[code] ?? code}: ${match.value}억달러`);
+          }
+        }
+        if (results.length > 0) {
+          sections.push(`[${country} × 품목 교차 데이터]\n${results.join(", ")}`);
+        }
+      } catch { /* 조회 실패 시 무시 */ }
     }
   }
 

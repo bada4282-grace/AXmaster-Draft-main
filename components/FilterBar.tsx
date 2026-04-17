@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useRouter, useSearchParams } from "next/navigation";
-import { getCountryData, getTreemapData } from "@/lib/data";
+import { getCountryRankingAsync, getTreemapDataAsync } from "@/lib/dataSupabase";
 
 interface FilterBarProps {
   mode?: "country" | "product";
@@ -72,9 +72,19 @@ export default function FilterBar({
     router.replace(`?${params.toString()}`, { scroll: false });
   };
 
-  // 해당 연도의 국가/품목 목록 (현재 tradeType 기준)
-  const countryNames = getCountryData(year, tradeType).map((c) => c.name);
-  const productNames = [...new Set(getTreemapData(year, tradeType).map((p) => p.name))];
+  // 해당 연도의 국가/품목 목록 (Supabase에서 비동기 로드)
+  const [countryNames, setCountryNames] = useState<string[]>([]);
+  const [productNames, setProductNames] = useState<string[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    getCountryRankingAsync(year, tradeType).then(ranks => {
+      if (!cancelled) setCountryNames(ranks.map(r => r.country));
+    }).catch(() => {});
+    getTreemapDataAsync(year, tradeType).then(data => {
+      if (!cancelled) setProductNames([...new Set(data.map(p => p.name))]);
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [year, tradeType]);
 
   const handleMonth = (m: string) => {
     // 2026년 3~12월은 데이터 미존재

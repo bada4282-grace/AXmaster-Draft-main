@@ -7,14 +7,16 @@ import FilterBar from "@/components/FilterBar";
 import KPIBar from "@/components/KPIBar";
 import MacroSection from "@/components/MacroSection";
 import {
-  getTreemapData,
-  getCountryTreemapData,
-  getAggregatedProductTrend,
-  getAggregatedTopCountries,
   aggregateTreemapByDepth,
   DEFAULT_YEAR,
   type TradeType,
 } from "@/lib/data";
+import {
+  getTreemapDataAsync,
+  getCountryTreemapDataAsync,
+  getProductTrendAsync,
+  getProductTopCountriesAsync,
+} from "@/lib/dataSupabase";
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer,
@@ -49,33 +51,54 @@ function ProductDetailContent() {
     searchParams.get("tab") === "countries" ? "상위 국가" : "금액 추이"
   );
 
-  // 해당 품목 정보 찾기 (6단위 또는 집계 코드)
-  const treemapData = getTreemapData(DEFAULT_YEAR, tradeType);
   const isAggregated = codeParam.length > 0 && codeParam.length < 6;
 
-  // 6단위: 기존 방식으로 찾기 / 집계: aggregateTreemapByDepth로 찾기
-  const product = isAggregated
-    ? aggregateTreemapByDepth(treemapData, codeParam.length).find((p) => p.code === codeParam)
-      ?? aggregateTreemapByDepth(getTreemapData(DEFAULT_YEAR, "수출"), codeParam.length).find((p) => p.code === codeParam)
-    : treemapData.find((p) => p.name === name)
-      ?? getTreemapData(DEFAULT_YEAR, "수출").find((p) => p.name === name);
+  // 품목 정보 + 추이 데이터 — Supabase에서 비동기 로드
+  const [productCode, setProductCode] = useState(codeParam);
+  const [rawTrend, setRawTrend] = useState<{ year: string; value: number }[]>([]);
 
-  const productCode = codeParam || (product?.code ?? "");
+  useEffect(() => {
+    let cancelled = false;
+    const loadProductData = async () => {
+      // 1. 품목 코드 결정
+      let code = codeParam;
+      if (!code) {
+        const treemap = await getTreemapDataAsync(DEFAULT_YEAR, tradeType);
+        const found = treemap.find(p => p.name === name);
+        if (!found) {
+          const expTreemap = await getTreemapDataAsync(DEFAULT_YEAR, "수출");
+          code = expTreemap.find(p => p.name === name)?.code ?? "";
+        } else {
+          code = found.code;
+        }
+      }
+      if (cancelled) return;
+      setProductCode(code);
+      if (!code) { setRawTrend([]); return; }
 
-  // 해당 품목의 연간 추이 (tradeType 반영, 국가 선택 시 국가별 데이터)
-  const rawTrend = productCode
-    ? country
-      ? ["2020", "2021", "2022", "2023", "2024", "2025", "2026"].map((y) => {
-          const base = getCountryTreemapData(y, country, tradeType);
+      // 2. 추이 데이터
+      if (country) {
+        // 국가 필터 시: 연도별로 국가×품목 트리맵에서 값 추출
+        const years = ["2020", "2021", "2022", "2023", "2024", "2025", "2026"];
+        const results = await Promise.all(years.map(async (y) => {
+          const base = await getCountryTreemapDataAsync(y, country, tradeType);
           if (isAggregated) {
-            const agg = aggregateTreemapByDepth(base, codeParam.length).find((p) => p.code === codeParam);
+            const agg = aggregateTreemapByDepth(base, codeParam.length).find(p => p.code === codeParam);
             return { year: y, value: agg?.value ?? 0 };
           }
-          const d = base.find((p) => p.name === name);
+          const d = base.find(p => p.name === name);
           return { year: y, value: d?.value ?? 0 };
-        })
-      : getAggregatedProductTrend(productCode, tradeType)
-    : [];
+        }));
+        if (!cancelled) setRawTrend(results);
+      } else {
+        const trend = await getProductTrendAsync(code, tradeType);
+        if (!cancelled) setRawTrend(trend);
+      }
+    };
+    loadProductData().catch(() => { if (!cancelled) setRawTrend([]); });
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [name, codeParam, tradeType, country]);
   // "2026(1-2월)" → "2026" 으로 정리, 괄호가 있으면 불완전 데이터로 표시
   const currentFullYear = String(new Date().getFullYear());
   const initialIncompleteYears = new Set<string>();
@@ -127,8 +150,16 @@ function ProductDetailContent() {
   const trendMin = trendValues.length ? Math.floor(Math.min(...trendValues) * 0.85) : 0;
   const trendMax = trendValues.length ? Math.ceil(Math.max(...trendValues) * 1.1) : 100;
 
-  // 상위 국가 (tradeType 반영)
-  const topCountries = productCode ? getAggregatedTopCountries(productCode, year, tradeType).slice(0, 10) : [];
+  // 상위 국가 (Supabase에서 비동기 로드)
+  const [topCountries, setTopCountries] = useState<{ country: string; value: number }[]>([]);
+  useEffect(() => {
+    if (!productCode) { setTopCountries([]); return; }
+    let cancelled = false;
+    getProductTopCountriesAsync(productCode, year, tradeType).then(data => {
+      if (!cancelled) setTopCountries(data.slice(0, 10));
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [productCode, year, tradeType]);
 
   // ── 애니메이션: 국가 상세 페이지와 동일한 패턴 ──
   const flatTrend = trend.map((d) => ({ ...d, value: trendMin }));
@@ -169,38 +200,47 @@ function ProductDetailContent() {
   const changeRate = (isComplete && prevVal) ? ((currentVal - prevVal) / prevVal * 100).toFixed(1) : null;
   const tradeLabel = tradeType === "수입" ? "수입" : "수출";
 
-  // ─── 품목별 KPI: 수출·수입 양쪽 데이터로 KPIBar에 전달 ───
-  const getProductYearValue = (tt: TradeType, yr: string): number => {
-    if (!productCode) return 0;
-    if (country) {
-      const base = getCountryTreemapData(yr, country, tt);
-      if (isAggregated) {
-        const agg = aggregateTreemapByDepth(base, codeParam.length).find((p) => p.code === codeParam);
-        return agg?.value ?? 0;
-      }
-      return base.find((p) => p.name === name)?.value ?? 0;
-    }
-    const t = getAggregatedProductTrend(productCode, tt);
-    const clean = (s: string) => s.replace(/\(.*\)/, "").trim();
-    return t.find((d) => clean(d.year) === yr)?.value ?? 0;
-  };
+  // ─── 품목별 KPI: 수출·수입 양쪽 데이터로 KPIBar에 전달 (Supabase 비동기) ───
+  const [prodKpi, setProdKpi] = useState({ expCur: 0, expPrev: 0, impCur: 0, impPrev: 0 });
+  useEffect(() => {
+    if (!productCode) { setProdKpi({ expCur: 0, expPrev: 0, impCur: 0, impPrev: 0 }); return; }
+    let cancelled = false;
 
-  const prodExpCur = getProductYearValue("수출", year);
-  const prodExpPrev = getProductYearValue("수출", prevYear);
-  const prodImpCur = getProductYearValue("수입", year);
-  const prodImpPrev = getProductYearValue("수입", prevYear);
+    const getVal = async (tt: TradeType, yr: string): Promise<number> => {
+      if (country) {
+        const base = await getCountryTreemapDataAsync(yr, country, tt);
+        if (isAggregated) {
+          const agg = aggregateTreemapByDepth(base, codeParam.length).find(p => p.code === codeParam);
+          return agg?.value ?? 0;
+        }
+        return base.find(p => p.name === name)?.value ?? 0;
+      }
+      const t = await getProductTrendAsync(productCode, tt);
+      const clean = (s: string) => String(s).replace(/\(.*\)/, "").trim();
+      return t.find(d => clean(d.year) === yr)?.value ?? 0;
+    };
+
+    Promise.all([
+      getVal("수출", year), getVal("수출", prevYear),
+      getVal("수입", year), getVal("수입", prevYear),
+    ]).then(([ec, ep, ic, ip]) => {
+      if (!cancelled) setProdKpi({ expCur: ec, expPrev: ep, impCur: ic, impPrev: ip });
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [productCode, year, prevYear, country, tradeType]);
 
   const pctChg = (cur: number, prev: number) =>
     prev > 0 ? Math.round(Math.abs((cur - prev) / prev * 10000)) / 100 : 0;
 
-  const prodExpVal = prodExpCur.toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
-  const prodImpVal = prodImpCur.toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
-  const prodBalance = Math.abs(prodExpCur - prodImpCur);
+  const prodExpVal = prodKpi.expCur.toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  const prodImpVal = prodKpi.impCur.toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  const prodBalance = Math.abs(prodKpi.expCur - prodKpi.impCur);
   const prodBalVal = prodBalance.toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
-  const prodExpChange = (isComplete && prodExpPrev > 0) ? pctChg(prodExpCur, prodExpPrev) : 0;
-  const prodExpUp = prodExpCur >= prodExpPrev;
-  const prodImpChange = (isComplete && prodImpPrev > 0) ? pctChg(prodImpCur, prodImpPrev) : 0;
-  const prodImpUp = prodImpCur >= prodImpPrev;
+  const prodExpChange = (isComplete && prodKpi.expPrev > 0) ? pctChg(prodKpi.expCur, prodKpi.expPrev) : 0;
+  const prodExpUp = prodKpi.expCur >= prodKpi.expPrev;
+  const prodImpChange = (isComplete && prodKpi.impPrev > 0) ? pctChg(prodKpi.impCur, prodKpi.impPrev) : 0;
+  const prodImpUp = prodKpi.impCur >= prodKpi.impPrev;
   const tooltipFollowProps = {
     ...rechartsTooltipSurfaceProps,
     isAnimationActive: false,
@@ -255,7 +295,7 @@ function ProductDetailContent() {
               importChange={prodImpChange}
               importUp={prodImpUp}
               balance={prodBalVal}
-              balancePositive={prodExpCur >= prodImpCur}
+              balancePositive={prodKpi.expCur >= prodKpi.impCur}
             />
 
             <div className="split-panel" style={{ height: 380 }}>
