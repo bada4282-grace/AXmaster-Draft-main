@@ -403,7 +403,7 @@ function ProductDetailContent() {
                 </span>
               </div>
 
-              <div style={{ flex: "1 1 auto", padding: 12, minHeight: 340, position: "relative" }}>
+              <div style={{ flex: 1, padding: 12, overflow: "hidden" }}>
                 {subTab === "금액 추이" ? (
                   trend.length > 0 ? (
                     <ResponsiveContainer width="100%" height="100%">
