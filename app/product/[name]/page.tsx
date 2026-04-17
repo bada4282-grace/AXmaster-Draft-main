@@ -318,7 +318,7 @@ function ProductDetailContent() {
                         />
                         <Bar
                           dataKey="value"
-                          fill="#14B8A6"
+                          fill="#2371C8"
                           radius={[4, 4, 0, 0]}
                           barSize={42}
                           name={`${tradeLabel}액(억$)`}
