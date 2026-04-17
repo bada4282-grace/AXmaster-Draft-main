@@ -112,12 +112,6 @@ export async function GET() {
       ...buildTrend(rows, "KR_BASE_RATE"),
     },
     {
-      label: "제조업 BSI",
-      value: fmtNum(cur.KR_BSI_MFG, 0),
-      ...calcChange(cur.KR_BSI_MFG, prv.KR_BSI_MFG),
-      ...buildTrend(rows, "KR_BSI_MFG"),
-    },
-    {
       label: "EBSI",
       value: fmtNum(cur.KR_EBSI, 1),
       ...calcChange(cur.KR_EBSI, prv.KR_EBSI),
@@ -130,10 +124,16 @@ export async function GET() {
       ...buildTrend(rows, "KR_PROD_YOY"),
     },
     {
-      label: "CPI 증감률",
-      value: fmtPct(cur.KR_CPI_YOY),
-      ...calcChange(cur.KR_CPI_YOY, prv.KR_CPI_YOY),
-      ...buildTrend(rows, "KR_CPI_YOY"),
+      label: "중국 PMI",
+      value: fmtNum(cur.CN_PMI_MFG, 1),
+      ...calcChange(cur.CN_PMI_MFG, prv.CN_PMI_MFG),
+      ...buildTrend(rows, "CN_PMI_MFG"),
+    },
+    {
+      label: "미국 기준금리",
+      value: fmtPct(cur.US_BASE_RATE),
+      ...calcChange(cur.US_BASE_RATE, prv.US_BASE_RATE),
+      ...buildTrend(rows, "US_BASE_RATE"),
     },
     {
       label: "브렌트유",

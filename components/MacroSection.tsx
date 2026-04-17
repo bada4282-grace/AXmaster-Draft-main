@@ -6,10 +6,10 @@ import type { MacroItem } from "@/app/api/macro/route";
 const FALLBACK: MacroItem[] = [
   { label: "USD/KRW", value: "—", change: "로딩중", up: true, trend: [], periodLabel: "" },
   { label: "한국 기준금리", value: "—", change: "로딩중", up: true, trend: [], periodLabel: "" },
-  { label: "제조업 BSI", value: "—", change: "로딩중", up: true, trend: [], periodLabel: "" },
   { label: "EBSI", value: "—", change: "로딩중", up: true, trend: [], periodLabel: "" },
   { label: "산업생산 증감률", value: "—", change: "로딩중", up: true, trend: [], periodLabel: "" },
-  { label: "CPI 증감률", value: "—", change: "로딩중", up: true, trend: [], periodLabel: "" },
+  { label: "중국 PMI", value: "—", change: "로딩중", up: true, trend: [], periodLabel: "" },
+  { label: "미국 기준금리", value: "—", change: "로딩중", up: true, trend: [], periodLabel: "" },
   { label: "브렌트유", value: "—", change: "로딩중", up: true, trend: [], periodLabel: "" },
   { label: "SCFI", value: "—", change: "로딩중", up: true, trend: [], periodLabel: "" },
 ];
