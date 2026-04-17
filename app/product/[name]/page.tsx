@@ -1,5 +1,5 @@
 "use client";
-import { Suspense, useState, useEffect } from "react";
+import { Suspense, useState, useEffect, useRef } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Header from "@/components/Header";
 import HeroBanner from "@/components/HeroBanner";
@@ -161,11 +161,29 @@ function ProductDetailContent() {
     return () => { cancelled = true; };
   }, [productCode, year, tradeType]);
 
-  // ── 애니메이션: 비동기 데이터 로드 완료 시 실행 ──
+  // ── 애니메이션: 데이터 로드 완료를 명시적으로 추적 ──
   const [displayTrend, setDisplayTrend] = useState<{ year: string; value: number }[]>([]);
   const [displayCountries, setDisplayCountries] = useState<{ country: string; value: number }[]>([]);
   const [animActive, setAnimActive] = useState(false);
+  const [dataVersion, setDataVersion] = useState(0);
 
+  // rawTrend/topCountries가 변경될 때 버전 증가 → 애니메이션 트리거
+  const prevRawTrendLen = useRef(0);
+  const prevTopCountriesLen = useRef(0);
+  useEffect(() => {
+    if (rawTrend.length !== prevRawTrendLen.current || topCountries.length !== prevTopCountriesLen.current) {
+      prevRawTrendLen.current = rawTrend.length;
+      prevTopCountriesLen.current = topCountries.length;
+      setDataVersion(v => v + 1);
+    }
+  }, [rawTrend, topCountries]);
+
+  // subTab 변경 시에도 애니메이션
+  useEffect(() => {
+    setDataVersion(v => v + 1);
+  }, [subTab]);
+
+  // dataVersion 변경 시 애니메이션 실행
   useEffect(() => {
     if (trend.length === 0 && topCountries.length === 0) {
       setDisplayTrend([]);
@@ -192,7 +210,7 @@ function ProductDetailContent() {
       clearTimeout(stopId);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [trend, topCountries, subTab]);
+  }, [dataVersion]);
 
   // 현재 연도 금액 & 전년 대비 증감 — 추이 데이터에서 직접 조회 (Top30 제한 없음)
   const prevYear = String(parseInt(year) - 1);
