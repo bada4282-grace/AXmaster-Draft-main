@@ -140,19 +140,24 @@ function CountryDetailContent() {
   const minBal = balScale.min;
   const maxBal = balScale.max;
 
-  const flatData = timeseries.map((d) => ({
-    ...d,
-    export: minVal,
-    import: minVal,
-    balance: minBal,
-  }));
-
-  const [displayData, setDisplayData] = useState(flatData);
+  const [displayData, setDisplayData] = useState<MonthlyData[]>([]);
   const [lineAnimActive, setLineAnimActive] = useState(false);
 
+  // timeseries가 비동기로 로드되므로, timeseries 변경 시 애니메이션 실행
   useEffect(() => {
+    if (timeseries.length === 0) {
+      setDisplayData([]);
+      return;
+    }
+
+    // 시작: 바닥에서 시작
     setLineAnimActive(false);
-    setDisplayData(flatData);
+    setDisplayData(timeseries.map((d) => ({
+      ...d,
+      export: minVal,
+      import: minVal,
+      balance: minBal,
+    })));
 
     const startTimeout = setTimeout(() => {
       setLineAnimActive(true);
@@ -168,7 +173,7 @@ function CountryDetailContent() {
       clearTimeout(stopTimeout);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [year, subTab]);
+  }, [timeseries]);
 
   return (
     <div style={{ minHeight: "100vh", background: "#f8f8f8" }}>
