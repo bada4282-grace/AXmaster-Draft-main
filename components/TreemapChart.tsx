@@ -69,7 +69,7 @@ function CustomContent({ x = 0, y = 0, width = 0, height = 0, name, value = 0, d
         animation: `tcell-${animKey} 0.5s cubic-bezier(0.22, 1, 0.36, 1) both`,
       }}
     >
-      <rect x={x} y={y} width={width} height={height} fill={color} stroke="#fff" strokeWidth={1} />
+      <rect x={x + 1} y={y + 1} width={Math.max(width - 2, 0)} height={Math.max(height - 2, 0)} rx={6} ry={6} fill={color} stroke="#fff" strokeWidth={2} />
       {width > 36 && height > 22 && (
         <foreignObject x={x + pad} y={y} width={width - pad * 2} height={height}>
           <div
