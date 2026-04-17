@@ -146,8 +146,16 @@ export default function ChatBot({
   const [input, setInput] = useState("");
   const [fontSize, setFontSize] = useState(12);
   const [isStreaming, setIsStreaming] = useState(false);
-  const [guestFaq, setGuestFaq] = useState(() => getOrBuildGuestFaq());
-  const [userFaq, setUserFaq] = useState<string[] | null>(() => getCachedUserFaq());
+  const [guestFaq, setGuestFaq] = useState(DEFAULT_GUEST_FAQ);
+  const [userFaq, setUserFaq] = useState<string[] | null>(null);
+
+  // Hydrate FAQ from sessionStorage on client to avoid SSR mismatch
+  useEffect(() => {
+    const cached = getOrBuildGuestFaq();
+    if (cached !== DEFAULT_GUEST_FAQ) setGuestFaq(cached);
+    const cachedUser = getCachedUserFaq();
+    if (cachedUser) setUserFaq(cachedUser);
+  }, []);
 
   // 게스트 FAQ: 세션 캐시가 없으면 Supabase에서 동적 생성
   useEffect(() => {
