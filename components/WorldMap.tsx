@@ -13,24 +13,27 @@ import { DEFAULT_YEAR, type TradeType, type CountryData } from "@/lib/data";
 import { getCountryRankingAsync, getTreemapDataAsync } from "@/lib/dataSupabase";
 import type { ProductNode } from "@/lib/data";
 
-// 민트-틸 그라데이션 팔레트 (rank 1~30 기준, 5구간)
-function getMapColor(rank: number): string {
-  if (rank <= 3)  return "#054744"; // 1~3위   — 딥 다크 틸
-  if (rank <= 9)  return "#1A9088"; // 4~9위   — 다크 틸
-  if (rank <= 15) return "#50B8AD"; // 10~15위 — 미디엄 틸
-  if (rank <= 21) return "#6DCAB9"; // 16~21위 — 라이트 틸
-  if (rank <= 30) return "#A8E0D4"; // 22~30위 — 연한 민트 틸
-  return "#DCF3EF";                 // 30위 밖 — 유지
+// 수출: 블루 그라데이션 / 수입: 코럴 그라데이션
+function getMapColor(rank: number, mode: "수출" | "수입" = "수출"): string {
+  if (mode === "수입") {
+    if (rank <= 3)  return "#B02020"; // 딥 로즈
+    if (rank <= 9)  return "#D04545"; // 코럴 레드
+    if (rank <= 15) return "#E07060"; // 소프트 코럴
+    if (rank <= 21) return "#ECA090"; // 피치
+    if (rank <= 30) return "#F4C8BC"; // 라이트 피치
+    return "#FAE8E4";               // 30위 밖
+  }
+  // 수출 — 블루
+  if (rank <= 3)  return "#002B5C"; // 딥 네이비
+  if (rank <= 9)  return "#0A3D6B"; // 다크 블루
+  if (rank <= 15) return "#1A6FA0"; // 블루
+  if (rank <= 21) return "#6A9EC0"; // 소프트 블루
+  if (rank <= 30) return "#B0D0E8"; // 라이트 블루
+  return "#DCE8F0";                 // 30위 밖
 }
 
-// 필터 모드 전용 색상 — #DCF3EF 와 대비가 확보되도록 강화
-function getFilterColor(rank: number): string {
-  if (rank <= 3)  return "#054744";
-  if (rank <= 9)  return "#1A9088";
-  if (rank <= 15) return "#50B8AD";
-  if (rank <= 21) return "#6DCAB9";
-  if (rank <= 30) return "#6DC4B5"; // #A8E0D4 → 더 진하게
-  return "#DCF3EF";
+function getFilterColor(rank: number, mode: "수출" | "수입" = "수출"): string {
+  return getMapColor(rank, mode);
 }
 import { getMonthlyCountryMapData, type MonthlyCountryMapItem } from "@/lib/supabase";
 
@@ -173,7 +176,7 @@ const COUNTRY_CENTROIDS: Record<string, [number, number]> = {
 const MAP_STYLE: any = {
   version: 8,
   sources: {},
-  layers: [{ id: "bg", type: "background", paint: { "background-color": "#F2FBFF" } }],
+  layers: [{ id: "bg", type: "background", paint: { "background-color": "#FFFFFF" } }],
 };
 
 // ─── GeoJSON 로드 (topojson → GeoJSON 변환, 모듈 캐싱) ───────────────────────
@@ -459,6 +462,8 @@ export default function WorldMap({
 
   // ─ 순위 구간 필터 ─
   const [filterTier, setFilterTier] = useState<string>("all");
+  const [zoomPct, setZoomPct] = useState(100);
+  const BASE_ZOOM = 1.0;
 
   // ─ choropleth 색상 주입 ─
   const coloredGeoJSON = useMemo((): GeoJSON.FeatureCollection | null => {
@@ -511,8 +516,8 @@ export default function WorldMap({
           properties: {
             alpha2,
             fill_color:   (isColored && inTier)
-              ? (filterTier === "all" ? getMapColor(effectiveRank) : getFilterColor(effectiveRank))
-              : "#DCF3EF",
+              ? (filterTier === "all" ? getMapColor(effectiveRank, tradeType) : getFilterColor(effectiveRank, tradeType))
+              : (tradeType === "수입" ? "#FAE8E4" : "#DCE8F0"),
             rank:         effectiveRank,
             is_top30:     (effectiveRank <= 30) ? 1 : 0,
             country_name: countryName,
@@ -652,7 +657,7 @@ export default function WorldMap({
   return (
     <div className="flex flex-col w-full h-full" style={{ minHeight: 340 }}>
       {/* 지도 영역 */}
-      <div className="relative flex-1 bg-[#F2FBFF]" onMouseLeave={() => { markerHoverRef.current = false; clearHover(); setTooltip(null); }}>
+      <div className="relative flex-1 bg-[#FFFFFF]" onMouseLeave={() => { markerHoverRef.current = false; clearHover(); setTooltip(null); }}>
         <ReactMap
           ref={mapRef}
           mapStyle={MAP_STYLE}
@@ -667,6 +672,10 @@ export default function WorldMap({
           onMouseLeave={onMouseLeave}
           onClick={onClick as any}
           cursor={tooltip?.isTop30 ? "pointer" : "grab"}
+          onZoom={(e) => {
+            const z = e.viewState.zoom;
+            setZoomPct(Math.round((Math.pow(2, z) / Math.pow(2, BASE_ZOOM)) * 100));
+          }}
         >
           {/* 순위 구간 필터 — 우상단 */}
           <div style={{
@@ -788,6 +797,49 @@ export default function WorldMap({
               </Marker>
             );
           })}
+          {/* 배율 컨트롤 — 좌하단 */}
+          <div style={{
+            position: "absolute",
+            bottom: 12,
+            left: 12,
+            zIndex: 10,
+            display: "flex",
+            alignItems: "center",
+            gap: 4,
+            background: "rgba(255,255,255,0.88)",
+            backdropFilter: "blur(6px)",
+            border: "1px solid rgba(255,255,255,0.6)",
+            borderRadius: 8,
+            boxShadow: "0 2px 10px rgba(0,0,0,0.12)",
+            padding: "3px 6px",
+          }}>
+            <button
+              onClick={() => { const m = mapRef.current?.getMap(); if (m) m.zoomOut(); }}
+              style={{
+                border: "none", background: "none", cursor: "pointer",
+                fontSize: 14, fontWeight: 700, color: "#4b5563",
+                width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center",
+                borderRadius: 4,
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(0,0,0,0.05)")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "none")}
+            >−</button>
+            <span style={{
+              fontSize: 11, fontWeight: 600, color: "#1f2937",
+              minWidth: 40, textAlign: "center", userSelect: "none",
+            }}>{zoomPct}%</span>
+            <button
+              onClick={() => { const m = mapRef.current?.getMap(); if (m) m.zoomIn(); }}
+              style={{
+                border: "none", background: "none", cursor: "pointer",
+                fontSize: 14, fontWeight: 700, color: "#4b5563",
+                width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center",
+                borderRadius: 4,
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(0,0,0,0.05)")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "none")}
+            >+</button>
+          </div>
         </ReactMap>
       </div>
 
@@ -809,14 +861,21 @@ export default function WorldMap({
         <div style={{ flex: 1 }}>
           {/* 구간별 색상 바 */}
           <div style={{ display: "flex", width: "100%", height: 10, borderRadius: 3, overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.15)" }}>
-            {[
-              { color: "#DCF3EF" },
-              { color: "#A8E0D4" },
-              { color: "#6DCAB9" },
-              { color: "#50B8AD" },
-              { color: "#1A9088" },
-              { color: "#054744" },
-            ].map(({ color }) => (
+            {(tradeType === "수입" ? [
+              { color: "#FAE8E4" },
+              { color: "#F4C8BC" },
+              { color: "#ECA090" },
+              { color: "#E07060" },
+              { color: "#D04545" },
+              { color: "#B02020" },
+            ] : [
+              { color: "#DCE8F0" },
+              { color: "#B0D0E8" },
+              { color: "#6A9EC0" },
+              { color: "#1A6FA0" },
+              { color: "#0A3D6B" },
+              { color: "#002B5C" },
+            ]).map(({ color }) => (
               <div key={color} style={{ flex: 1, backgroundColor: color }} />
             ))}
           </div>
