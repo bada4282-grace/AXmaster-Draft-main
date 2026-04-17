@@ -632,9 +632,9 @@ export default function WorldMap({
       if (matched) p = matched.properties ?? p;
     }
 
-    if (p.is_top30 && p.country_name) {
+    if (p.country_name) {
       const mode = tradeType === "수입" ? "import" : "export";
-      router.push(`/country/${encodeURIComponent(p.country_name as string)}?mode=${mode}`);
+      router.push(`/country/${encodeURIComponent(p.country_name as string)}?mode=${mode}&year=${year}`);
     }
   }, [router, tradeType, coloredGeoJSON]);
 
@@ -671,7 +671,7 @@ export default function WorldMap({
           onMouseMove={onMouseMove as any}
           onMouseLeave={onMouseLeave}
           onClick={onClick as any}
-          cursor={tooltip?.isTop30 ? "pointer" : "grab"}
+          cursor={tooltip?.country ? "pointer" : "grab"}
           onZoom={(e) => {
             const z = e.viewState.zoom;
             setZoomPct(Math.round((Math.pow(2, z) / Math.pow(2, BASE_ZOOM)) * 100));
@@ -789,7 +789,7 @@ export default function WorldMap({
                   onClick={(e) => {
                     e.stopPropagation();
                     const mode = tradeType === "수입" ? "import" : "export";
-                    router.push(`/country/${encodeURIComponent(country.name)}?mode=${mode}`);
+                    router.push(`/country/${encodeURIComponent(country.name)}?mode=${mode}&year=${year}`);
                   }}
                 >
                   {country.name}
@@ -903,7 +903,7 @@ export default function WorldMap({
             }}
           >
             <p className="tooltip-shell-title">{tooltip.country}</p>
-            {tooltip.isTop30 ? (
+            {tooltip.rank ? (
               <>
                 <p className="tooltip-shell-line">
                   {tradeType === "수입" ? "수입" : "수출"} 순위:{" "}
@@ -913,26 +913,25 @@ export default function WorldMap({
                   {tradeType === "수입" ? "수입액" : "수출액"}:{" "}
                   <strong>${tooltip.exportVal}억</strong>
                 </p>
-                <p
-                  className="tooltip-shell-line"
-                  style={{ marginTop: 10, fontWeight: 600, color: "#64748b" }}
-                >
-                  상위 품목:
-                </p>
-                <ul className="tooltip-shell-list">
-                  {tooltip.topProducts?.map((p) => (
-                    <li key={p}>• {p}</li>
-                  ))}
-                </ul>
+                {tooltip.isTop30 && tooltip.topProducts && tooltip.topProducts.length > 0 && (
+                  <>
+                    <p
+                      className="tooltip-shell-line"
+                      style={{ marginTop: 10, fontWeight: 600, color: "#64748b" }}
+                    >
+                      상위 품목:
+                    </p>
+                    <ul className="tooltip-shell-list">
+                      {tooltip.topProducts.map((p) => (
+                        <li key={p}>• {p}</li>
+                      ))}
+                    </ul>
+                  </>
+                )}
                 <p className="tooltip-shell-hint">클릭 → 상세페이지</p>
               </>
             ) : (
-              <p
-                className="tooltip-shell-sub"
-                style={{ margin: 0, color: "#94a3b8" }}
-              >
-                상세 데이터 제한
-              </p>
+              <p className="tooltip-shell-hint">클릭 → 상세페이지</p>
             )}
           </div>,
           document.body

@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback, Suspense } from "react";
+import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import Header from "@/components/Header";
@@ -142,15 +142,29 @@ function CountryDetailContent() {
 
   const [displayData, setDisplayData] = useState<MonthlyData[]>([]);
   const [lineAnimActive, setLineAnimActive] = useState(false);
+  const [tsVersion, setTsVersion] = useState(0);
+  const prevTsLen = useRef(0);
 
-  // timeseries가 비동기로 로드되므로, timeseries 변경 시 애니메이션 실행
+  // timeseries 길이/내용 변경 감지 → 버전 증가
+  useEffect(() => {
+    if (timeseries.length !== prevTsLen.current) {
+      prevTsLen.current = timeseries.length;
+      setTsVersion(v => v + 1);
+    }
+  }, [timeseries]);
+
+  // subTab 변경 시에도 애니메이션
+  useEffect(() => {
+    setTsVersion(v => v + 1);
+  }, [subTab]);
+
+  // 애니메이션 실행
   useEffect(() => {
     if (timeseries.length === 0) {
       setDisplayData([]);
       return;
     }
 
-    // 시작: 바닥에서 시작
     setLineAnimActive(false);
     setDisplayData(timeseries.map((d) => ({
       ...d,
@@ -173,7 +187,7 @@ function CountryDetailContent() {
       clearTimeout(stopTimeout);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [timeseries]);
+  }, [tsVersion]);
 
   return (
     <div style={{ minHeight: "100vh", background: "#f8f8f8" }}>

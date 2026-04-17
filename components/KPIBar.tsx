@@ -275,7 +275,7 @@ export default function KPIBar({
           </div>
         )
       ) : (
-        <div className={ec === 0 ? "" : eu ? "kpi-change-up" : "kpi-change-down"} style={{ color: expColor }}>
+        <div className="kpi-change-up" style={{ color: expColor }}>
           <span className="kpi-change-icon">{ec === 0 ? "—" : eu ? "▲" : "▼"}</span>
           <span>{fmtRate(ec)}%</span>
           <span style={{ fontSize: 10, color: expColor, opacity: 0.55, marginLeft: 4, fontWeight: 400 }}>
@@ -297,7 +297,7 @@ export default function KPIBar({
           </div>
         )
       ) : (
-        <div className={ic === 0 ? "" : iu ? "kpi-change-up" : "kpi-change-down"} style={{ color: impColor }}>
+        <div className="kpi-change-up" style={{ color: impColor }}>
           <span className="kpi-change-icon">{ic === 0 ? "—" : iu ? "▲" : "▼"}</span>
           <span>{fmtRate(ic)}%</span>
           <span style={{ fontSize: 10, color: impColor, opacity: 0.55, marginLeft: 4, fontWeight: 400 }}>

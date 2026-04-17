@@ -111,7 +111,7 @@ export default function FilterBar({
   const handleCountry = (name: string) => {
     if (!name) return;
     const mode = tradeType === "수입" ? "import" : "export";
-    router.push(`/country/${encodeURIComponent(name)}?mode=${mode}`);
+    router.push(`/country/${encodeURIComponent(name)}?mode=${mode}&year=${year}`);
   };
 
   return (

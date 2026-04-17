@@ -246,7 +246,7 @@ export default function TreemapChart({
     if (!data?.name) return;
     const item = displayData.find((d) => d.name === data.name);
     if (!item) return;
-    const params = new URLSearchParams({ code: item.code });
+    const params = new URLSearchParams({ code: item.code, year });
     router.push(`/product/${encodeURIComponent(item.name)}?${params.toString()}`);
   };
 
