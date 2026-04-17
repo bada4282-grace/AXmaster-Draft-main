@@ -2,8 +2,9 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { Treemap, ResponsiveContainer } from "recharts";
-import { getTreemapData, getCountryTreemapData, aggregateTreemapByDepth, MTI_COLORS, MTI_NAMES, ProductNode, DEFAULT_YEAR, type TradeType } from "@/lib/data";
+import { aggregateTreemapByDepth, MTI_COLORS, MTI_NAMES, type ProductNode, DEFAULT_YEAR, type TradeType } from "@/lib/data";
 import { getMonthlyTreemapData, getCountryMonthlyTreemapData } from "@/lib/supabase";
+import { getTreemapDataAsync, getCountryTreemapDataAsync } from "@/lib/dataSupabase";
 import { useRouter } from "next/navigation";
 
 /** MTI 대분류별 SVG 아이콘 path */
@@ -144,11 +145,7 @@ export default function TreemapChart({
 }: TreemapChartProps) {
   const router = useRouter();
 
-  const annualData = forCountry && countryName
-    ? getCountryTreemapData(year, countryName, tradeType)
-    : getTreemapData(year, tradeType);
-
-  const [treemapData, setTreemapData] = useState<ProductNode[]>(annualData);
+  const [treemapData, setTreemapData] = useState<ProductNode[]>([]);
   const [noData, setNoData] = useState(false);
   const [zoomedMti, setZoomedMti] = useState<number | null>(null);
   const [animKey, setAnimKey] = useState(0);
@@ -168,19 +165,24 @@ export default function TreemapChart({
   };
 
   useEffect(() => {
-    if (!month) {
-      setNoData(false);
-      setTreemapData(annualData);
-      startTreemapAnimation();
-      return;
-    }
+    let mounted = true;
     onLoadingChange?.(true);
-    const fetch = forCountry && countryName
-      ? getCountryMonthlyTreemapData(year, month, countryName, tradeType)
-      : getMonthlyTreemapData(year, month, tradeType);
 
-    fetch
-      .then((data) => {
+    const loadData = async () => {
+      if (!month) {
+        // 연간: Supabase 집계 테이블에서 조회
+        const data = forCountry && countryName
+          ? await getCountryTreemapDataAsync(year, countryName, tradeType)
+          : await getTreemapDataAsync(year, tradeType);
+        if (!mounted) return;
+        setNoData(false);
+        setTreemapData(data);
+      } else {
+        // 월별: 기존 Supabase RPC
+        const data = forCountry && countryName
+          ? await getCountryMonthlyTreemapData(year, month, countryName, tradeType)
+          : await getMonthlyTreemapData(year, month, tradeType);
+        if (!mounted) return;
         if (data.length === 0) {
           setNoData(true);
           setTreemapData([]);
@@ -188,12 +190,14 @@ export default function TreemapChart({
           setNoData(false);
           setTreemapData(data);
         }
-      })
-      .catch(() => {
-        setNoData(false);
-        setTreemapData(annualData);
-      })
-      .finally(() => { startTreemapAnimation(); onLoadingChange?.(false); });
+      }
+    };
+
+    loadData()
+      .catch(() => { if (mounted) { setNoData(false); setTreemapData([]); } })
+      .finally(() => { if (mounted) { startTreemapAnimation(); onLoadingChange?.(false); } });
+
+    return () => { mounted = false; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [year, month, tradeType, countryName, forCountry]);
 

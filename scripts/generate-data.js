@@ -466,23 +466,13 @@ try {
 // ─── TS 파일 생성 ─────────────────────────────────────────────────────────
 console.log('TypeScript 파일 생성 중...');
 
+// Heavy 데이터는 Supabase agg 테이블에서 조회 (seed-supabase.js로 시드)
+// 이 파일에는 경량 데이터만 포함: KPI, MTI 룩업, 거시경제 지표
 const ts = `// !! 자동 생성된 파일입니다. 수정하지 마세요 !!
 // 생성: scripts/generate-data.js
-// 원본: tradedata_ctr_mti6.csv + MTI-data.csv
+// Heavy 데이터(트리맵, 국가, 품목 추이)는 Supabase agg 테이블에서 조회
 
 export const KPI_BY_YEAR = ${JSON.stringify(kpiOut, null, 2)} as const;
-
-export const COUNTRY_DATA_BY_YEAR: Record<string, {
-  iso: string; name: string; nameEn: string; rank: number;
-  export: string; import: string; region: string;
-  topProducts: string[]; topImportProducts: string[]; share: number;
-}[]> = ${JSON.stringify(countryDataOut, null, 2)};
-
-export const COUNTRY_IMP_DATA_BY_YEAR: Record<string, {
-  iso: string; name: string; nameEn: string; rank: number;
-  export: string; import: string; region: string;
-  topProducts: string[]; topImportProducts: string[]; share: number;
-}[]> = ${JSON.stringify(countryImpDataOut, null, 2)};
 
 export const MTI_COLORS: Record<number, string> = {
 ${Object.entries(MTI_COLORS).map(([k, v]) => `  ${k}: "${v}"`).join(',\n')},
@@ -491,50 +481,6 @@ ${Object.entries(MTI_COLORS).map(([k, v]) => `  ${k}: "${v}"`).join(',\n')},
 export const MTI_NAMES: Record<number, string> = {
 ${Object.entries(MTI_NAMES).map(([k, v]) => `  ${k}: "${v}"`).join(',\n')},
 };
-
-export const TREEMAP_EXP_DATA_BY_YEAR: Record<string, {
-  code: string; name: string; value: number;
-  mti: number; color: string; topCountries: string[];
-}[]> = ${JSON.stringify(treemapExpOut, null, 2)};
-
-export const TREEMAP_IMP_DATA_BY_YEAR: Record<string, {
-  code: string; name: string; value: number;
-  mti: number; color: string; topCountries: string[];
-}[]> = ${JSON.stringify(treemapImpOut, null, 2)};
-
-export const TIMESERIES_BY_YEAR_COUNTRY: Record<string, Record<string, {
-  month: string; export: number; import: number; balance: number;
-}[]>> = ${JSON.stringify(timeseriesOut, null, 2)};
-
-export const PRODUCT_EXP_TREND_BY_CODE: Record<string, {
-  year: string; value: number;
-}[]> = ${JSON.stringify(productExpTrendOut, null, 2)};
-
-export const PRODUCT_IMP_TREND_BY_CODE: Record<string, {
-  year: string; value: number;
-}[]> = ${JSON.stringify(productImpTrendOut, null, 2)};
-
-export const PRODUCT_EXP_TOP_COUNTRIES_BY_CODE: Record<string, Record<string, {
-  country: string; value: number;
-}[]>> = ${JSON.stringify(productExpTopCtrsOut, null, 2)};
-
-export const PRODUCT_IMP_TOP_COUNTRIES_BY_CODE: Record<string, Record<string, {
-  country: string; value: number;
-}[]>> = ${JSON.stringify(productImpTopCtrsOut, null, 2)};
-
-export const COUNTRY_KPI_BY_YEAR: Record<string, Record<string, {
-  export: string; import: string; rawExport: number; rawImport: number;
-  balance: string; positive: boolean;
-  exportChange: number; exportUp: boolean; importChange: number; importUp: boolean;
-}>> = ${JSON.stringify(countryKpiOut, null, 2)};
-
-export const COUNTRY_TREEMAP_EXP_BY_YEAR: Record<string, Record<string, {
-  code: string; name: string; value: number; mti: number; color: string;
-}[]>> = ${JSON.stringify(countryTreemapExpOut, null, 2)};
-
-export const COUNTRY_TREEMAP_IMP_BY_YEAR: Record<string, Record<string, {
-  code: string; name: string; value: number; mti: number; color: string;
-}[]>> = ${JSON.stringify(countryTreemapImpOut, null, 2)};
 
 export const MTI_LOOKUP: Record<string, string> = ${JSON.stringify(mtiLookup)};
 

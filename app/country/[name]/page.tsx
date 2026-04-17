@@ -7,12 +7,17 @@ import HeroBanner from "@/components/HeroBanner";
 import FilterBar from "@/components/FilterBar";
 import KPIBar from "@/components/KPIBar";
 import {
-  getCountryByName,
-  getCountryTimeseries,
-  getCountryKpi,
   DEFAULT_YEAR,
   type TradeType,
+  type CountryData,
+  type MonthlyData,
 } from "@/lib/data";
+import {
+  getCountryRankingAsync,
+  getCountryKpiAsync,
+  getCountryTimeseriesAsync,
+  type CountryKPIAsync,
+} from "@/lib/dataSupabase";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from "recharts";
@@ -46,18 +51,49 @@ function CountryDetailContent() {
     setLoadingCount((c) => c + (loading ? 1 : -1));
   }, []);
 
-  // 연도·수출입 모드에 따라 순위·비중이 달라짐
-  const country = getCountryByName(name, year, tradeType) ?? {
+  // 국가 데이터 — Supabase에서 비동기 로드
+  const defaultCountry: CountryData = {
     name, iso: "??", region: "기타", rank: 1,
-    export: "0", import: "0", region2: "기타",
-    topProducts: [], nameEn: name, share: 0,
+    export: "0", import: "0", nameEn: name,
+    topProducts: [], topImportProducts: [], share: 0,
   };
+  const [country, setCountry] = useState<CountryData>(defaultCountry);
+  const [kpi, setKpi] = useState<CountryKPIAsync | undefined>(undefined);
+  const [prevKpi, setPrevKpi] = useState<CountryKPIAsync | undefined>(undefined);
+  const [timeseries, setTimeseries] = useState<MonthlyData[]>([]);
 
-  // 해당 국가의 연도별 KPI — 증감률은 사전 생성 값 대신 자체 계산
-  const kpi = getCountryKpi(year, name);
-  const prevYearStr = String(parseInt(year) - 1);
-  const prevKpi = getCountryKpi(prevYearStr, name);
+  useEffect(() => {
+    let cancelled = false;
+    const prevYearStr = String(parseInt(year) - 1);
 
+    // 국가 순위
+    getCountryRankingAsync(year, tradeType).then(ranks => {
+      if (cancelled) return;
+      const fmt1 = (v: number) => (Math.round(v / 1e8 * 10) / 10).toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+      const r = ranks.find(r => r.country === name);
+      if (r) {
+        setCountry({
+          ...defaultCountry,
+          rank: tradeType === "수입" ? r.rank_imp : r.rank_exp,
+          export: fmt1(r.exp_amt),
+          import: fmt1(r.imp_amt),
+          share: tradeType === "수입" ? r.share_imp : r.share_exp,
+        });
+      }
+    }).catch(() => {});
+
+    // KPI (현재 + 전년)
+    getCountryKpiAsync(year, name).then(d => { if (!cancelled) setKpi(d); }).catch(() => {});
+    getCountryKpiAsync(prevYearStr, name).then(d => { if (!cancelled) setPrevKpi(d); }).catch(() => {});
+
+    // 시계열
+    getCountryTimeseriesAsync(year, name).then(d => { if (!cancelled) setTimeseries(d); }).catch(() => {});
+
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [year, name, tradeType]);
+
+  // 증감률 자체 계산
   const pctChg = (cur: number, prev: number) =>
     prev > 0 ? Math.round(Math.abs((cur - prev) / prev * 10000)) / 100 : 0;
 
@@ -73,8 +109,6 @@ function CountryDetailContent() {
   const countryImportUp = (kpi && prevKpi)
     ? kpi.rawImport >= prevKpi.rawImport
     : true;
-
-  const timeseries = getCountryTimeseries(year, name);
 
   // Y축 깔끔한 눈금 계산 (50, 100, 150… 같은 round number)
   function niceScale(rawMin: number, rawMax: number, targetTicks = 5) {

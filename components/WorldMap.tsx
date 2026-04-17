@@ -9,7 +9,9 @@ import type { MapRef } from "react-map-gl/maplibre";
 import type { MapLayerMouseEvent } from "maplibre-gl";
 import { feature as topoFeature } from "topojson-client";
 
-import { getCountryData, getTreemapData, DEFAULT_YEAR, type TradeType, type CountryData } from "@/lib/data";
+import { DEFAULT_YEAR, type TradeType, type CountryData } from "@/lib/data";
+import { getCountryRankingAsync, getTreemapDataAsync } from "@/lib/dataSupabase";
+import type { ProductNode } from "@/lib/data";
 
 // 민트-틸 그라데이션 팔레트 (rank 1~30 기준, 5구간)
 function getMapColor(rank: number): string {
@@ -301,20 +303,46 @@ export default function WorldMap({
   // FilterBar에서 선택한 품목을 URL에서 읽어 지도 필터로 적용
   const selectedProduct = useSearchParams().get("product") ?? "";
 
-  const countryData = getCountryData(year, tradeType);
+  // ─ 국가 데이터 (Supabase에서 비동기 로드) ─
+  const [countryData, setCountryData] = useState<CountryData[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    getCountryRankingAsync(year, tradeType).then(ranks => {
+      if (cancelled) return;
+      const fmt1 = (v: number) => (Math.round(v / 1e8 * 10) / 10).toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+      setCountryData(ranks.map(r => ({
+        iso: KO_NAME_TO_ISO[r.country] ?? "??",
+        name: r.country,
+        nameEn: r.country,
+        rank: tradeType === "수입" ? r.rank_imp : r.rank_exp,
+        export: fmt1(r.exp_amt),
+        import: fmt1(r.imp_amt),
+        region: "",
+        topProducts: [],
+        topImportProducts: [],
+        share: tradeType === "수입" ? r.share_imp : r.share_exp,
+      })));
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [year, tradeType]);
 
-  // ─ 품목별 국가 순위 (정적 데이터 사용) ─
-  const productTopIso = useMemo(() => {
-    if (!selectedProduct) return null;
-    const treemap = getTreemapData(year, tradeType);
-    const product = treemap.find((p) => p.name === selectedProduct);
-    if (!product?.topCountries?.length) return null;
-    const isoSet = new Set<string>();
-    product.topCountries.forEach((name) => {
-      const iso = KO_NAME_TO_ISO[name];
-      if (iso) isoSet.add(iso);
-    });
-    return isoSet.size > 0 ? isoSet : null;
+  // ─ 품목별 국가 순위 (Supabase에서 비동기 로드) ─
+  const [productTopIso, setProductTopIso] = useState<Set<string> | null>(null);
+  useEffect(() => {
+    if (!selectedProduct) { setProductTopIso(null); return; }
+    let cancelled = false;
+    getTreemapDataAsync(year, tradeType).then(treemap => {
+      if (cancelled) return;
+      const product = treemap.find(p => p.name === selectedProduct);
+      if (!product?.topCountries?.length) { setProductTopIso(null); return; }
+      const isoSet = new Set<string>();
+      product.topCountries.forEach(name => {
+        const iso = KO_NAME_TO_ISO[name];
+        if (iso) isoSet.add(iso);
+      });
+      setProductTopIso(isoSet.size > 0 ? isoSet : null);
+    }).catch(() => setProductTopIso(null));
+    return () => { cancelled = true; };
   }, [selectedProduct, year, tradeType]);
 
   // ─ Pretendard 폰트 로드 ─
@@ -383,13 +411,22 @@ export default function WorldMap({
     return [...updated, ...extras];
   }, [countryData, month, monthlyRanks]);
 
-  // 품목 국가 ISO 맵 (정적 topCountries + topProducts 역색인)
+  // 품목 국가 ISO 맵 (Supabase treemap + activeCountryData 역색인)
+  const [treemapCache, setTreemapCache] = useState<ProductNode[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    getTreemapDataAsync(year, tradeType).then(data => {
+      if (!cancelled) setTreemapCache(data);
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [year, tradeType]);
+
   const productByIso = useMemo((): Map<string, number> | null => {
     if (!selectedProduct) return null;
     const productIsoSet = new Set<string>();
 
-    const found = getTreemapData(year, tradeType).find((p) => p.name === selectedProduct);
-    found?.topCountries?.forEach((name) => {
+    const found = treemapCache.find((p: ProductNode) => p.name === selectedProduct);
+    found?.topCountries?.forEach((name: string) => {
       const iso = KO_NAME_TO_ISO[name];
       if (iso) productIsoSet.add(iso);
     });
@@ -404,12 +441,12 @@ export default function WorldMap({
 
     const m = new Map<string, number>();
     activeCountryData.forEach((c) => { if (productIsoSet.has(c.iso)) m.set(c.iso, c.rank); });
-    found?.topCountries?.forEach((name, i) => {
+    found?.topCountries?.forEach((name: string, i: number) => {
       const iso = KO_NAME_TO_ISO[name];
       if (iso && !m.has(iso)) m.set(iso, i + 1);
     });
     return m.size > 0 ? m : null;
-  }, [selectedProduct, year, tradeType, activeCountryData]);
+  }, [selectedProduct, treemapCache, activeCountryData]);
 
   const top5Countries = useMemo(
     () => activeCountryData.filter((c) => c.rank <= 5).sort((a, b) => a.rank - b.rank),

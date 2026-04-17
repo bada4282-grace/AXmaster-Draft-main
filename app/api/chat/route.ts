@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
   // buildChatContext는 대용량 데이터 접근을 포함하므로 에러를 명시적으로 잡습니다
   let context = "";
   try {
-    context = buildChatContext(message);
+    context = await buildChatContext(message);
   } catch (err) {
     console.error("[chat/route] buildChatContext error:", err);
   }

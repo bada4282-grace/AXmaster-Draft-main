@@ -9,7 +9,8 @@ import { saveChatLog, getChatLogs } from "@/lib/chat";
 import { resolveRouteButtons } from "@/lib/chatContext";
 import type { RouteButton } from "@/lib/chatContext";
 import type { User } from "@supabase/supabase-js";
-import { getCountryData, getTreemapData, DEFAULT_YEAR } from "@/lib/data";
+import { DEFAULT_YEAR } from "@/lib/data";
+import { getCountryRankingAsync, getTreemapDataAsync } from "@/lib/dataSupabase";
 
 function TypingIndicator() {
   return (
@@ -63,23 +64,41 @@ interface ChatBotProps {
 const GUEST_FAQ_KEY = "kstat_guest_faq";
 const USER_FAQ_KEY = "kstat_user_faq";
 
+const DEFAULT_GUEST_FAQ = [
+  "올해 수출 1위 국가는?",
+  "반도체 수출 현황 알려줘",
+  "최근 거시경제 지표 요약해줘",
+];
+
 function getOrBuildGuestFaq(): string[] {
   try {
     const cached = sessionStorage.getItem(GUEST_FAQ_KEY);
     if (cached) return JSON.parse(cached);
   } catch { /* SSR or parse error */ }
+  return DEFAULT_GUEST_FAQ;
+}
 
-  const countries = getCountryData(DEFAULT_YEAR, "수출").slice(0, 10);
-  const products = getTreemapData(DEFAULT_YEAR, "수출").slice(0, 10);
-  const rc = countries[Math.floor(Math.random() * countries.length)];
-  const rp = products[Math.floor(Math.random() * products.length)];
-  const faq = [
-    rc ? `올해 대${rc.name} 수출입 현황은?` : "올해 수출 1위 국가는?",
-    rp ? `${rp.name} 수출 추이와 상위 국가는?` : "반도체 수출 현황 알려줘",
-    "최근 거시경제 지표 요약해줘",
-  ];
-  try { sessionStorage.setItem(GUEST_FAQ_KEY, JSON.stringify(faq)); } catch {}
-  return faq;
+/** Supabase에서 국가/품목 목록을 가져와 게스트 FAQ를 동적 생성 */
+async function buildDynamicGuestFaq(): Promise<string[]> {
+  try {
+    const [ranks, products] = await Promise.all([
+      getCountryRankingAsync(DEFAULT_YEAR, "수출"),
+      getTreemapDataAsync(DEFAULT_YEAR, "수출"),
+    ]);
+    const top10c = ranks.slice(0, 10);
+    const top10p = products.slice(0, 10);
+    const rc = top10c[Math.floor(Math.random() * top10c.length)];
+    const rp = top10p[Math.floor(Math.random() * top10p.length)];
+    const faq = [
+      rc ? `올해 대${rc.country} 수출입 현황은?` : DEFAULT_GUEST_FAQ[0],
+      rp ? `${rp.name} 수출 추이와 상위 국가는?` : DEFAULT_GUEST_FAQ[1],
+      "최근 거시경제 지표 요약해줘",
+    ];
+    try { sessionStorage.setItem(GUEST_FAQ_KEY, JSON.stringify(faq)); } catch {}
+    return faq;
+  } catch {
+    return DEFAULT_GUEST_FAQ;
+  }
 }
 
 function getCachedUserFaq(): string[] | null {
@@ -127,8 +146,14 @@ export default function ChatBot({
   const [input, setInput] = useState("");
   const [fontSize, setFontSize] = useState(12);
   const [isStreaming, setIsStreaming] = useState(false);
-  const [guestFaq] = useState(() => getOrBuildGuestFaq());
+  const [guestFaq, setGuestFaq] = useState(() => getOrBuildGuestFaq());
   const [userFaq, setUserFaq] = useState<string[] | null>(() => getCachedUserFaq());
+
+  // 게스트 FAQ: 세션 캐시가 없으면 Supabase에서 동적 생성
+  useEffect(() => {
+    try { if (sessionStorage.getItem(GUEST_FAQ_KEY)) return; } catch {}
+    buildDynamicGuestFaq().then(setGuestFaq).catch(() => {});
+  }, []);
   const [welcomeLoading, setWelcomeLoading] = useState(false);
   const [welcomeTrigger, setWelcomeTrigger] = useState(0);
   const currentUserIdRef = useRef<string | null>(null);
@@ -325,7 +350,7 @@ export default function ChatBot({
       saveResponse = true;
 
       // 스트리밍 완료 후 라우팅 버튼 계산해서 마지막 봇 메시지에 추가
-      const routeButtons = resolveRouteButtons(userMsg);
+      const routeButtons = await resolveRouteButtons(userMsg);
       if (routeButtons.length > 0) {
         setMessages(prev => [
           ...prev.slice(0, -1),
