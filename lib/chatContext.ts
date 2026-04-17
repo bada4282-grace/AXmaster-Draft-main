@@ -103,9 +103,9 @@ export async function resolveRouteButtons(question: string): Promise<RouteButton
   const { year } = await extractKeywords(question);
   const detectedYear = year !== DEFAULT_YEAR ? year : null;
 
-  // 국가 버튼 (정확 매칭, 수입/수출 + 탭 + 연도 반영)
-  if (countries.length > 0) {
-    const tradeType = detectTradeType(question);
+  // 국가 버튼 — 언급된 모든 국가에 대해 개별 생성, 국가별 수출/수입 판단
+  for (const country of countries) {
+    const tradeType = detectTradeTypeForCountry(question, country);
     const params = new URLSearchParams();
     if (tradeType === "수입") params.set("mode", "import");
     if (isTimeseriesQuery) params.set("tab", "timeseries");
@@ -113,8 +113,8 @@ export async function resolveRouteButtons(question: string): Promise<RouteButton
     if (detectedMtiDepth) params.set("mtiDepth", detectedMtiDepth);
     const queryString = params.toString() ? `?${params.toString()}` : "";
     buttons.push({
-      label: `${countries[0]} ${tradeType} 데이터 확인하기`,
-      href: `/country/${encodeURIComponent(countries[0])}${queryString}`,
+      label: `${country} ${tradeType} 데이터 확인하기`,
+      href: `/country/${encodeURIComponent(country)}${queryString}`,
       type: "exact",
     });
   }
@@ -156,7 +156,9 @@ export async function resolveRouteButtons(question: string): Promise<RouteButton
     });
   } else {
     // 2단계: 유사 후보 탐색 (질문 단어 안에 MTI값이 포함된 경우)
-    const tokens = question.split(/[\s,·.?!、。]+/).filter(t => t.length >= 2);
+    // 무역 일반 용어는 제외 (품목이 아닌 단어가 매칭되는 것 방지)
+    const EXCLUDE_TOKENS = new Set(["무역", "무역수지", "수지", "수출", "수입", "수출입", "증감", "증감률", "현황", "추이", "데이터"]);
+    const tokens = question.split(/[\s,·.?!、。]+/).filter(t => t.length >= 2 && !EXCLUDE_TOKENS.has(t));
     const candidateMap = new Map<string, string>(); // code → name
 
     for (const [code, name] of Object.entries(mtiLookup)) {
@@ -195,6 +197,15 @@ export async function resolveRouteButtons(question: string): Promise<RouteButton
     }
   }
 
+  // 무역수지/전체 현황 질문 시 메인 대시보드 버튼
+  if (/무역수지|무역 현황|전체 현황|총 수출|총 수입/.test(question) && buttons.length === 0) {
+    buttons.push({
+      label: "전체 무역 현황 대시보드",
+      href: "/",
+      type: "exact",
+    });
+  }
+
   return buttons;
 }
 
@@ -202,6 +213,18 @@ export async function resolveRouteButtons(question: string): Promise<RouteButton
 function detectTradeType(question: string): "수출" | "수입" {
   if (question.includes("수입")) return "수입";
   return "수출";
+}
+
+// 특정 국가명 주변 맥락에서 수출/수입 감지 (국가별 개별 판단)
+function detectTradeTypeForCountry(question: string, country: string): "수출" | "수입" {
+  // "대{국가} 수출", "{국가} 수입" 등 국가명 근처의 수출/수입 감지
+  const patterns = [
+    new RegExp(`대${country}\\s*수입|${country}.*수입|수입.*${country}`),
+    new RegExp(`대${country}\\s*수출|${country}.*수출|수출.*${country}`),
+  ];
+  if (patterns[0].test(question)) return "수입";
+  if (patterns[1].test(question)) return "수출";
+  return detectTradeType(question);
 }
 
 // 분석/원인 질문인지 감지
