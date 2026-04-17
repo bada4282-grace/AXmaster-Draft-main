@@ -6,7 +6,6 @@ import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
 import { supabase } from "@/lib/supabase";
 import { saveChatLog, getChatLogs } from "@/lib/chat";
-import { resolveRouteButtons } from "@/lib/chatContext";
 import type { RouteButton } from "@/lib/chatContext";
 import type { User } from "@supabase/supabase-js";
 import { DEFAULT_YEAR } from "@/lib/data";
@@ -349,14 +348,26 @@ export default function ChatBot({
 
       saveResponse = true;
 
-      // 스트리밍 완료 후 라우팅 버튼 계산해서 마지막 봇 메시지에 추가
-      const routeButtons = await resolveRouteButtons(userMsg);
-      if (routeButtons.length > 0) {
-        setMessages(prev => [
-          ...prev.slice(0, -1),
-          { role: "bot", text: fullResponse, routeButtons },
-        ]);
-      }
+      // 스트리밍 완료 후 AI 기반 라우팅 버튼 생성
+      try {
+        const btnRes = await fetch("/api/route-buttons", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ question: userMsg, answer: fullResponse }),
+        });
+        const { buttons } = await btnRes.json();
+        if (Array.isArray(buttons) && buttons.length > 0) {
+          const routeButtons: RouteButton[] = buttons.map((b: { label: string; href: string }) => ({
+            label: b.label,
+            href: b.href,
+            type: "exact" as const,
+          }));
+          setMessages(prev => [
+            ...prev.slice(0, -1),
+            { role: "bot", text: fullResponse, routeButtons },
+          ]);
+        }
+      } catch { /* 버튼 생성 실패 시 무시 */ }
     } catch {
       fullResponse = "답변 생성 중 오류가 발생했습니다.";
       setMessages(prev => [

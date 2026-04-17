@@ -161,18 +161,21 @@ function ProductDetailContent() {
     return () => { cancelled = true; };
   }, [productCode, year, tradeType]);
 
-  // ── 애니메이션: 국가 상세 페이지와 동일한 패턴 ──
-  const flatTrend = trend.map((d) => ({ ...d, value: trendMin }));
-  const flatCountries = topCountries.map((d) => ({ ...d, value: 0 }));
-
-  const [displayTrend, setDisplayTrend] = useState(flatTrend);
-  const [displayCountries, setDisplayCountries] = useState(flatCountries);
+  // ── 애니메이션: 비동기 데이터 로드 완료 시 실행 ──
+  const [displayTrend, setDisplayTrend] = useState<{ year: string; value: number }[]>([]);
+  const [displayCountries, setDisplayCountries] = useState<{ country: string; value: number }[]>([]);
   const [animActive, setAnimActive] = useState(false);
 
   useEffect(() => {
+    if (trend.length === 0 && topCountries.length === 0) {
+      setDisplayTrend([]);
+      setDisplayCountries([]);
+      return;
+    }
+
     setAnimActive(false);
-    setDisplayTrend(flatTrend);
-    setDisplayCountries(flatCountries);
+    setDisplayTrend(trend.map((d) => ({ ...d, value: trendMin })));
+    setDisplayCountries(topCountries.map((d) => ({ ...d, value: 0 })));
 
     const startId = setTimeout(() => {
       setAnimActive(true);
@@ -189,7 +192,7 @@ function ProductDetailContent() {
       clearTimeout(stopId);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [subTab, year, tradeType, country]);
+  }, [trend, topCountries, subTab]);
 
   // 현재 연도 금액 & 전년 대비 증감 — 추이 데이터에서 직접 조회 (Top30 제한 없음)
   const prevYear = String(parseInt(year) - 1);
