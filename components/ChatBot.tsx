@@ -440,11 +440,19 @@ export default function ChatBot({
     }
   }, [messages]);
 
-const sendEmail = async (to: string) => {
+const sendReport = async () => {
+  const to = prompt("이메일 주소를 입력해주세요:");
+  if (!to) return;
+  const reportRes = await fetch("/api/report", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ messages }),
+  });
+  const { html } = await reportRes.json();
   await fetch("/api/send-email", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ to, messages }),
+    body: JSON.stringify({ to, html }),
   });
 };
 
@@ -586,10 +594,7 @@ const sendEmail = async (to: string) => {
           <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
             <div style={{ position: "relative", display: "inline-flex" }}>
               <button
-                onClick={() => {
-                  const to = prompt("이메일 주소를 입력해주세요:");
-                  if (to) sendEmail(to);
-                }}
+                onClick={() => sendReport()}
                 title="메일로 받기"
                 style={{ width: 22, height: 22, borderRadius: "50%", border: "1px solid #ddd", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
                 onMouseEnter={e => (e.currentTarget.style.background = "#fde8e8")}
