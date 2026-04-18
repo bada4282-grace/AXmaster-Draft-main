@@ -295,6 +295,43 @@ function detectMacroKeywords(question: string): string[] {
   return matched;
 }
 
+// ─── 데이터 커버리지 판정 ────────────────────────────────────────────────
+// trade_mti6의 최신 YYMM을 기준으로 "해당 연도가 부분 집계인지"를 판별
+// (LLM이 2026년 1~2월 누적치를 연간 합계로 오해하는 문제를 방지)
+let _latestYymmCache: { value: string | null; ts: number } | null = null;
+const LATEST_YYMM_TTL = 10 * 60 * 1000; // 10분
+
+async function getLatestYYMM(): Promise<string | null> {
+  if (_latestYymmCache && Date.now() - _latestYymmCache.ts < LATEST_YYMM_TTL) {
+    return _latestYymmCache.value;
+  }
+  try {
+    const { data } = await supabase
+      .from("trade_mti6")
+      .select("YYMM")
+      .order("YYMM", { ascending: false })
+      .limit(1);
+    const value = data && data.length > 0 ? String(data[0].YYMM) : null;
+    _latestYymmCache = { value, ts: Date.now() };
+    return value;
+  } catch {
+    _latestYymmCache = { value: null, ts: Date.now() };
+    return null;
+  }
+}
+
+// 특정 연도에 대한 커버리지 주석 반환 — null이면 완전 집계
+async function getYearCoverageNote(year: string): Promise<string | null> {
+  const latest = await getLatestYYMM();
+  if (!latest) return null;
+  const latestYear = latest.slice(0, 4);
+  const latestMonth = parseInt(latest.slice(4, 6), 10);
+  if (year > latestYear) return `${year}년 데이터 없음`;
+  if (year < latestYear) return null;
+  if (!latestMonth || latestMonth >= 12) return null;
+  return `${year}년은 1~${latestMonth}월까지만 집계되어 있으며 연간 합계가 아닌 부분 누적치입니다`;
+}
+
 // 질문이 "지금 보고 있는 화면"을 참조하는지 감지
 // 화면 참조가 있을 때만 pageContext(연도/국가/방향/뷰)를 기본값으로 사용하여,
 // 일반 질문이 페이지 상태에 이끌리지 않도록 한다.
@@ -503,7 +540,11 @@ export async function buildChatContext(
     else if (pageContext.view === "products") parts.push("활성 뷰: 품목별 트리맵");
     else if (pageContext.view === "countries") parts.push("활성 뷰: 상위 국가");
     else if (pageContext.view === "trend") parts.push("활성 뷰: 금액 추이");
-    sections.push(`[현재 화면 상태]\n${parts.join(" | ")}\n사용자가 "화면", "여기", "지금 보고 있는" 같은 표현을 쓰면 위 상태를 기준으로 답변하세요.`);
+    const coverageNote = await getYearCoverageNote(year);
+    const coverageLine = coverageNote ? `\n※ ${coverageNote}` : "";
+    sections.push(
+      `[현재 화면 상태]\n${parts.join(" | ")}${coverageLine}\n사용자가 "화면", "여기", "지금 보고 있는" 같은 표현을 쓰면 위 상태를 기준으로 답변하세요.`,
+    );
   }
 
   // 전체 KPI 요약 (항상 포함)
@@ -513,8 +554,10 @@ export async function buildChatContext(
     balance: { value: string };
   }>)[year];
   if (kpi) {
+    const overallCoverage = await getYearCoverageNote(year);
+    const overallLine = overallCoverage ? `\n※ ${overallCoverage}` : "";
     sections.push(
-      `[${year}년 전체 무역 요약]\n수출: ${kpi.export.value}억달러, 수입: ${kpi.import.value}억달러, 무역수지: ${kpi.balance.value}억달러`
+      `[${year}년 전체 무역 요약]\n수출: ${kpi.export.value}억달러, 수입: ${kpi.import.value}억달러, 무역수지: ${kpi.balance.value}억달러${overallLine}`
     );
   }
 
@@ -559,7 +602,12 @@ export async function buildChatContext(
       const inTimeseriesView = view === "timeseries";
       const inProductsView = view === "products";
 
-      let section = `[${country} 교역 데이터 (${year}년)]\n`;
+      const countryCoverage = await getYearCoverageNote(year);
+      const yearLabel = countryCoverage ? `${year}년, 부분 집계` : `${year}년`;
+      let section = `[${country} 교역 데이터 (${yearLabel})]\n`;
+      if (countryCoverage) {
+        section += `※ ${countryCoverage}\n`;
+      }
       if (countryRank) {
         const fmt1 = (v: number) => (Math.round(v / 1e8 * 10) / 10).toFixed(1);
         section += `수출순위: ${countryRank.rank_exp}위, 수출액: ${fmt1(countryRank.exp_amt)}억달러, 수입액: ${fmt1(countryRank.imp_amt)}억달러\n`;
@@ -635,6 +683,17 @@ export async function buildChatContext(
           return `${cleanYear}년 ${t.value}억달러`;
         }).join(", ");
         section += `연도별 추이: ${recent}`;
+
+        // 각 연도의 커버리지 주석 수집 — 부분 집계 연도가 있으면 경고 추가
+        const coverageNotes = new Set<string>();
+        for (const t of slice) {
+          const y = String(t.year).replace(/\(.*\)/, "").trim();
+          const note = await getYearCoverageNote(y);
+          if (note) coverageNotes.add(note);
+        }
+        if (coverageNotes.size > 0) {
+          section += `\n※ ${Array.from(coverageNotes).join(" / ")}`;
+        }
       }
       if (topCountries.length === 0 && trend.length === 0) {
         section += `해당 품목의 ${direction} 데이터가 없습니다.`;

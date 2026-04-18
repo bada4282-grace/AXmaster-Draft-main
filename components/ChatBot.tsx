@@ -244,12 +244,16 @@ export default function ChatBot({
   }, []);
   const [welcomeLoading, setWelcomeLoading] = useState(false);
   const [welcomeTrigger, setWelcomeTrigger] = useState(0);
+  // 초기 세션 확인 완료 여부 — auth 하이드레이션 전에는 welcome/persist 이펙트가 동작하지 않도록 차단
+  const [authChecked, setAuthChecked] = useState(false);
   const currentUserIdRef = useRef<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const welcomeFetchedRef = useRef(false);
   // 복원 시도 완료 여부 — persist 이펙트가 복원 전에 빈 배열을 덮어쓰지 않도록 가드
   const hasRestoredRef = useRef(false);
+  // 초기 세션 관측(재하이드레이션) vs 실제 로그인/로그아웃 구분
+  const sessionInitializedRef = useRef(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const increaseFontSize = () => setFontSize(prev => Math.min(prev + 1, 16));
   const decreaseFontSize = () => setFontSize(prev => Math.max(prev - 1, 10));
@@ -265,22 +269,39 @@ export default function ChatBot({
   useEffect(() => { initialMessageRef.current = initialMessage; });
 
   useEffect(() => {
+    // 초기 세션 동기화 — getSession과 onAuthStateChange 중 먼저 도달하는 쪽이 초기화 처리
+    const initializeSession = (userId: string | null, u: User | null) => {
+      if (sessionInitializedRef.current) return;
+      sessionInitializedRef.current = true;
+      currentUserIdRef.current = userId;
+      setUser(u);
+      setAuthChecked(true);
+    };
+
     supabase.auth.getSession().then(({ data: { session } }) => {
-      currentUserIdRef.current = session?.user?.id ?? null;
-      setUser(session?.user ?? null);
+      initializeSession(session?.user?.id ?? null, session?.user ?? null);
+    }).catch(() => {
+      initializeSession(null, null);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       const newUserId = session?.user?.id ?? null;
       const newUser = session?.user ?? null;
-      const prevUserId = currentUserIdRef.current;
 
+      // 마운트 직후 초기 세션 재하이드레이션(INITIAL_SESSION / 최초 SIGNED_IN)은
+      // "사용자 전환"으로 오판하지 않도록 storage를 건드리지 않는다.
+      if (!sessionInitializedRef.current) {
+        initializeSession(newUserId, newUser);
+        return;
+      }
+
+      const prevUserId = currentUserIdRef.current;
       currentUserIdRef.current = newUserId;
 
       if (event === "SIGNED_IN") {
         setUser(newUser);
         if (newUserId !== prevUserId) {
-          // 사용자 전환 — 이전 세션 저장본을 제거하고 새 세션으로 시작
+          // 초기화 이후에 발생한 실제 사용자 전환 — 이전 세션 저장본을 제거
           clearStoredMessages(prevUserId);
           clearStoredMessages(newUserId);
           welcomeFetchedRef.current = false;
@@ -289,7 +310,6 @@ export default function ChatBot({
           setWelcomeTrigger(t => t + 1);
         }
       } else if (event === "SIGNED_OUT") {
-        // 로그아웃 — 현재(이전 로그인) 저장본과 게스트 저장본 모두 제거
         clearStoredMessages(prevUserId);
         clearStoredMessages(null);
         setUser(null);
@@ -332,7 +352,8 @@ export default function ChatBot({
   }, [user]);
 
   useEffect(() => {
-    if (!open || welcomeFetchedRef.current) return;
+    // auth 확인 전에는 어떤 메시지도 세팅하지 않는다 — 로그인 사용자가 잠깐 게스트 인사말을 보는 현상 차단
+    if (!open || !authChecked || welcomeFetchedRef.current) return;
     welcomeFetchedRef.current = true;
 
     const currentUser = user;
@@ -382,15 +403,15 @@ export default function ChatBot({
     };
 
     loadWelcome();
-  }, [open, user, welcomeTrigger]);
+  }, [open, user, welcomeTrigger, authChecked]);
 
   // 채팅 내역을 sessionStorage에 백업 — 새로고침/네비게이션 후 복원에 사용
-  // 복원 시도가 완료된 뒤에만 동작하여 빈 상태로 덮어쓰는 레이스를 방지
+  // auth 확인 + 복원 시도 완료 이후에만 동작 — 로그인 사용자 키에 게스트 fallback이 덮이는 레이스를 방지
   useEffect(() => {
-    if (!hasRestoredRef.current) return;
+    if (!authChecked || !hasRestoredRef.current) return;
     if (messages.length === 0) return;
     persistMessages(user?.id ?? null, messages);
-  }, [messages, user]);
+  }, [messages, user, authChecked]);
 
   useEffect(() => {
     const container = messagesContainerRef.current;
