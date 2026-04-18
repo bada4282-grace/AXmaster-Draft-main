@@ -268,6 +268,7 @@ export default function ChatBot({
       setSendStatus("idle");
     }
   }, [emailModal, user]);
+
   useEffect(() => {
     const cached = getOrBuildGuestFaq();
     if (cached !== DEFAULT_GUEST_FAQ) setGuestFaq(cached);
@@ -464,7 +465,10 @@ export default function ChatBot({
       const reportRes = await fetch("/api/report", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages }),
+        body: JSON.stringify({ 
+          messages,
+          userName: user?.user_metadata?.name ?? null
+        }),
       });
       const reportData = await reportRes.json();
       console.log("report 응답:", reportData);
@@ -494,7 +498,10 @@ export default function ChatBot({
       const reportRes = await fetch("/api/report", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages }),
+        body: JSON.stringify({ 
+          messages,
+          userName: user?.user_metadata?.name ?? null
+        }),
       });
       const reportData = await reportRes.json();
 
@@ -504,7 +511,7 @@ export default function ChatBot({
       element.innerHTML = reportData.html;
       document.body.appendChild(element);
 
-      const today = new Date().toISOString().slice(0, 10);
+      const today = new Date().toISOString().slice(0, 10).replace(/-/g, "").slice(2);
       await html2pdf().set({
         margin: 0,
         filename: `K-stat_대화요약리포트_${today}.pdf`,
