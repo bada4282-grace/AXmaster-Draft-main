@@ -443,17 +443,27 @@ export default function ChatBot({
 const sendReport = async () => {
   const to = prompt("이메일 주소를 입력해주세요:");
   if (!to) return;
-  const reportRes = await fetch("/api/report", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ messages }),
-  });
-  const { html } = await reportRes.json();
-  await fetch("/api/send-email", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ to, html }),
-  });
+  try {
+    const reportRes = await fetch("/api/report", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messages }),
+    });
+    const reportData = await reportRes.json();
+    console.log("report 응답:", reportData);
+
+    const emailRes = await fetch("/api/send-email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ to, html: reportData.html }),
+    });
+    const emailData = await emailRes.json();
+    console.log("email 응답:", emailData);
+    alert("전송 완료!");
+  } catch (e) {
+    console.error("오류:", e);
+    alert("오류 발생!");
+  }
 };
 
   const send = async (overrideMsg?: string) => {
