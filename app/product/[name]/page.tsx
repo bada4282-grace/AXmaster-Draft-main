@@ -336,13 +336,13 @@ function ProductDetailContent() {
               balancePositive={prodKpi.expCur >= prodKpi.impCur}
             />
 
-            <div className="split-panel" style={{ height: 380 }}>
+            <div className="split-panel" style={{ position: "relative" }}>
             {/* Left info cards */}
             <div className="left-cards">
               <div className="left-cards-stack">
                 <div className="info-card">
                   <div className="info-card-label">품목명</div>
-                  <div style={{ fontSize: 18, fontWeight: 900 }}>{name}</div>
+                  <div className="info-card-value">{name}</div>
                   {productCode && (
                     <div style={{ fontSize: 10, color: "#888", marginTop: 2 }}>
                       MTI {productCode}{isAggregated && " (집계)"}
@@ -352,10 +352,10 @@ function ProductDetailContent() {
 
                 <div className="info-card">
                   <div className="info-card-label">{year}년 {tradeLabel}액</div>
-                  <div style={{ fontSize: 16, fontWeight: 700 }}>
+                  <div className="info-card-value">
                     {currentVal.toLocaleString()} 억
                   </div>
-                  <div style={{ fontSize: 10, color: "#888", fontWeight: 500 }}>달러</div>
+                  <div style={{ fontSize: 10, color: "#888" }}>달러</div>
                 </div>
 
                 <div className="info-card">
@@ -365,22 +365,23 @@ function ProductDetailContent() {
                     const absV = Math.abs(rv);
                     const isZero = absV === 0;
                     const color = isZero ? "#999" : rv >= 0 ? "#E02020" : "#185FA5";
+                    const arrow = isZero ? "" : rv >= 0 ? "▲ " : "▼ ";
                     // 소수점 2자리, .00은 .0으로 축약
                     const fmt = absV.toFixed(2).replace(/0$/, "").replace(/\.$/, ".0");
                     return (
                       <>
-                        <div style={{ fontSize: 18, fontWeight: 900, color }}>
-                          {fmt}%
+                        <div className="info-card-value" style={{ color }}>
+                          {arrow}{fmt}%
                         </div>
-                        <div style={{ fontSize: 10, color, fontWeight: 500 }}>
+                        <div style={{ fontSize: 10, color }}>
                           {isZero ? "변동 없음" : rv >= 0 ? "상승" : "하락"}
                         </div>
                       </>
                     );
                   })() : (
                     <>
-                      <div style={{ fontSize: 18, fontWeight: 900, color: "#999" }}>-</div>
-                      <div style={{ fontSize: 10, color: "#999", fontWeight: 500 }}>⚠️데이터 불충분</div>
+                      <div className="info-card-value" style={{ color: "#999" }}>-</div>
+                      <div style={{ fontSize: 10, color: "#999" }}>⚠ 데이터 불충분</div>
                     </>
                   )}
                 </div>
@@ -388,7 +389,7 @@ function ProductDetailContent() {
             </div>
 
             {/* Main viz */}
-            <div className="dashboard-area" style={{ display: "flex", flexDirection: "column" }}>
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
               {/* Sub tabs */}
               <div className="subtab-bar">
                 {(["금액 추이", "상위 국가"] as const).map((tab) => (
@@ -403,7 +404,9 @@ function ProductDetailContent() {
                 </span>
               </div>
 
-              <div style={{ flex: 1, padding: 12, overflow: "hidden" }}>
+
+              <div style={{ flex: 1, padding: 8, overflow: "hidden" }}>
+
                 {subTab === "금액 추이" ? (
                   trend.length > 0 ? (
                     <ResponsiveContainer width="100%" height="100%">
