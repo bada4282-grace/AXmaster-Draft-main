@@ -631,10 +631,10 @@ export default function ChatBot({
             <div style={{ display: "flex", gap: 8 }}>
               <button
                 onClick={() => { setEmailModal(false); setEmailInput(""); setSendStatus("idle"); }}
-                disabled={sendStatus === "sending"}
+                disabled={sendStatus === "sending" || sendStatus === "done"}
                 style={{
                   flex: 1, padding: "8px 0", borderRadius: 8, border: "1px solid #ddd",
-                  background: "#f5f5f5", fontSize: 13, cursor: sendStatus === "sending" ? "not-allowed" : "pointer",
+                  background: "#f5f5f5", fontSize: 13, cursor: (sendStatus === "sending" || sendStatus === "done") ? "not-allowed" : "pointer",
                   color: "#555",
                 }}
               >
@@ -642,11 +642,11 @@ export default function ChatBot({
               </button>
               <button
                 onClick={sendReport}
-                disabled={sendStatus === "sending"}
+                disabled={sendStatus === "sending" || sendStatus === "done"}
                 style={{
                   flex: 1, padding: "8px 0", borderRadius: 8, border: "none",
-                  background: sendStatus === "sending" ? "#ccc" : "#C41E3A", fontSize: 13,
-                  cursor: sendStatus === "sending" ? "not-allowed" : "pointer", color: "#fff", fontWeight: 600,
+                  background: (sendStatus === "sending" || sendStatus === "done") ? "#ccc" : "#C41E3A", fontSize: 13,
+                  cursor: (sendStatus === "sending" || sendStatus === "done") ? "not-allowed" : "pointer", color: "#fff", fontWeight: 600,
                 }}
               >
                 {sendStatus === "sending" ? "전송 중..." : "발송"}
