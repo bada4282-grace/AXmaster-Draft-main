@@ -352,7 +352,7 @@ function CountryDetailContent() {
 
                 <div className="info-card">
                   <div className="info-card-label" style={{ fontSize: 12 }}>
-                    한국 전체 {tradeType} 중 비중
+                    한국 전체 {tradeType} 중 {country.name} 비중
                   </div>
                   <div className="info-card-value">{country.share}%</div>
                 </div>
