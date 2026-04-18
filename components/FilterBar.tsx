@@ -114,6 +114,8 @@ export default function FilterBar({
     router.push(`/country/${encodeURIComponent(name)}?mode=${mode}&year=${year}`);
   };
 
+  const partnerLabel = tradeType === "수출" ? "수입국" : "수출국";
+
   return (
     <>
     <div className="filter-bar">
@@ -194,7 +196,7 @@ export default function FilterBar({
                 style={{ width: 140 }}
                 onChange={(e) => onCountryChange?.(e.target.value)}
               >
-                <option value="">수입국 (전체)</option>
+                <option value="">{partnerLabel} (전체)</option>
                 {countryNames.map((n) => (
                   <option key={n} value={n}>{n}</option>
                 ))}
@@ -219,7 +221,7 @@ export default function FilterBar({
                 value={showCountrySelect ?? ""}
                 onChange={(e) => handleCountry(e.target.value)}
               >
-                <option value="">수입국 (전체)</option>
+                <option value="">{partnerLabel} (전체)</option>
                 {countryNames.map((n) => (
                   <option key={n} value={n}>{n}</option>
                 ))}
