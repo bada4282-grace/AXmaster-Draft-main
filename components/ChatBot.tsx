@@ -66,6 +66,49 @@ interface ChatBotProps {
 
 const GUEST_FAQ_KEY = "kstat_guest_faq";
 const USER_FAQ_KEY = "kstat_user_faq";
+// 채팅 내역 sessionStorage 키 접두사 — 사용자별/게스트로 분리해 로그인 전환 시 혼선 방지
+const MESSAGES_KEY_PREFIX = "kstat_chat_messages_";
+const MAX_STORED_MESSAGES = 50;
+
+function messagesKey(userId: string | null | undefined): string {
+  return `${MESSAGES_KEY_PREFIX}${userId ?? "guest"}`;
+}
+
+function loadStoredMessages(userId: string | null | undefined): ChatMessage[] | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem(messagesKey(userId));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return null;
+    const msgs = parsed.filter(
+      (m): m is ChatMessage =>
+        m && (m.role === "bot" || m.role === "user") && typeof m.text === "string",
+    );
+    return msgs.length > 0 ? msgs : null;
+  } catch {
+    return null;
+  }
+}
+
+function persistMessages(userId: string | null | undefined, messages: ChatMessage[]) {
+  if (typeof window === "undefined") return;
+  try {
+    const trimmed = messages.slice(-MAX_STORED_MESSAGES);
+    sessionStorage.setItem(messagesKey(userId), JSON.stringify(trimmed));
+  } catch {
+    /* quota 등 — 무시 */
+  }
+}
+
+function clearStoredMessages(userId: string | null | undefined) {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.removeItem(messagesKey(userId));
+  } catch {
+    /* 무시 */
+  }
+}
 
 const DEFAULT_GUEST_FAQ = [
   "올해 수출 1위 국가는?",
@@ -205,6 +248,8 @@ export default function ChatBot({
   const bottomRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const welcomeFetchedRef = useRef(false);
+  // 복원 시도 완료 여부 — persist 이펙트가 복원 전에 빈 배열을 덮어쓰지 않도록 가드
+  const hasRestoredRef = useRef(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const increaseFontSize = () => setFontSize(prev => Math.min(prev + 1, 16));
   const decreaseFontSize = () => setFontSize(prev => Math.max(prev - 1, 10));
@@ -235,14 +280,22 @@ export default function ChatBot({
       if (event === "SIGNED_IN") {
         setUser(newUser);
         if (newUserId !== prevUserId) {
+          // 사용자 전환 — 이전 세션 저장본을 제거하고 새 세션으로 시작
+          clearStoredMessages(prevUserId);
+          clearStoredMessages(newUserId);
           welcomeFetchedRef.current = false;
+          hasRestoredRef.current = false;
           setMessages([]);
           setWelcomeTrigger(t => t + 1);
         }
       } else if (event === "SIGNED_OUT") {
+        // 로그아웃 — 현재(이전 로그인) 저장본과 게스트 저장본 모두 제거
+        clearStoredMessages(prevUserId);
+        clearStoredMessages(null);
         setUser(null);
         setUserFaq(null);
         welcomeFetchedRef.current = true;
+        hasRestoredRef.current = true;
         setMessages([{ role: "bot", text: initialMessageRef.current }]);
       }
     });
@@ -285,6 +338,15 @@ export default function ChatBot({
     const currentUser = user;
     const fallback = initialMessageRef.current;
 
+    // 1. sessionStorage에 이전 채팅 내역이 있으면 복원 (새로고침/네비게이션 대응)
+    const restored = loadStoredMessages(currentUser?.id ?? null);
+    if (restored && restored.length > 0) {
+      setMessages(restored);
+      hasRestoredRef.current = true;
+      return;
+    }
+    hasRestoredRef.current = true;
+
     if (!currentUser) {
       setMessages([{ role: "bot", text: fallback }]);
       welcomeFetchedRef.current = false;
@@ -321,6 +383,14 @@ export default function ChatBot({
 
     loadWelcome();
   }, [open, user, welcomeTrigger]);
+
+  // 채팅 내역을 sessionStorage에 백업 — 새로고침/네비게이션 후 복원에 사용
+  // 복원 시도가 완료된 뒤에만 동작하여 빈 상태로 덮어쓰는 레이스를 방지
+  useEffect(() => {
+    if (!hasRestoredRef.current) return;
+    if (messages.length === 0) return;
+    persistMessages(user?.id ?? null, messages);
+  }, [messages, user]);
 
   useEffect(() => {
     const container = messagesContainerRef.current;
@@ -465,7 +535,10 @@ export default function ChatBot({
             <button onClick={increaseFontSize} style={{ width: 22, height: 22, borderRadius: "50%", border: "1px solid #ddd", background: "#fff", cursor: "pointer", fontSize: 14, color: "#555", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>+</button>
           </div>
           <button
-            onClick={() => setMessages([{ role: "bot", text: initialMessage }])}
+            onClick={() => {
+              clearStoredMessages(user?.id ?? null);
+              setMessages([{ role: "bot", text: initialMessage }]);
+            }}
             title="대화 내용 지우기"
             style={{ width: 22, height: 22, borderRadius: "50%", border: "1px solid #ddd", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
             onMouseEnter={e => (e.currentTarget.style.background = "#fde8e8")}
