@@ -485,7 +485,7 @@ export default function ChatBot({
         setEmailModal(false);
         setEmailInput("");
         setSendStatus("idle");
-      }, 10000);
+      }, 5000);
     } catch (e) {
       console.error("오류:", e);
       setSendStatus("error");
