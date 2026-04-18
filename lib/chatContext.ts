@@ -30,6 +30,8 @@ export interface PageContext {
   productName?: string;
   productCode?: string;
   year?: string;
+  /** "01" ~ "12" 형식. 홈 필터에서 특정 월이 선택된 경우. */
+  month?: string;
   tradeType?: "수출" | "수입";
   view?: "timeseries" | "products" | "countries" | "trend";
 }
@@ -534,21 +536,32 @@ export async function buildChatContext(
   const sections: string[] = [];
 
   // 현재 보고 있는 화면 상태 — 사용자가 화면을 명시적으로 참조할 때만 주입
+  // 홈 페이지는 country/productName이 없어도 year/tradeType/view만으로 주입 (필터 상태 노출)
   const referencesScreen = questionReferencesScreen(question);
-  if (referencesScreen && pageContext && (pageContext.country || pageContext.productName)) {
+  const hasAnyPageSignal =
+    !!pageContext &&
+    (pageContext.country ||
+      pageContext.productName ||
+      pageContext.view ||
+      pageContext.month);
+  if (referencesScreen && pageContext && hasAnyPageSignal) {
     const parts: string[] = [];
-    if (pageContext.country) parts.push(`국가: ${pageContext.country}`);
+    if (pageContext.country) parts.push(`국가 필터: ${pageContext.country}`);
     if (pageContext.productName) parts.push(`품목: ${pageContext.productName}`);
     parts.push(`연도: ${year}년`);
+    if (pageContext.month) {
+      const mm = parseInt(pageContext.month, 10);
+      if (mm >= 1 && mm <= 12) parts.push(`월 필터: ${mm}월`);
+    }
     parts.push(`방향: ${tradeType}`);
     if (pageContext.view === "timeseries") parts.push("활성 뷰: 시계열 추이(월별)");
     else if (pageContext.view === "products") parts.push("활성 뷰: 품목별 트리맵");
-    else if (pageContext.view === "countries") parts.push("활성 뷰: 상위 국가");
+    else if (pageContext.view === "countries") parts.push("활성 뷰: 국가별(세계 지도/순위)");
     else if (pageContext.view === "trend") parts.push("활성 뷰: 금액 추이");
     const coverageNote = await getYearCoverageNote(year);
     const coverageLine = coverageNote ? `\n※ ${coverageNote}` : "";
     sections.push(
-      `[현재 화면 상태]\n${parts.join(" | ")}${coverageLine}\n사용자가 "화면", "여기", "지금 보고 있는" 같은 표현을 쓰면 위 상태를 기준으로 답변하세요.`,
+      `[현재 화면 상태]\n${parts.join(" | ")}${coverageLine}\n사용자가 "화면", "여기", "지금 보고 있는", "현재 대시보드" 같은 표현을 쓰면 위 상태를 기준으로 답변하세요. 이 컨텍스트가 있으면 "어떤 화면인지 알려주세요" 같은 되묻기는 절대 금지입니다.`,
     );
   }
 
