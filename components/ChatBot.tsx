@@ -495,7 +495,7 @@ export default function ChatBot({
       element.innerHTML = reportData.html;
       document.body.appendChild(element);
 
-      const today = new Date().toISOString().slice(0, 10);
+      const today = new Date().toISOString().slice(0, 10).replace(/-/g, "").slice(2);
       await html2pdf().set({
         margin: 0,
         filename: `K-stat_대화요약리포트_${today}.pdf`,
