@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
-import { buildChatContext } from "@/lib/chatContext";
+import { buildChatContext, type PageContext } from "@/lib/chatContext";
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -12,11 +12,13 @@ interface HistoryEntry {
 export async function POST(request: NextRequest) {
   let message: string;
   let history: HistoryEntry[];
+  let pageContext: PageContext | undefined;
 
   try {
     const body = await request.json();
     message = body.message ?? "";
     history = body.history ?? [];
+    pageContext = body.pageContext;
   } catch {
     return new Response("Invalid JSON", { status: 400 });
   }
@@ -28,7 +30,7 @@ export async function POST(request: NextRequest) {
   // buildChatContext는 대용량 데이터 접근을 포함하므로 에러를 명시적으로 잡습니다
   let context = "";
   try {
-    context = await buildChatContext(message);
+    context = await buildChatContext(message, pageContext);
   } catch (err) {
     console.error("[chat/route] buildChatContext error:", err);
   }
