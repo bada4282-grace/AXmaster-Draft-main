@@ -22,7 +22,7 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from "recharts";
 import { RechartsPayloadTooltip, rechartsTooltipSurfaceProps } from "@/components/RechartsTooltip";
-import { KO_NAME_TO_ISO, isoToFlagEmoji } from "@/lib/countryIso";
+import { KO_NAME_TO_ISO } from "@/lib/countryIso";
 
 const TreemapChart = dynamic(() => import("@/components/TreemapChart"), { ssr: false });
 import MacroSection from "@/components/MacroSection";
@@ -280,13 +280,41 @@ function CountryDetailContent() {
                 <div className="info-card">
                   <div className="info-card-label" style={{ fontSize: 12 }}>선택 국가</div>
                   <div style={{ fontSize: 18, fontWeight: 900, display: "flex", alignItems: "center", gap: 8 }}>
-                    {isoToFlagEmoji(country.iso) && (
-                      <span style={{ fontSize: 22, lineHeight: 1 }} aria-hidden>
-                        {isoToFlagEmoji(country.iso)}
+                    {country.iso && country.iso !== "??" && (
+                      <span style={{
+                        fontSize: 11,
+                        fontWeight: 700,
+                        padding: "2px 6px",
+                        background: "#f1f5f9",
+                        color: "#475569",
+                        borderRadius: 4,
+                        letterSpacing: 0.5,
+                        lineHeight: 1.2,
+                      }}>
+                        {country.iso}
                       </span>
                     )}
                     <span>{country.name}</span>
                   </div>
+                  {country.iso && country.iso !== "??" && (
+                    <div style={{ marginTop: 8 }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={`https://flagcdn.com/w80/${country.iso.toLowerCase()}.png`}
+                        srcSet={`https://flagcdn.com/w160/${country.iso.toLowerCase()}.png 2x`}
+                        alt={`${country.name} 국기`}
+                        width={40}
+                        height={30}
+                        style={{
+                          borderRadius: 3,
+                          border: "1px solid #e2e8f0",
+                          display: "block",
+                          objectFit: "cover",
+                        }}
+                        loading="lazy"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <div className="info-card">
@@ -324,7 +352,7 @@ function CountryDetailContent() {
 
                 <div className="info-card">
                   <div className="info-card-label" style={{ fontSize: 12 }}>
-                    한국 전체 {tradeType} 중 {country.name} 비중
+                    한국 전체 {tradeType} 중 비중
                   </div>
                   <div className="info-card-value">{country.share}%</div>
                 </div>
