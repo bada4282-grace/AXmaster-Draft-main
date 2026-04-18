@@ -76,9 +76,21 @@ function CustomContent({ x = 0, y = 0, width = 0, height = 0, name, value = 0, d
   const baseFontSize = width > 120 ? 14 : width > 60 ? 11 : 9;
   const nameLen = (name ?? "").length;
   const availWidth = width - pad * 2;
-  const maxLines = height > 50 ? 3 : 2;
-  const maxFitSize = nameLen > 0 ? Math.floor((availWidth * maxLines) / (nameLen * 0.9)) : baseFontSize;
-  const fontSize = Math.max(7, Math.min(baseFontSize, maxFitSize));
+  const availHeight = height - pad * 2;
+  // 한글 기준 글자 폭 ≈ fontSize, 줄높이 ≈ fontSize * 1.3
+  // 가로에 들어가는 글자 수 = availWidth / fontSize
+  // 필요한 줄 수 = nameLen / 가로글자수
+  // 필요한 높이 = 줄수 * fontSize * 1.3 + 금액텍스트(~14px)
+  // fontSize를 줄여가며 맞추기
+  let fontSize = baseFontSize;
+  while (fontSize > 7) {
+    const charsPerLine = Math.floor(availWidth / fontSize);
+    if (charsPerLine < 1) { fontSize--; continue; }
+    const lines = Math.ceil(nameLen / charsPerLine);
+    const textHeight = lines * fontSize * 1.3 + (height > 38 ? 14 : 0);
+    if (textHeight <= availHeight) break;
+    fontSize--;
+  }
   const cx = x + width / 2;
   const cy = y + height / 2;
 
