@@ -738,11 +738,12 @@ export default function WorldMap({
               >
                 <span
                   style={{
+                    // 흰 텍스트 + 어두운 halo, 플랫폼 공통 폰트(Noto Sans KR)
                     color:         "white",
-                    fontSize:      10,
+                    fontSize:      12,
                     fontWeight:    700,
-                    fontFamily:    "'Pretendard', 'Noto Sans KR', sans-serif",
-                    textShadow:    "0 0 4px rgba(4,22,30,1), 0 0 4px rgba(4,22,30,1), 0 0 8px rgba(4,22,30,0.8)",
+                    fontFamily:    "'Noto Sans KR', sans-serif",
+                    textShadow:    "0 0 4px rgba(0,0,0,1), 0 0 4px rgba(0,0,0,1), 0 0 8px rgba(0,0,0,1)",
                     pointerEvents: "auto",
                     whiteSpace:    "nowrap",
                     userSelect:    "none",
@@ -838,7 +839,7 @@ export default function WorldMap({
         gap: 10,
         flexShrink: 0,
       }}>
-        <span style={{ fontSize: 9, color: "#4b5563", fontWeight: 600, whiteSpace: "nowrap" }}>
+        <span style={{ fontSize: 11, color: "#4b5563", fontWeight: 600, whiteSpace: "nowrap" }}>
           {tradeType === "수입" ? "수입액" : "수출액"} 순위
         </span>
         <div style={{ flex: 1 }}>
@@ -866,7 +867,7 @@ export default function WorldMap({
           <div style={{ display: "flex", marginTop: 3 }}>
             {["30위 밖", "22~30위", "16~21위", "10~15위", "4~9위", "1~3위"].map((label) => (
               <div key={label} style={{ flex: 1, textAlign: "center" }}>
-                <span style={{ fontSize: 8, color: "#6b7280" }}>{label}</span>
+                <span style={{ fontSize: 10, color: "#6b7280" }}>{label}</span>
               </div>
             ))}
           </div>
@@ -1060,7 +1061,7 @@ export default function WorldMap({
 // → 커스텀 버튼 + 팝오버로 체크마크·호버·높이 모두 일관 표현
 interface TierOption { value: string; label: string }
 const TIER_OPTIONS: TierOption[] = [
-  { value: "all",    label: "전체" },
+  { value: "all",    label: "전체 보기" },
   { value: "1-3",    label: "1~3위" },
   { value: "4-9",    label: "4~9위" },
   { value: "10-15",  label: "10~15위" },
@@ -1072,7 +1073,6 @@ function TierDropdown({ value, onChange }: { value: string; onChange: (v: string
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const current = TIER_OPTIONS.find((o) => o.value === value) ?? TIER_OPTIONS[0];
-  const isFiltered = value !== "all";
 
   // click outside·ESC 로 닫기
   useEffect(() => {
@@ -1091,6 +1091,13 @@ function TierDropdown({ value, onChange }: { value: string; onChange: (v: string
     };
   }, [open]);
 
+  // 트리거·옵션 공통 폰트 — 브라우저 기본 <button> UA 스타일(system-ui)로 인한 불일치 방지
+  const commonFont = {
+    fontFamily: "inherit",
+    fontSize: 12,
+    fontWeight: 400 as const,
+  };
+
   return (
     <div ref={ref} style={{ position: "relative" }}>
       <button
@@ -1102,34 +1109,22 @@ function TierDropdown({ value, onChange }: { value: string; onChange: (v: string
           display: "flex",
           alignItems: "center",
           gap: 6,
-          backgroundColor: isFiltered ? "rgba(241, 245, 249, 0.95)" : "rgba(255,255,255,0.9)",
+          // 필터 적용 여부와 무관하게 배경·테두리 완전 동일 (옵션 A)
+          // 상태 변화는 트리거 텍스트(전체 → 1~3위 등)로만 전달
+          backgroundColor: "rgba(255,255,255,0.9)",
           backdropFilter: "blur(6px)",
-          border: isFiltered ? "0.5px solid #cbd5e1" : "0.5px solid #e5e7eb",
+          border: "0.5px solid #e5e7eb",
           borderRadius: 8,
           padding: "6px 11px",
-          fontSize: 11,
-          fontWeight: isFiltered ? 600 : 500,
           color: "#1f2937",
           boxShadow: "0 2px 10px rgba(0,0,0,0.10)",
           cursor: "pointer",
           outline: "none",
           minWidth: 92,
           whiteSpace: "nowrap",
+          ...commonFont,
         }}
       >
-        {isFiltered && (
-          <span
-            aria-hidden
-            style={{
-              width: 6,
-              height: 6,
-              borderRadius: "50%",
-              background: "#64748b",
-              display: "inline-block",
-              flexShrink: 0,
-            }}
-          />
-        )}
         <span>{current.label}</span>
         <svg
           width="10"
@@ -1190,10 +1185,11 @@ function TierDropdown({ value, onChange }: { value: string; onChange: (v: string
                   background: selected ? "#f1f5f9" : "transparent",
                   border: "none",
                   cursor: "pointer",
-                  fontSize: 12,
-                  fontWeight: selected ? 500 : 400,
                   color: "#1f2937",
                   textAlign: "left",
+                  ...commonFont,
+                  // 선택된 옵션만 weight 500 (체크 마크와 함께 강조)
+                  fontWeight: selected ? 500 : 400,
                 }}
               >
                 <span style={{ width: 12, display: "inline-block", color: "#1f2937", flexShrink: 0 }}>
