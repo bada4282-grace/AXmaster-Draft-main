@@ -1,5 +1,5 @@
 "use client";
-import { useState, useCallback, useRef, useEffect, memo } from "react";
+import { Suspense, useState, useCallback, useRef, useEffect, memo } from "react";
 import { usePathname } from "next/navigation";
 import ChatBot from "@/components/ChatBot";
 
@@ -49,11 +49,15 @@ export default function PersistentChatBot() {
       </button>
       <div className="app-chatbot-inner">
         <div className="dashboard-card chatbot-card">
-          <StableChatBot
-            open={true}
-            showInternalToggle={false}
-            initialMessage="안녕하세요! K-stat AI 어시스턴트입니다. 국가·품목·거시경제 지표에 대해 질문해 보세요. 로그인하시면 대화 기록이 저장되어 맞춤형 분석을 받으실 수 있습니다."
-          />
+          {/* ChatBot 내부에서 useSearchParams()를 사용하므로, 정적 프리렌더 대상 페이지
+              (/_not-found 포함)에서도 안전하도록 Suspense로 감싼다. */}
+          <Suspense fallback={null}>
+            <StableChatBot
+              open={true}
+              showInternalToggle={false}
+              initialMessage="안녕하세요! K-stat AI 어시스턴트입니다. 국가·품목·거시경제 지표에 대해 질문해 보세요. 로그인하시면 대화 기록이 저장되어 맞춤형 분석을 받으실 수 있습니다."
+            />
+          </Suspense>
         </div>
       </div>
     </aside>
