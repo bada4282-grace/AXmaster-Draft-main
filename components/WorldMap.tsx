@@ -255,7 +255,7 @@ export default function WorldMap({
         name: r.country,
         nameEn: r.country,
         rank: tradeType === "수입" ? r.rank_imp : r.rank_exp,
-        export: fmt1(r.exp_amt),
+        export: fmt1(tradeType === "수입" ? r.imp_amt : r.exp_amt),
         import: fmt1(r.imp_amt),
         region: "",
         topProducts: [],

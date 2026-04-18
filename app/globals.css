@@ -141,28 +141,42 @@ header.w-full {
   z-index: 10;
 }
 
-/* Main tab pills */
+/* Main tab pills — 공통 box model */
+.main-tab-active,
+.main-tab-inactive {
+  box-sizing: border-box;
+  border-width: 1px;
+  border-style: solid;
+  border-radius: 4px;
+  padding: 6px 20px;
+  font-size: 14px;
+  cursor: pointer;
+  line-height: 1.4;
+}
+
 .main-tab-active {
   background: #E02020;
   color: #fff;
-  border: none;
-  border-radius: 4px;
-  padding: 6px 20px;
-  font-size: 14px;
+  border-color: #E02020;
   font-weight: 600;
-  cursor: pointer;
 }
+
 .main-tab-inactive {
   background: #fff;
   color: #666;
-  border: 1px solid #d0d0d0;
-  border-radius: 4px;
-  padding: 6px 20px;
-  font-size: 14px;
+  border-color: #d0d0d0;
   font-weight: 500;
-  cursor: pointer;
 }
+
 .main-tab-inactive:hover { border-color: #E02020; color: #E02020; }
+
+.main-tab-active:focus,
+.main-tab-inactive:focus { outline: none; }
+.main-tab-active:focus-visible,
+.main-tab-inactive:focus-visible {
+  outline: 2px solid #E02020;
+  outline-offset: 2px;
+}
 
 /* Dashboard card */
 .dashboard-card {
