@@ -258,7 +258,16 @@ export default function ChatBot({
   const [pdfModal, setPdfModal] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
 
-  // Hydrate FAQ from sessionStorage on client to avoid SSR mismatch
+  // 이메일 모달 열릴 때 유저 이메일 자동 채우기
+  useEffect(() => {
+    if (emailModal && user?.email) {
+      setEmailInput(user.email);
+    }
+    if (!emailModal) {
+      setEmailInput("");
+      setSendStatus("idle");
+    }
+  }, [emailModal, user]);
   useEffect(() => {
     const cached = getOrBuildGuestFaq();
     if (cached !== DEFAULT_GUEST_FAQ) setGuestFaq(cached);
@@ -495,7 +504,7 @@ export default function ChatBot({
       element.innerHTML = reportData.html;
       document.body.appendChild(element);
 
-      const today = new Date().toISOString().slice(0, 10).replace(/-/g, "").slice(2);
+      const today = new Date().toISOString().slice(0, 10);
       await html2pdf().set({
         margin: 0,
         filename: `K-stat_대화요약리포트_${today}.pdf`,
