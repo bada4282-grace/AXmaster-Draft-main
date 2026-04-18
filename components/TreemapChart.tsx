@@ -5,6 +5,7 @@ import { Treemap, ResponsiveContainer } from "recharts";
 import { aggregateTreemapByDepth, MTI_COLORS, MTI_NAMES, type ProductNode, DEFAULT_YEAR, type TradeType } from "@/lib/data";
 import { getMonthlyTreemapData, getCountryMonthlyTreemapData } from "@/lib/supabase";
 import { getTreemapDataAsync, getCountryTreemapDataAsync } from "@/lib/dataSupabase";
+import { useIncompleteMonthRange } from "@/lib/useIncompleteMonthRange";
 import { useRouter } from "next/navigation";
 
 /** MTI 대분류별 SVG 아이콘 path */
@@ -306,6 +307,8 @@ export default function TreemapChart({
   // 불완전 연도 + 연간 조회 판별 (KPIBar와 동일 기준) — 전년 대비 비교가 무의미
   const currentCalendarYear = new Date().getFullYear();
   const isAnnualIncomplete = !month && parseInt(year, 10) >= currentCalendarYear;
+  // 실제 집계 월 범위 ("1~2월" 등) — 배지에 표기
+  const incompleteMonthRange = useIncompleteMonthRange(year);
 
   // 카테고리별 집계(금액·비중·전년 대비·상위3) 사전 계산 — 모든 MTI + ALL
   const categoryAggregates = useMemo(() => {
@@ -482,6 +485,7 @@ export default function TreemapChart({
               color={color as string}
               isActive={isActive}
               isAnnualIncomplete={isAnnualIncomplete}
+              monthRange={incompleteMonthRange}
               aggregate={categoryAggregates.per[n] ?? { amount: 0, share: 0, yoy: null, topItems: [] }}
               onClick={() => {
                 const next = isActive ? null : n;
@@ -498,6 +502,7 @@ export default function TreemapChart({
           color="#94A3B8"
           isActive={zoomedMti === null}
           isAnnualIncomplete={isAnnualIncomplete}
+          monthRange={incompleteMonthRange}
           aggregate={categoryAggregates.all}
           onClick={() => {
             setZoomedMti(null);
@@ -515,12 +520,14 @@ export default function TreemapChart({
           ? prevRawByCode.get(item.code) ?? 0
           : prevAggByCode.get(item.code) ?? 0;
 
-        // 전년 대비 줄 계산 — 불완전 연도·연간 조회면 "데이터 불충분", 전년 0/미존재면 "-"
+        // 전년 대비 줄 계산 — 불완전 연도·연간 조회면 "부분 데이터(1~N월)", 전년 0/미존재면 "-"
         let yoyLine: React.ReactNode;
         if (isAnnualIncomplete) {
           yoyLine = (
             <span style={{ color: "#999" }}>
-              - <span style={{ fontSize: 10, opacity: 0.7, marginLeft: 2 }}>⚠ 데이터 불충분</span>
+              - <span style={{ fontSize: 10, opacity: 0.7, marginLeft: 2 }}>
+                ⓘ 부분 데이터{incompleteMonthRange ? `(${incompleteMonthRange})` : ""}
+              </span>
             </span>
           );
         } else if (prevValue <= 0) {
@@ -598,12 +605,14 @@ interface CategoryChipButtonProps {
   color: string;
   isActive: boolean;
   isAnnualIncomplete: boolean;
+  /** 부분 집계 월 범위 ("1~2월" 등) — 배지 표기에 사용 */
+  monthRange: string | null;
   aggregate: CategoryAggregate;
   onClick: () => void;
 }
 
 function CategoryChipButton({
-  mti, label, color, isActive, isAnnualIncomplete, aggregate, onClick,
+  mti, label, color, isActive, isAnnualIncomplete, monthRange, aggregate, onClick,
 }: CategoryChipButtonProps) {
   const [show, setShow] = useState(false);
   const [pos, setPos] = useState<{ cx: number; topY: number } | null>(null);
@@ -729,6 +738,7 @@ function CategoryChipButton({
           label={label}
           aggregate={aggregate}
           isAnnualIncomplete={isAnnualIncomplete}
+          monthRange={monthRange}
           onMouseEnter={handleEnter}
           onMouseLeave={handleLeave}
         />,
@@ -746,12 +756,13 @@ interface CategoryTooltipProps {
   label: string;
   aggregate: CategoryAggregate;
   isAnnualIncomplete: boolean;
+  monthRange: string | null;
   onMouseEnter: () => void;
   onMouseLeave: () => void;
 }
 
 function CategoryTooltip({
-  id, position, iconPath, iconColor, label, aggregate, isAnnualIncomplete,
+  id, position, iconPath, iconColor, label, aggregate, isAnnualIncomplete, monthRange,
   onMouseEnter, onMouseLeave,
 }: CategoryTooltipProps) {
   const { amount, share, yoy, topItems } = aggregate;
@@ -763,7 +774,9 @@ function CategoryTooltip({
     yoyNode = (
       <span style={{ color: "#A5A39A", display: "inline-flex", alignItems: "center", gap: 4 }}>
         <span>–</span>
-        <span style={{ fontSize: 10, opacity: 0.85 }}>⚠ 데이터 불충분</span>
+        <span style={{ fontSize: 10, opacity: 0.85 }}>
+          ⓘ 부분 데이터{monthRange ? `(${monthRange})` : ""}
+        </span>
       </span>
     );
   } else if (yoy === null) {

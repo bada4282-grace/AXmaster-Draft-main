@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useSearchParams, usePathname } from "next/navigation";
 import { KPI_BY_YEAR, DEFAULT_YEAR } from "@/lib/data";
 import { getMonthlyCountryMapData, type MonthlyCountryMapItem } from "@/lib/supabase";
+import { useIncompleteMonthRange } from "@/lib/useIncompleteMonthRange";
 
 type KpiEntry = {
   export: { value: string; raw: number; change: number; up: boolean };
@@ -269,11 +270,12 @@ export default function KPIBar({
     </div>
   );
 
-  // 공통 "데이터 불충분" 표시 — 다른 컴포넌트(RechartsTooltip/country page)와 문구 통일
+  // 공통 "부분 데이터" 표시 — 실제 집계 월 범위를 Supabase에서 가져와 동적 주석
+  const monthRange = useIncompleteMonthRange(year);
   const insufficientIndicator = (
     <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 2, fontSize: 12, color: "#999" }}>
       <span>-</span>
-      <span style={{ fontSize: 10, opacity: 0.7 }}>⚠ 데이터 불충분</span>
+      <span style={{ fontSize: 10, opacity: 0.7 }}>ⓘ 부분 데이터{monthRange ? `(${monthRange})` : ""}</span>
     </div>
   );
 

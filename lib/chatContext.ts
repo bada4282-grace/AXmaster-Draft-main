@@ -4,7 +4,7 @@ import {
   KPI_BY_YEAR,
   MTI_LOOKUP,
 } from "@/lib/data";
-import { supabase } from "@/lib/supabase";
+import { supabase, getLatestYYMM } from "@/lib/supabase";
 import {
   getProductTrendAsync,
   getProductTopCountriesAsync,
@@ -302,27 +302,7 @@ function detectMacroKeywords(question: string): string[] {
 // ─── 데이터 커버리지 판정 ────────────────────────────────────────────────
 // trade_mti6의 최신 YYMM을 기준으로 "해당 연도가 부분 집계인지"를 판별
 // (LLM이 2026년 1~2월 누적치를 연간 합계로 오해하는 문제를 방지)
-let _latestYymmCache: { value: string | null; ts: number } | null = null;
-const LATEST_YYMM_TTL = 10 * 60 * 1000; // 10분
-
-async function getLatestYYMM(): Promise<string | null> {
-  if (_latestYymmCache && Date.now() - _latestYymmCache.ts < LATEST_YYMM_TTL) {
-    return _latestYymmCache.value;
-  }
-  try {
-    const { data } = await supabase
-      .from("trade_mti6")
-      .select("YYMM")
-      .order("YYMM", { ascending: false })
-      .limit(1);
-    const value = data && data.length > 0 ? String(data[0].YYMM) : null;
-    _latestYymmCache = { value, ts: Date.now() };
-    return value;
-  } catch {
-    _latestYymmCache = { value: null, ts: Date.now() };
-    return null;
-  }
-}
+// getLatestYYMM은 lib/supabase.ts에서 공용 import (UI 배지와 단일 소스 공유)
 
 // 특정 연도에 대한 커버리지 주석 반환 — null이면 완전 집계
 async function getYearCoverageNote(year: string): Promise<string | null> {
@@ -334,6 +314,76 @@ async function getYearCoverageNote(year: string): Promise<string | null> {
   if (year < latestYear) return null;
   if (!latestMonth || latestMonth >= 12) return null;
   return `${year}년은 1~${latestMonth}월까지만 집계되어 있으며 연간 합계가 아닌 부분 누적치입니다`;
+}
+
+// 부분 집계 연도에 대해 "같은 기간 전년 누적"을 계산해 반환
+// (LLM이 월평균 환산 같은 잘못된 비교를 시도하지 않도록, 유효 비교치를 미리 만들어 컨텍스트에 박아넣는 용도)
+interface SamePeriodYoY {
+  monthRange: string;
+  currAmt: number;
+  prevAmt: number;
+  yoyPct: number | null;
+}
+
+// 단일 월·direction의 해당 product code prefix 합계 조회 — 프로세스 레벨 캐시
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const _monthlyProductSumCache = new Map<string, Promise<Array<{ code: string; amt: number }>>>();
+async function getMonthlyTreemapRows(
+  yymm: string,
+  mode: "export" | "import",
+): Promise<Array<{ code: string; amt: number }>> {
+  const key = `${yymm}_${mode}`;
+  const cached = _monthlyProductSumCache.get(key);
+  if (cached) return cached;
+  const promise = (async () => {
+    const { data, error } = await supabase.rpc("get_treemap_mti6", {
+      p_yymm: yymm,
+      p_mode: mode,
+      p_mti_depth: 6,
+    });
+    if (error || !data) return [];
+    return (data as Array<{ mti_cd: string; total_amt: number }>).map((r) => ({
+      code: String(r.mti_cd),
+      amt: Number(r.total_amt) || 0,
+    }));
+  })();
+  _monthlyProductSumCache.set(key, promise);
+  return promise;
+}
+
+async function getProductSamePeriodYoY(
+  code: string,
+  year: string,
+  tradeType: "수출" | "수입",
+): Promise<SamePeriodYoY | null> {
+  const latest = await getLatestYYMM();
+  if (!latest) return null;
+  const latestYear = latest.slice(0, 4);
+  const latestMonth = parseInt(latest.slice(4, 6), 10);
+  // 부분 집계 연도가 아니면 유효 비교 불필요(전체 연도 trend로 충분)
+  if (year !== latestYear || !latestMonth || latestMonth >= 12) return null;
+
+  const prevYear = String(parseInt(year, 10) - 1);
+  const mode = tradeType === "수입" ? "import" : "export";
+  const months = Array.from({ length: latestMonth }, (_, i) => i + 1);
+
+  const sumForYear = async (yr: string) => {
+    const results = await Promise.all(
+      months.map((m) => getMonthlyTreemapRows(`${yr}${String(m).padStart(2, "0")}`, mode)),
+    );
+    let total = 0;
+    for (const rows of results) {
+      for (const row of rows) {
+        if (row.code.startsWith(code)) total += row.amt;
+      }
+    }
+    return total / 1e8; // 원단위 달러 → 억달러
+  };
+
+  const [currAmt, prevAmt] = await Promise.all([sumForYear(year), sumForYear(prevYear)]);
+  const yoyPct = prevAmt > 0 ? ((currAmt - prevAmt) / prevAmt) * 100 : null;
+  const monthRange = latestMonth === 1 ? "1월" : `1~${latestMonth}월`;
+  return { monthRange, currAmt, prevAmt, yoyPct };
 }
 
 // 질문이 "지금 보고 있는 화면"을 참조하는지 감지
@@ -535,6 +585,10 @@ export async function buildChatContext(
   const productTradeTypes: ("수출" | "수입")[] = mentionsExport && mentionsImport
     ? ["수출", "수입"]
     : [tradeType];
+
+  // 현재(입력) 연도가 부분 집계인지 — 전년 동기 유효 비교 계산 여부 판단에 사용
+  const annualCoverageNote = await getYearCoverageNote(year);
+  const isAnnualIncomplete = annualCoverageNote !== null;
   const sections: string[] = [];
 
   // 현재 보고 있는 화면 상태 — 사용자가 화면을 명시적으로 참조할 때만 주입
@@ -717,6 +771,24 @@ export async function buildChatContext(
         }
         if (coverageNotes.size > 0) {
           section += `\n※ ${Array.from(coverageNotes).join(" / ")}`;
+        }
+
+        // 부분 집계 연도면 "전년 동기 누적" 유효 비교치를 미리 계산해 주입
+        // (LLM이 월평균 환산 같은 잘못된 비교를 시도할 여지를 없애기 위함)
+        if (isAnnualIncomplete) {
+          try {
+            const sp = await getProductSamePeriodYoY(code, year, direction);
+            if (sp && sp.prevAmt > 0) {
+              const prevYear = String(parseInt(year, 10) - 1);
+              const pctStr =
+                sp.yoyPct === null
+                  ? "-"
+                  : `${sp.yoyPct >= 0 ? "+" : ""}${sp.yoyPct.toFixed(1)}%`;
+              section +=
+                `\n※ 유효 비교(전년 동기 누적): ${year}년 ${sp.monthRange} ${sp.currAmt.toFixed(1)}억달러 vs ${prevYear}년 ${sp.monthRange} ${sp.prevAmt.toFixed(1)}억달러 (${pctStr})` +
+                `\n※ 위 유효 비교 수치만 인용해서 추세를 말하세요. 다른 기간끼리(월평균 환산 포함)는 비교하지 마세요.`;
+            }
+          } catch { /* 집계 실패 시 무시 — 추세 주장을 하지 않도록 LLM에 맡김 */ }
         }
       }
       if (topCountries.length === 0 && trend.length === 0) {

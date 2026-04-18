@@ -28,6 +28,7 @@ import {
   rechartsTooltipFollowProps,
 } from "@/components/RechartsTooltip";
 import { getAvailableMonths } from "@/lib/supabase";
+import { useIncompleteMonthRange } from "@/lib/useIncompleteMonthRange";
 
 export default function ProductDetailPage() {
   return (
@@ -237,6 +238,7 @@ function ProductDetailContent() {
   const isComplete = !resolvedIncompleteYears.has(year) && !resolvedIncompleteYears.has(prevYear);
   const changeRate = (isComplete && prevVal) ? ((currentVal - prevVal) / prevVal * 100).toFixed(1) : null;
   const tradeLabel = tradeType === "수입" ? "수입" : "수출";
+  const productMonthRange = useIncompleteMonthRange(year);
 
   // ─── 품목별 KPI: 수출·수입 양쪽 데이터로 KPIBar에 전달 (Supabase 비동기) ───
   const [prodKpi, setProdKpi] = useState({ expCur: 0, expPrev: 0, impCur: 0, impPrev: 0 });
@@ -368,7 +370,9 @@ function ProductDetailContent() {
                   })() : (
                     <>
                       <div style={{ fontSize: 18, fontWeight: 900, color: "#999" }}>-</div>
-                      <div style={{ fontSize: 10, color: "#999", fontWeight: 500 }}>⚠️데이터 불충분</div>
+                      <div style={{ fontSize: 10, color: "#999", fontWeight: 500 }}>
+                        ⓘ 부분 데이터{productMonthRange ? `(${productMonthRange})` : ""}
+                      </div>
                     </>
                   )}
                 </div>
