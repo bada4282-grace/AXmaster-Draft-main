@@ -409,7 +409,7 @@ export default function ChatBot({
     if (!currentUser) {
       setMessages([{ role: "bot", text: fallback }]);
       setTimeout(() => {
-        setMessages(prev => [...prev, { role: "bot", text: "💡 대화 요약 보고서를 📄 PDF 또는 📧 메일로 받아보세요!" }]);
+        setMessages(prev => [...prev, { role: "bot", text: "💡 대화 요약 보고서를 📋 PDF 또는 📧 메일로 받아보세요!" }]);
       }, 1000);
       welcomeFetchedRef.current = false;
       return;
@@ -425,7 +425,7 @@ export default function ChatBot({
         if (logs.length === 0) {
           setMessages([{ role: "bot", text: fallback }]);
           setTimeout(() => {
-            setMessages(prev => [...prev, { role: "bot", text: "💡 대화 요약 보고서를 📄 PDF 또는 📧 메일로 받아보세요!" }]);
+            setMessages(prev => [...prev, { role: "bot", text: "💡 대화 요약 보고서를 📋 PDF 또는 📧 메일로 받아보세요!" }]);
           }, 1000);
           return;
         }
@@ -440,12 +440,12 @@ export default function ChatBot({
 
         setMessages([{ role: "bot", text: message ?? fallback }]);
         setTimeout(() => {
-          setMessages(prev => [...prev, { role: "bot", text: "💡 대화 요약 보고서를 📄 PDF 또는 📧 메일로 받아보세요!" }]);
+          setMessages(prev => [...prev, { role: "bot", text: "💡 대화 요약 보고서를 📋 PDF 또는 📧 메일로 받아보세요!" }]);
         }, 1000);
       } catch {
         setMessages([{ role: "bot", text: fallback }]);
         setTimeout(() => {
-          setMessages(prev => [...prev, { role: "bot", text: "💡 대화 요약 보고서를 📄 PDF 또는 📧 메일로 받아보세요!" }]);
+          setMessages(prev => [...prev, { role: "bot", text: "💡 대화 요약 보고서를 📋 PDF 또는 📧 메일로 받아보세요!" }]);
         }, 1000);
       } finally {
         setWelcomeLoading(false);
@@ -735,7 +735,7 @@ export default function ChatBot({
             width: 280, display: "flex", flexDirection: "column", gap: 12,
             boxShadow: "0 4px 24px rgba(0,0,0,0.15)",
           }}>
-            <div style={{ fontSize: 14, fontWeight: 600, color: "#333" }}>📄 PDF 다운로드</div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: "#333" }}>📋 PDF 다운로드</div>
             <p style={{ margin: 0, fontSize: 13, color: "#555", lineHeight: 1.6 }}>
               대화 내용 요약 보고서를 PDF로 다운받으시겠습니까?
             </p>
@@ -816,7 +816,7 @@ export default function ChatBot({
               onMouseEnter={e => (e.currentTarget.style.background = "#fde8e8")}
               onMouseLeave={e => (e.currentTarget.style.background = "#fff")}
             >
-              📄
+              📋
             </button>
             <button
               onClick={() => {
