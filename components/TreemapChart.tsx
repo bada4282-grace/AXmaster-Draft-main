@@ -482,6 +482,7 @@ export default function TreemapChart({
               isActive={isActive}
               isAnnualIncomplete={isAnnualIncomplete}
               monthRange={incompleteMonthRange}
+              yoyLabel={month ? "전년 동기 대비" : "전년 대비"}
               aggregate={categoryAggregates.per[n] ?? { amount: 0, share: 0, yoy: null, topItems: [] }}
               onClick={() => {
                 const next = isActive ? null : n;
@@ -499,6 +500,7 @@ export default function TreemapChart({
           isActive={zoomedMti === null}
           isAnnualIncomplete={isAnnualIncomplete}
           monthRange={incompleteMonthRange}
+          yoyLabel={month ? "전년 동기 대비" : "전년 대비"}
           aggregate={categoryAggregates.all}
           onClick={() => {
             setZoomedMti(null);
@@ -617,7 +619,7 @@ export default function TreemapChart({
             <Row label="비중" value={shareLabel} />
 
             <Divider />
-            <Row label="전년 대비" value={yoyNode} />
+            <Row label={month ? "전년 동기 대비" : "전년 대비"} value={yoyNode} />
 
             {isAnnualIncomplete && (
               <>
@@ -653,12 +655,14 @@ interface CategoryChipButtonProps {
   isAnnualIncomplete: boolean;
   /** 부분 집계 월 범위 ("1~2월" 등) — 배지 표기에 사용 */
   monthRange: string | null;
+  /** 전년 대비 라벨 — 월 선택 시 "전년 동기 대비", 연간은 "전년 대비" */
+  yoyLabel: string;
   aggregate: CategoryAggregate;
   onClick: () => void;
 }
 
 function CategoryChipButton({
-  mti, label, color, isActive, isAnnualIncomplete, monthRange, aggregate, onClick,
+  mti, label, color, isActive, isAnnualIncomplete, monthRange, yoyLabel, aggregate, onClick,
 }: CategoryChipButtonProps) {
   const [show, setShow] = useState(false);
   const [pos, setPos] = useState<{ cx: number; topY: number } | null>(null);
@@ -785,6 +789,7 @@ function CategoryChipButton({
           aggregate={aggregate}
           isAnnualIncomplete={isAnnualIncomplete}
           monthRange={monthRange}
+          yoyLabel={yoyLabel}
           onMouseEnter={handleEnter}
           onMouseLeave={handleLeave}
         />,
@@ -803,12 +808,14 @@ interface CategoryTooltipProps {
   aggregate: CategoryAggregate;
   isAnnualIncomplete: boolean;
   monthRange: string | null;
+  /** 전년 대비 라벨 — 월 선택 시 "전년 동기 대비", 연간은 "전년 대비" */
+  yoyLabel: string;
   onMouseEnter: () => void;
   onMouseLeave: () => void;
 }
 
 function CategoryTooltip({
-  id, position, iconPath, iconColor, label, aggregate, isAnnualIncomplete, monthRange,
+  id, position, iconPath, iconColor, label, aggregate, isAnnualIncomplete, monthRange, yoyLabel,
   onMouseEnter, onMouseLeave,
 }: CategoryTooltipProps) {
   const { amount, share, yoy, topItems } = aggregate;
@@ -878,7 +885,7 @@ function CategoryTooltip({
       {/* 값 3줄 */}
       <CategoryTooltipRow label="금액" value={formatAmount(amount)} />
       <CategoryTooltipRow label="비중" value={`${share.toFixed(1)}%`} />
-      <CategoryTooltipRow label="전년 대비" value={yoyNode} />
+      <CategoryTooltipRow label={yoyLabel} value={yoyNode} />
       {/* 구분선 + 상위 품목 */}
       {topItems.length > 0 && (
         <>
