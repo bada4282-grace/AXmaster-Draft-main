@@ -337,7 +337,12 @@ async function getYearCoverageNote(year: string): Promise<string | null> {
 // 일반 질문이 페이지 상태에 이끌리지 않도록 한다.
 export function questionReferencesScreen(question: string): boolean {
   const markers = [
+    // 화면·페이지·위치 표현
     "화면", "이 페이지", "이 화면", "이 곳", "여기",
+    "대시보드", "이 대시보드", "현재 대시보드",
+    // 대시보드 구성 요소(사용자가 보고 있는 것을 지칭)
+    "트리맵", "차트", "그래프", "지도", "시각화",
+    // 관찰/표시 표현
     "지금 보", "지금 보이", "현재 보", "보고 있", "보이는",
     "나와 있", "나온 내용", "나온 것", "표시된", "표시되어",
   ];

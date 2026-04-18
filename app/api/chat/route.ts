@@ -37,9 +37,18 @@ export async function POST(request: NextRequest) {
 
   const model = process.env.ANTHROPIC_MODEL ?? "claude-haiku-4-5-20251001";
 
-  // 이전 대화 맥락은 일절 모델에 전달하지 않는다 — 현재 질문에만 집중하도록 완전 격리
-  // (이전 국가/연도/품목 토픽이 현재 답변에 섞이는 문제를 구조적으로 차단)
-  void history;
+  // 이전 대화는 기본적으로 모델에 전달하지 않는다 — 현재 질문에 집중하도록 격리.
+  // 예외: 아직 사용자 메시지가 없고 웰컴 인사말만 있는 "첫 턴"의 경우,
+  //   그 인사말만 맥락으로 주입해 "네/좋아/그래" 같은 수락 응답을 제대로 이어갈 수 있게 한다.
+  const validHistory = history.filter((m) => m.content.trim().length > 0);
+  const hasAnyUser = validHistory.some((m) => m.role === "user");
+  let welcomeContext = "";
+  if (!hasAnyUser && validHistory.length > 0) {
+    const lastAssistant = [...validHistory]
+      .reverse()
+      .find((m) => m.role === "assistant");
+    if (lastAssistant) welcomeContext = lastAssistant.content;
+  }
   const finalHistory: HistoryEntry[] = [];
 
   // 시점 표현 기준이 되는 오늘 날짜 — "최근" 같은 표현의 오용 방지
@@ -111,9 +120,11 @@ export async function POST(request: NextRequest) {
 - 불확실성이나 한계는 딱 한 번만 간결하게 언급하세요. 한계를 언급한 후에는 있는 데이터로 자신있게 분석하세요.
 
 [현재 질문 집중 규칙 — 매우 중요]
-- 사용자의 **현재 질문**에만 집중하여 답변하세요. 이전 대화(웰컴 인사, 이전 Q/A)를 참고하지 말고, 그 안의 국가·품목·연도·방향(수출/수입)을 현재 질문에 이어 붙이지 마세요.
+- 사용자의 **현재 질문**에만 집중하여 답변하세요. 이전 Q/A를 참고하지 말고, 그 안의 국가·품목·연도·방향(수출/수입)을 현재 질문에 이어 붙이지 마세요.
 - 사용자가 별도로 명시하지 않았다면, 현재 질문만 읽고 그 안의 키워드로만 데이터를 해석하세요.
 - 사용자가 여러 질문을 한 번에 한 경우, 각 질문을 별도 문단으로 나누어 답변하세요. 각 문단에 ==토픽== 소제목을 붙여 구분하세요.
+- 예외: [바로 직전 인사말] 블록이 있고 사용자가 "네/응/그래/좋아/부탁해" 같은 짧은 수락으로 답한 경우, 그 인사말이 제안한 주제를 그대로 이어받아 답변을 시작하세요. 인사말이 여러 옵션을 제시했다면 그 중 첫 번째 또는 가장 구체적인 것을 택하세요.
+${welcomeContext ? `\n[바로 직전 인사말]\n당신이 사용자에게 먼저 건넨 말:\n${welcomeContext}` : ""}
 ${context ? `\n[데이터]\n${context}` : "\n[데이터 없음]"}`;
 
   let stream;
