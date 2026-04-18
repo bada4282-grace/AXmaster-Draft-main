@@ -188,17 +188,20 @@ function resolvePageContext(
 
   const year = searchParams?.get("year") ?? undefined;
   const month = searchParams?.get("month") ?? undefined;
-  const mode = searchParams?.get("mode");
+  // FilterBar는 `tradeType=`을 쓰고 상세 페이지 라우트는 `mode=`를 쓴다 — 둘 다 인식
+  const modeRaw = searchParams?.get("mode") ?? searchParams?.get("tradeType");
   const tradeType: PageContext["tradeType"] =
-    mode === "import" ? "수입" : mode === "export" ? "수출" : undefined;
+    modeRaw === "import" ? "수입" : modeRaw === "export" ? "수출" : undefined;
   const tabParam = searchParams?.get("tab");
+  const mtiDepthRaw = searchParams?.get("mtiDepth");
+  const mtiDepth = mtiDepthRaw ? Number(mtiDepthRaw) : undefined;
 
   const countryMatch = pathname.match(/^\/country\/([^/?#]+)/);
   if (countryMatch) {
     const country = decodeURIComponent(countryMatch[1]);
     const view: PageContext["view"] =
       tabParam === "timeseries" ? "timeseries" : "products";
-    return { country, year, month, tradeType: tradeType ?? "수출", view };
+    return { country, year, month, tradeType: tradeType ?? "수출", view, mtiDepth };
   }
 
   const productMatch = pathname.match(/^\/product\/([^/?#]+)/);
@@ -207,10 +210,10 @@ function resolvePageContext(
     const productCode = searchParams?.get("code") ?? undefined;
     const view: PageContext["view"] =
       tabParam === "countries" ? "countries" : "trend";
-    return { productName, productCode, year, month, tradeType, view };
+    return { productName, productCode, year, month, tradeType, view, mtiDepth };
   }
 
-  // 홈 페이지 (`/`) — 필터(year/month/mode/country)가 URL에 동기화되어 있으므로 파싱
+  // 홈 페이지 (`/`) — 필터(year/month/mode/country/mtiDepth)가 URL에 동기화됨
   if (pathname === "/") {
     const country = searchParams?.get("country")
       ? decodeURIComponent(searchParams.get("country")!)
@@ -218,12 +221,12 @@ function resolvePageContext(
     // 홈의 대시보드 뷰 타입 — 국가별 탭은 world map, 품목별 탭은 treemap
     const view: PageContext["view"] =
       tabParam === "product" ? "products" : "countries";
-    if (country || year || month || tradeType) {
-      return { country, year, month, tradeType: tradeType ?? "수출", view };
+    if (country || year || month || tradeType || mtiDepth) {
+      return { country, year, month, tradeType: tradeType ?? "수출", view, mtiDepth };
     }
   }
 
-  return year || tradeType ? { year, tradeType } : undefined;
+  return year || tradeType || mtiDepth ? { year, tradeType, mtiDepth } : undefined;
 }
 
 export default function ChatBot({

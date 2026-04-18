@@ -34,6 +34,8 @@ export interface PageContext {
   month?: string;
   tradeType?: "수출" | "수입";
   view?: "timeseries" | "products" | "countries" | "trend";
+  /** 품목별 트리맵의 그룹핑 깊이 (1~6). */
+  mtiDepth?: number;
 }
 
 // MTI_LOOKUP에서 품목명 → 코드 역조회 맵 구성 (경량, 전체 품목 포함)
@@ -543,7 +545,8 @@ export async function buildChatContext(
     (pageContext.country ||
       pageContext.productName ||
       pageContext.view ||
-      pageContext.month);
+      pageContext.month ||
+      pageContext.mtiDepth);
   if (referencesScreen && pageContext && hasAnyPageSignal) {
     const parts: string[] = [];
     if (pageContext.country) parts.push(`국가 필터: ${pageContext.country}`);
@@ -558,6 +561,9 @@ export async function buildChatContext(
     else if (pageContext.view === "products") parts.push("활성 뷰: 품목별 트리맵");
     else if (pageContext.view === "countries") parts.push("활성 뷰: 국가별(세계 지도/순위)");
     else if (pageContext.view === "trend") parts.push("활성 뷰: 금액 추이");
+    if (pageContext.mtiDepth && pageContext.mtiDepth >= 1 && pageContext.mtiDepth <= 6) {
+      parts.push(`MTI 분류 깊이: ${pageContext.mtiDepth}단위`);
+    }
     const coverageNote = await getYearCoverageNote(year);
     const coverageLine = coverageNote ? `\n※ ${coverageNote}` : "";
     sections.push(
