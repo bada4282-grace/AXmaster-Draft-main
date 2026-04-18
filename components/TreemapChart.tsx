@@ -758,7 +758,15 @@ function CategoryTooltip({
 
   // 전년 대비 라인 — 색상은 KPIBar와 동일하게 #E02020(상승)/#185FA5(하락)/회색 동률
   let yoyNode: React.ReactNode;
-  if (isAnnualIncomplete || yoy === null) {
+  if (isAnnualIncomplete) {
+    // 다른 곳들(KPIBar / RechartsTooltip / country page)과 문구 통일
+    yoyNode = (
+      <span style={{ color: "#A5A39A", display: "inline-flex", alignItems: "center", gap: 4 }}>
+        <span>–</span>
+        <span style={{ fontSize: 10, opacity: 0.85 }}>⚠ 데이터 불충분</span>
+      </span>
+    );
+  } else if (yoy === null) {
     yoyNode = <span style={{ color: "#A5A39A" }}>–</span>;
   } else {
     const abs = Math.abs(yoy);

@@ -25,7 +25,7 @@ import {
 import {
   RechartsPayloadTooltip,
   RechartsBarCountryTooltip,
-  rechartsTooltipSurfaceProps,
+  rechartsTooltipFollowProps,
 } from "@/components/RechartsTooltip";
 import { getAvailableMonths } from "@/lib/supabase";
 
@@ -279,20 +279,8 @@ function ProductDetailContent() {
   const prodExpUp = prodKpi.expCur >= prodKpi.expPrev;
   const prodImpChange = (isComplete && prodKpi.impPrev > 0) ? pctChg(prodKpi.impCur, prodKpi.impPrev) : 0;
   const prodImpUp = prodKpi.impCur >= prodKpi.impPrev;
-  const tooltipFollowProps = {
-    ...rechartsTooltipSurfaceProps,
-    isAnimationActive: false,
-    cursor: false,
-    offset: 18,
-    position: undefined,
-    reverseDirection: { x: true, y: true },
-    allowEscapeViewBox: { x: false, y: false },
-    wrapperStyle: {
-      ...rechartsTooltipSurfaceProps.wrapperStyle,
-      transition: "none",
-      pointerEvents: "none",
-    },
-  } as const;
+  // 툴팁 위치는 공통 follow props 사용 — 커서 오른쪽 8px, 경계에서 자동 flip
+  const tooltipFollowProps = rechartsTooltipFollowProps;
 
   return (
     <div style={{ minHeight: "100vh", background: "#f8f8f8" }}>

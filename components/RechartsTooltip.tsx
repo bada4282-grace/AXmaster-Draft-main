@@ -65,6 +65,90 @@ export const rechartsTooltipSurfaceProps = {
   isAnimationActive: false,
 };
 
+/**
+ * 표준 툴팁 위치 정책 — 커서 오른쪽 8px, 차트 경계에서 자동 flip.
+ * 모든 차트(시계열/금액 추이/상위 국가)에 공통 적용.
+ */
+export const rechartsTooltipFollowProps = {
+  ...rechartsTooltipSurfaceProps,
+  offset: 8,
+  allowEscapeViewBox: { x: false, y: false } as const,
+};
+
+interface TimeseriesPoint { month: string; export: number; import: number; balance: number }
+interface TimeseriesRowSpec { key: "export" | "import" | "balance"; name: string; color: string }
+
+/**
+ * 시계열 차트용 툴팁 — $단위 + 전월 대비 증감(▲/▼/–) 동반 표기.
+ * 색상은 KPIBar 관례(#E02020 상승 · #185FA5 하락)와 동일.
+ */
+export function TimeseriesTooltip({
+  active,
+  payload,
+  label,
+  title,
+  allData,
+  rows,
+}: {
+  active?: boolean;
+  payload?: TooltipPayload;
+  label?: unknown;
+  title: string;
+  allData: TimeseriesPoint[];
+  rows: TimeseriesRowSpec[];
+}) {
+  if (!active || !payload?.length) return null;
+  const monthLabel = label !== undefined && label !== null ? String(label) : "";
+  const current = payload[0]?.payload as TimeseriesPoint | undefined;
+  if (!current) return null;
+  const idx = allData.findIndex((d) => d.month === monthLabel);
+  const prev = idx > 0 ? allData[idx - 1] : null;
+
+  const fmtAmt = (v: number) => {
+    const sign = v < 0 ? "-" : "";
+    return `${sign}$${Math.abs(v).toFixed(1)}억`;
+  };
+
+  const momNode = (cur: number, prevVal: number | undefined): React.ReactNode => {
+    if (prevVal === undefined || prevVal === 0) return <span style={{ color: "#A5A39A", fontSize: 11 }}>–</span>;
+    const diff = cur - prevVal;
+    const pct = (diff / Math.abs(prevVal)) * 100;
+    const abs = Math.abs(pct);
+    const noChange = abs < 0.05;
+    const up = diff >= 0;
+    const color = noChange ? "#999" : up ? "#E02020" : "#185FA5";
+    const arrow = noChange ? "–" : up ? "▲" : "▼";
+    const sign = noChange ? "" : up ? "+" : "-";
+    return (
+      <span style={{ color, fontSize: 11, whiteSpace: "nowrap", fontWeight: 600 }}>
+        {arrow} {sign}{abs.toFixed(1)}%
+      </span>
+    );
+  };
+
+  return (
+    <div className="tooltip-shell">
+      <p className="tooltip-shell-title">{title}</p>
+      <p className="tooltip-shell-sub">
+        {monthLabel}{" "}
+        <span style={{ opacity: 0.7, fontSize: 10 }}>(전월 대비)</span>
+      </p>
+      {rows.map((r) => {
+        const val = current[r.key];
+        return (
+          <div key={r.key} className="tooltip-shell-row">
+            <span style={{ color: r.color }}>{r.name}</span>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+              <span>{fmtAmt(val)}</span>
+              {momNode(val, prev?.[r.key])}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 interface BarPayloadRow {
   country?: string;
   value?: number;
