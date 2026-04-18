@@ -307,6 +307,50 @@ export default function TreemapChart({
   const currentCalendarYear = new Date().getFullYear();
   const isAnnualIncomplete = !month && parseInt(year, 10) >= currentCalendarYear;
 
+  // 카테고리별 집계(금액·비중·전년 대비·상위3) 사전 계산 — 모든 MTI + ALL
+  const categoryAggregates = useMemo(() => {
+    const totalCurrent = treemapData.reduce((s, d) => s + d.value, 0);
+    const totalPrev = prevYearRaw.reduce((s, d) => s + d.value, 0);
+    const byMti = new Map<number, { curr: ProductNode[]; prev: ProductNode[] }>();
+    for (const d of treemapData) {
+      const e = byMti.get(d.mti) ?? { curr: [], prev: [] };
+      e.curr.push(d);
+      byMti.set(d.mti, e);
+    }
+    for (const d of prevYearRaw) {
+      const e = byMti.get(d.mti) ?? { curr: [], prev: [] };
+      e.prev.push(d);
+      byMti.set(d.mti, e);
+    }
+    const per: Record<number, {
+      amount: number;
+      share: number;
+      yoy: number | null;
+      topItems: { name: string; value: number }[];
+    }> = {};
+    for (const [m, { curr, prev }] of byMti.entries()) {
+      const amount = curr.reduce((s, d) => s + d.value, 0);
+      const prevAmount = prev.reduce((s, d) => s + d.value, 0);
+      const share = totalCurrent > 0 ? (amount / totalCurrent) * 100 : 0;
+      const yoy = prevAmount > 0 ? ((amount - prevAmount) / prevAmount) * 100 : null;
+      const topItems = [...curr]
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 3)
+        .map((d) => ({ name: d.name, value: d.value }));
+      per[m] = { amount, share, yoy, topItems };
+    }
+    const all = {
+      amount: totalCurrent,
+      share: 100,
+      yoy: totalPrev > 0 ? ((totalCurrent - totalPrev) / totalPrev) * 100 : null,
+      topItems: [...treemapData]
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 3)
+        .map((d) => ({ name: d.name, value: d.value })),
+    };
+    return { per, all };
+  }, [treemapData, prevYearRaw]);
+
   const onTreemapMouseMove = useCallback((e: React.MouseEvent) => {
     const target = e.target as SVGElement;
     const g = target.closest?.("g");
@@ -346,8 +390,9 @@ export default function TreemapChart({
           to   { opacity: 1; transform: scale(1); }
         }
         .mti-icon-btn {
-          height: 22px;
+          height: 26px;
           display: flex; align-items: center; justify-content: center;
+          gap: 4px;
           border-radius: 6px;
           border: 2px solid transparent;
           background: #f1f5f9;
@@ -424,67 +469,42 @@ export default function TreemapChart({
         )}
       </div>
 
-      {/* MTI 대분류 아이콘 필터 */}
+      {/* MTI 대분류 아이콘 필터 (호버 시 상세 툴팁 노출) */}
       <div style={{ display: "flex", width: "100%", flexShrink: 0, paddingTop: 4 }}>
         {Object.entries(MTI_COLORS).map(([mti, color]) => {
           const n = Number(mti);
           const isActive = zoomedMti === n;
           return (
-            <button
+            <CategoryChipButton
               key={mti}
-              data-tooltip={MTI_NAMES[n]}
+              mti={n}
+              label={MTI_NAMES[n]}
+              color={color as string}
+              isActive={isActive}
+              isAnnualIncomplete={isAnnualIncomplete}
+              aggregate={categoryAggregates.per[n] ?? { amount: 0, share: 0, yoy: null, topItems: [] }}
               onClick={() => {
                 const next = isActive ? null : n;
                 setZoomedMti(next);
                 onCategoryChange?.(next);
                 startTreemapAnimation();
               }}
-              className={`mti-icon-btn${isActive ? " mti-icon-btn--active" : ""}`}
-              style={{
-                "--mti-color": color as string,
-                flex: 1,
-                borderRadius: 0,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                background: isActive ? (color as string) : undefined,
-                borderColor: isActive ? (color as string) : "transparent",
-              } as React.CSSProperties}
-            >
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke={isActive ? "#fff" : (color as string)} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                {MTI_ICON_PATHS[n]}
-              </svg>
-              <span style={{
-                fontSize: 9,
-                fontWeight: 600,
-                color: isActive ? "#fff" : "#475569",
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                maxWidth: 60,
-              }}>
-                {MTI_NAMES[n]}
-              </span>
-            </button>
+            />
           );
         })}
-        <button
-          data-tooltip="전체 보기"
-          onClick={() => { setZoomedMti(null); onCategoryChange?.(null); startTreemapAnimation(); }}
-          className={`mti-icon-btn${zoomedMti === null ? " mti-icon-btn--active" : ""}`}
-          style={{
-            "--mti-color": "#94A3B8",
-            flex: 1,
-            borderRadius: 0,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            background: zoomedMti === null ? "#94A3B8" : undefined,
-            borderColor: zoomedMti === null ? "#94A3B8" : "transparent",
-          } as React.CSSProperties}
-        >
-          <span style={{ fontSize: 9, fontWeight: 700, color: zoomedMti === null ? "#fff" : "#64748b", lineHeight: 1 }}>ALL</span>
-        </button>
+        <CategoryChipButton
+          mti="all"
+          label="전체 품목"
+          color="#94A3B8"
+          isActive={zoomedMti === null}
+          isAnnualIncomplete={isAnnualIncomplete}
+          aggregate={categoryAggregates.all}
+          onClick={() => {
+            setZoomedMti(null);
+            onCategoryChange?.(null);
+            startTreemapAnimation();
+          }}
+        />
       </div>
 
       {/* 마우스 추적 툴팁 — 카테고리 dot + 품목 / 카테고리·MTI코드 / 금액·비중 / 전년 대비 */}
@@ -558,6 +578,284 @@ export default function TreemapChart({
           document.body,
         );
       })()}
+    </div>
+  );
+}
+
+// ─── 카테고리 칩 버튼 + 호버 툴팁 ─────────────────────────────────────
+// WCAG 1.4.13: Dismissible(ESC) / Hoverable(툴팁 hover 유지) / Persistent(호버 중 유지)
+
+interface CategoryAggregate {
+  amount: number;
+  share: number;
+  yoy: number | null;
+  topItems: { name: string; value: number }[];
+}
+
+interface CategoryChipButtonProps {
+  mti: number | "all";
+  label: string;
+  color: string;
+  isActive: boolean;
+  isAnnualIncomplete: boolean;
+  aggregate: CategoryAggregate;
+  onClick: () => void;
+}
+
+function CategoryChipButton({
+  mti, label, color, isActive, isAnnualIncomplete, aggregate, onClick,
+}: CategoryChipButtonProps) {
+  const [show, setShow] = useState(false);
+  const [pos, setPos] = useState<{ cx: number; topY: number } | null>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const enterTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const leaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const tipId = `mti-tip-${mti}`;
+
+  const clearEnter = () => { if (enterTimer.current) { clearTimeout(enterTimer.current); enterTimer.current = null; } };
+  const clearLeave = () => { if (leaveTimer.current) { clearTimeout(leaveTimer.current); leaveTimer.current = null; } };
+
+  const openNow = useCallback(() => {
+    if (!btnRef.current) return;
+    const r = btnRef.current.getBoundingClientRect();
+    setPos({ cx: r.left + r.width / 2, topY: r.top });
+    setShow(true);
+  }, []);
+
+  const handleEnter = useCallback(() => {
+    clearLeave();
+    clearEnter();
+    enterTimer.current = setTimeout(openNow, 300);
+  }, [openNow]);
+
+  const handleLeave = useCallback(() => {
+    clearEnter();
+    clearLeave();
+    leaveTimer.current = setTimeout(() => setShow(false), 100);
+  }, []);
+
+  const handleFocus = useCallback(() => {
+    clearEnter();
+    clearLeave();
+    openNow();
+  }, [openNow]);
+
+  const handleBlur = useCallback(() => { setShow(false); }, []);
+
+  // 모바일: 첫 tap → 툴팁 표시(필터 보류), 두 번째 tap → 필터 적용
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    if (!show) {
+      e.preventDefault();
+      openNow();
+    }
+  }, [show, openNow]);
+
+  // ESC → 닫기
+  useEffect(() => {
+    if (!show) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setShow(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [show]);
+
+  // unmount cleanup
+  useEffect(() => () => { clearEnter(); clearLeave(); }, []);
+
+  return (
+    <>
+      <button
+        ref={btnRef}
+        type="button"
+        aria-pressed={isActive}
+        aria-describedby={show ? tipId : undefined}
+        onClick={onClick}
+        onMouseEnter={handleEnter}
+        onMouseLeave={handleLeave}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
+        onTouchStart={handleTouchStart}
+        className={`mti-icon-btn${isActive ? " mti-icon-btn--active" : ""}`}
+        style={{
+          "--mti-color": color,
+          flex: 1,
+          borderRadius: 0,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: isActive ? color : undefined,
+          borderColor: isActive ? color : "transparent",
+        } as React.CSSProperties}
+      >
+        {mti === "all" ? (
+          <span style={{ fontSize: 11, fontWeight: 700, color: isActive ? "#fff" : "#64748b", lineHeight: 1 }}>
+            ALL
+          </span>
+        ) : (
+          <>
+            <svg
+              viewBox="0 0 24 24"
+              width="16"
+              height="16"
+              fill="none"
+              stroke={isActive ? "#fff" : color}
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              {MTI_ICON_PATHS[mti]}
+            </svg>
+            <span style={{
+              fontSize: 11,
+              fontWeight: 600,
+              color: isActive ? "#fff" : "#475569",
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              maxWidth: 80,
+            }}>
+              {label}
+            </span>
+          </>
+        )}
+      </button>
+      {show && pos && typeof document !== "undefined" && createPortal(
+        <CategoryTooltip
+          id={tipId}
+          position={pos}
+          iconPath={mti === "all" ? null : MTI_ICON_PATHS[mti]}
+          iconColor={color}
+          label={label}
+          aggregate={aggregate}
+          isAnnualIncomplete={isAnnualIncomplete}
+          onMouseEnter={handleEnter}
+          onMouseLeave={handleLeave}
+        />,
+        document.body,
+      )}
+    </>
+  );
+}
+
+interface CategoryTooltipProps {
+  id: string;
+  position: { cx: number; topY: number };
+  iconPath: React.ReactNode | null;
+  iconColor: string;
+  label: string;
+  aggregate: CategoryAggregate;
+  isAnnualIncomplete: boolean;
+  onMouseEnter: () => void;
+  onMouseLeave: () => void;
+}
+
+function CategoryTooltip({
+  id, position, iconPath, iconColor, label, aggregate, isAnnualIncomplete,
+  onMouseEnter, onMouseLeave,
+}: CategoryTooltipProps) {
+  const { amount, share, yoy, topItems } = aggregate;
+
+  // 전년 대비 라인 — 색상은 KPIBar와 동일하게 #E02020(상승)/#185FA5(하락)/회색 동률
+  let yoyNode: React.ReactNode;
+  if (isAnnualIncomplete || yoy === null) {
+    yoyNode = <span style={{ color: "#A5A39A" }}>–</span>;
+  } else {
+    const abs = Math.abs(yoy);
+    const noChange = abs < 0.05; // 반올림 기준 0.0%
+    const up = yoy >= 0;
+    const color = noChange ? "#A5A39A" : up ? "#E02020" : "#185FA5";
+    const arrow = noChange ? "–" : up ? "▲" : "▼";
+    const sign = noChange ? "" : up ? "+" : "-";
+    yoyNode = (
+      <span style={{ color }}>
+        {arrow} {sign}{abs.toFixed(1)}%
+      </span>
+    );
+  }
+
+  return (
+    <div
+      id={id}
+      role="tooltip"
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+      style={{
+        position: "fixed",
+        left: position.cx,
+        top: position.topY - 8,
+        transform: "translate(-50%, -100%)",
+        minWidth: 200,
+        maxWidth: 240,
+        padding: "10px 12px",
+        borderRadius: 8,
+        background: "#1F1E1C",
+        color: "#F5F4EE",
+        boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+        fontSize: 12,
+        lineHeight: 1.5,
+        zIndex: 1000,
+        pointerEvents: "auto",
+      }}
+    >
+      {/* 헤더: 아이콘 + 카테고리명 */}
+      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6, fontWeight: 700, fontSize: 13 }}>
+        {iconPath && (
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke={iconColor}
+               strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            {iconPath}
+          </svg>
+        )}
+        <span>{label}</span>
+      </div>
+      {/* 값 3줄 */}
+      <CategoryTooltipRow label="금액" value={formatAmount(amount)} />
+      <CategoryTooltipRow label="비중" value={`${share.toFixed(1)}%`} />
+      <CategoryTooltipRow label="전년 대비" value={yoyNode} />
+      {/* 구분선 + 상위 품목 */}
+      {topItems.length > 0 && (
+        <>
+          <div style={{ height: 0.5, background: "rgba(245,244,238,0.2)", margin: "8px 0 6px" }} />
+          <div style={{ color: "#C9C7BE", fontSize: 11, marginBottom: 4 }}>상위 품목</div>
+          {topItems.map((it, i) => (
+            <div key={i} style={{ display: "flex", gap: 8, fontSize: 11.5, marginTop: 2 }}>
+              <span style={{ color: "#A5A39A", flexShrink: 0, width: 26 }}>{i + 1}위</span>
+              <span style={{
+                color: "#F5F4EE",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}>
+                {it.name}
+              </span>
+            </div>
+          ))}
+        </>
+      )}
+      {/* 하단 중앙 삼각 포인터 */}
+      <div
+        aria-hidden
+        style={{
+          position: "absolute",
+          bottom: -5,
+          left: "50%",
+          transform: "translateX(-50%)",
+          width: 0,
+          height: 0,
+          borderLeft: "5px solid transparent",
+          borderRight: "5px solid transparent",
+          borderTop: "5px solid #1F1E1C",
+        }}
+      />
+    </div>
+  );
+}
+
+function CategoryTooltipRow({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center" }}>
+      <span style={{ color: "#C9C7BE" }}>{label}</span>
+      <span style={{ color: "#F5F4EE", fontWeight: 500 }}>{value}</span>
     </div>
   );
 }
