@@ -408,6 +408,9 @@ export default function ChatBot({
 
     if (!currentUser) {
       setMessages([{ role: "bot", text: fallback }]);
+      setTimeout(() => {
+        setMessages(prev => [...prev, { role: "bot", text: "💡 대화 요약 보고서를 📄 PDF 또는 📧 메일로 받아보세요!" }]);
+      }, 1000);
       welcomeFetchedRef.current = false;
       return;
     }
@@ -421,6 +424,9 @@ export default function ChatBot({
 
         if (logs.length === 0) {
           setMessages([{ role: "bot", text: fallback }]);
+          setTimeout(() => {
+            setMessages(prev => [...prev, { role: "bot", text: "💡 대화 요약 보고서를 📄 PDF 또는 📧 메일로 받아보세요!" }]);
+          }, 1000);
           return;
         }
 
@@ -433,8 +439,14 @@ export default function ChatBot({
         const { message } = await res.json();
 
         setMessages([{ role: "bot", text: message ?? fallback }]);
+        setTimeout(() => {
+          setMessages(prev => [...prev, { role: "bot", text: "💡 대화 요약 보고서를 📄 PDF 또는 📧 메일로 받아보세요!" }]);
+        }, 1000);
       } catch {
         setMessages([{ role: "bot", text: fallback }]);
+        setTimeout(() => {
+          setMessages(prev => [...prev, { role: "bot", text: "💡 대화 요약 보고서를 📄 PDF 또는 📧 메일로 받아보세요!" }]);
+        }, 1000);
       } finally {
         setWelcomeLoading(false);
       }
