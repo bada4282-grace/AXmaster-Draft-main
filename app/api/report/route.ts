@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 
 const client = new Anthropic();
 
+const LOGO_URL = `${process.env.NEXT_PUBLIC_SITE_URL}/h1_logo_og.jpg`;
+
 const REPORT_SYSTEM_PROMPT = `# 역할 (Role)
 너는 20년차 시니어 이메일 디자이너이자 HTML 마크업 전문가야.
 Gmail·Outlook·Apple Mail·Naver Mail 전 클라이언트 호환성을 최우선으로 고려해서,
@@ -19,7 +21,7 @@ inline CSS 기반의 table-layout HTML 이메일을 작성한다.
 - [발신자 정보]: 이름, 소속, 연락처, 이메일 (없으면 placeholder 유지)
 
 # 로고 처리 규칙
-출력 시 기본값은 /h1_logo_og.jpg로 작성. 절대 변경하지 말 것.
+img src는 반드시 [로고 URL]에서 제공된 절대 URL을 사용할 것. 상대경로(/h1_logo_og.jpg 등) 절대 사용 금지.
 
 # 디자인 규칙
 
@@ -74,7 +76,7 @@ inline CSS 기반의 table-layout HTML 이메일을 작성한다.
               <table width="100%" cellpadding="0" cellspacing="0" border="0">
                 <tr>
                   <td align="left" valign="middle" style="font-size:0;line-height:0;">
-                    <img src="/h1_logo_og.jpg" alt="KITA" width="100" style="display:inline-block;border:0;outline:none;max-width:100px;height:auto;vertical-align:middle;">
+                    <img src="{{로고URL}}" alt="KITA" width="100" style="display:inline-block;border:0;outline:none;max-width:100px;height:auto;vertical-align:middle;">
                   </td>
                   <td align="right" valign="middle" style="font-size:11px;color:#78909C;letter-spacing:0.5px;font-weight:500;line-height:1;">
                     {{날짜라벨}}
@@ -161,8 +163,9 @@ inline CSS 기반의 table-layout HTML 이메일을 작성한다.
 </html>
 
 # 변수 매핑 규칙
+- {{로고URL}}: 반드시 [로고 URL]로 제공된 절대 URL 그대로 사용
 - {{날짜라벨}}: YYYY.MM.DD · 한국어 부제 8-15자 (예: 2026.04.18 · 무역통계 일일 브리핑)
-- {{수신자}}: 수신자 이름
+- {{수신자}}: 수신자 이름 (알 수 없으면 "고객")
 - {{대화날짜}}: YYYY년 MM월 DD일 (요일)
 - {{대화주제}}: 대화 전체 1줄 주제
 - {{참여자}}: 예) "사용자, K-stat AI"
@@ -176,7 +179,7 @@ inline CSS 기반의 table-layout HTML 이메일을 작성한다.
 1. 모든 {{변수}}를 실제 내용으로 치환한 완성된 HTML만 출력.
 2. 코드블록 없이 순수 HTML만 반환 (마크다운 불필요).
 3. 민감정보(API 키, 개인정보 등)는 자동 마스킹.
-4. 로고 경로 /h1_logo_og.jpg 절대 변경 금지.`;
+4. {{로고URL}}은 반드시 [로고 URL]의 절대 URL로 치환할 것. 상대경로 절대 사용 금지.`;
 
 export async function POST(req: NextRequest) {
   const { messages } = await req.json();
@@ -194,7 +197,9 @@ export async function POST(req: NextRequest) {
     messages: [
       {
         role: "user",
-        content: `[대화 내용]\n${conversationText}`,
+        content: `[로고 URL]: ${LOGO_URL}
+[대화 내용]
+${conversationText}`,
       },
     ],
   });
