@@ -495,9 +495,10 @@ export default function ChatBot({
       element.innerHTML = reportData.html;
       document.body.appendChild(element);
 
+      const today = new Date().toISOString().slice(0, 10);
       await html2pdf().set({
         margin: 0,
-        filename: "대화요약보고서.pdf",
+        filename: `K-stat_대화요약리포트_${today}.pdf`,
         image: { type: "jpeg", quality: 0.98 },
         html2canvas: { scale: 2, useCORS: true },
         jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
