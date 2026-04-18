@@ -595,23 +595,12 @@ const sendEmail = async (to: string) => {
                 onMouseEnter={e => (e.currentTarget.style.background = "#fde8e8")}
                 onMouseLeave={e => (e.currentTarget.style.background = "#fff")}
               >
-                ✉️
+                📧
               </button>
               {messages.filter(m => m.role === "user").length >= 3 && (
                 <div style={{ position: "absolute", top: -2, right: -2, width: 6, height: 6, borderRadius: "50%", background: "#C41E3A" }} />
               )}
             </div>
-            <button
-              onClick={() => {
-                const to = prompt("이메일 주소를 입력해주세요:");
-                if (to) sendEmail(to);
-              }}
-              style={{ height: 22, borderRadius: 11, border: "1px solid #ddd", background: "#fff", cursor: "pointer", fontSize: 11, color: "#555", paddingLeft: 6, paddingRight: 8, display: "flex", alignItems: "center", justifyContent: "center", whiteSpace: "nowrap" }}
-              onMouseEnter={e => (e.currentTarget.style.background = "#fde8e8")}
-              onMouseLeave={e => (e.currentTarget.style.background = "#fff")}
-            >
-              메일 받기
-            </button>
             <button
               onClick={() => {
                 clearStoredMessages(user?.id ?? null);
