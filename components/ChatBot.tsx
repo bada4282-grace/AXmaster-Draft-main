@@ -468,7 +468,7 @@ export default function ChatBot({
         setEmailModal(false);
         setEmailInput("");
         setSendStatus("idle");
-      }, 2000);
+      }, 10000);
     } catch (e) {
       console.error("오류:", e);
       setSendStatus("error");
@@ -600,7 +600,7 @@ export default function ChatBot({
             width: 280, display: "flex", flexDirection: "column", gap: 12,
             boxShadow: "0 4px 24px rgba(0,0,0,0.15)",
           }}>
-            <div style={{ fontSize: 14, fontWeight: 600, color: "#333" }}>📧 보고서 이메일 발송</div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: "#333" }}>📧 대화 내용 요약 리포트 받기</div>
             <input
               type="email"
               placeholder="이메일 주소 입력"
