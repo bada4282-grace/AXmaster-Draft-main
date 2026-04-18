@@ -223,11 +223,11 @@ export async function resolveRouteButtons(question: string): Promise<RouteButton
 }
 
 // 질문에서 수출/수입 방향 감지
-// pageContext가 있으면 질문에서 명시되지 않은 경우 폴백으로 사용
+// pageContext.tradeType은 질문이 화면을 참조할 때만 폴백으로 사용
 function detectTradeType(question: string, pageContext?: PageContext): "수출" | "수입" {
   if (question.includes("수입")) return "수입";
   if (question.includes("수출")) return "수출";
-  if (pageContext?.tradeType) return pageContext.tradeType;
+  if (questionReferencesScreen(question) && pageContext?.tradeType) return pageContext.tradeType;
   return "수출";
 }
 
@@ -295,6 +295,18 @@ function detectMacroKeywords(question: string): string[] {
   return matched;
 }
 
+// 질문이 "지금 보고 있는 화면"을 참조하는지 감지
+// 화면 참조가 있을 때만 pageContext(연도/국가/방향/뷰)를 기본값으로 사용하여,
+// 일반 질문이 페이지 상태에 이끌리지 않도록 한다.
+export function questionReferencesScreen(question: string): boolean {
+  const markers = [
+    "화면", "이 페이지", "이 화면", "이 곳", "여기",
+    "지금 보", "지금 보이", "현재 보", "보고 있", "보이는",
+    "나와 있", "나온 내용", "나온 것", "표시된", "표시되어",
+  ];
+  return markers.some(m => question.includes(m));
+}
+
 // 국가 순위/개요 관련 질문인지 감지
 function isRankingQuery(question: string): boolean {
   const keywords = [
@@ -317,17 +329,21 @@ function isProductOverviewQuery(question: string): boolean {
 }
 
 // 질문에서 국가명, 품목명, 연도 추출 (부분 일치)
-// pageContext가 있으면 질문에서 누락된 필드의 폴백으로 사용
+// pageContext는 질문이 화면을 명시적으로 참조할 때만 폴백으로 사용
+// (일반 질문이 페이지 상태에 이끌리지 않도록 엄격 분리)
 export async function extractKeywords(
   question: string,
   pageContext?: PageContext,
 ): Promise<ExtractedKeywords> {
   const yearMatch = question.match(/\b(20\d{2})\b/);
-  const year = yearMatch ? yearMatch[1] : (pageContext?.year ?? DEFAULT_YEAR);
+  const usePageFallback = questionReferencesScreen(question);
+  const year = yearMatch
+    ? yearMatch[1]
+    : (usePageFallback && pageContext?.year ? pageContext.year : DEFAULT_YEAR);
 
   const countryList = await getCountryList();
   const countries = countryList.filter(name => question.includes(name));
-  if (countries.length === 0 && pageContext?.country) {
+  if (countries.length === 0 && usePageFallback && pageContext?.country) {
     countries.push(pageContext.country);
   }
 
@@ -383,7 +399,13 @@ export async function extractKeywords(
   }
 
   // 페이지 컨텍스트 폴백: 품목 상세 페이지에서 질문이 품목명을 생략한 경우
-  if (productCodes.length === 0 && pageContext?.productCode && pageContext?.productName) {
+  // 단, 화면을 명시적으로 참조할 때만 적용
+  if (
+    productCodes.length === 0 &&
+    usePageFallback &&
+    pageContext?.productCode &&
+    pageContext?.productName
+  ) {
     productCodes.push(pageContext.productCode);
     productNames.push(pageContext.productName);
   }
@@ -469,8 +491,9 @@ export async function buildChatContext(
     : [tradeType];
   const sections: string[] = [];
 
-  // 현재 보고 있는 화면 상태 — LLM이 "화면에 나온 내용" 질문에 정확히 답하도록
-  if (pageContext && (pageContext.country || pageContext.productName)) {
+  // 현재 보고 있는 화면 상태 — 사용자가 화면을 명시적으로 참조할 때만 주입
+  const referencesScreen = questionReferencesScreen(question);
+  if (referencesScreen && pageContext && (pageContext.country || pageContext.productName)) {
     const parts: string[] = [];
     if (pageContext.country) parts.push(`국가: ${pageContext.country}`);
     if (pageContext.productName) parts.push(`품목: ${pageContext.productName}`);
@@ -522,12 +545,19 @@ export async function buildChatContext(
   }
 
   // 특정 국가 상세 데이터 — Supabase에서 조회
+  // 현재 화면 뷰(view)에 따라 컨텍스트 범위를 제한 — 화면에 없는 데이터로 답변이 이탈하는 것을 방지
   for (const country of countries) {
     try {
       const ranks = await getCountryRankingAsync(year, tradeType);
       const countryRank = ranks.find(r => r.country === country);
       const kpiData = await getCountryKpiAsync(year, country);
       const timeseries = await getCountryTimeseriesAsync(year, country);
+
+      // 화면을 참조하는 질문이고, 이 국가가 현재 페이지 국가일 때만 view narrowing 적용
+      const isPageCountry = referencesScreen && pageContext?.country === country;
+      const view = isPageCountry ? pageContext?.view : undefined;
+      const inTimeseriesView = view === "timeseries";
+      const inProductsView = view === "products";
 
       let section = `[${country} 교역 데이터 (${year}년)]\n`;
       if (countryRank) {
@@ -537,16 +567,31 @@ export async function buildChatContext(
       if (kpiData) {
         section += `KPI — 수출: ${kpiData.export}억달러, 수입: ${kpiData.import}억달러, 수지: ${kpiData.balance}억달러\n`;
       }
+
+      // 시계열 뷰: 화면에 월별 차트가 보이므로 12개월 전체를 제공
+      // 그 외: 요약 3개월만 제공
       if (timeseries.length > 0) {
-        const recent = timeseries.slice(-3).map(m => `${m.month} 수출${m.export}억달러`).join(", ");
-        section += `최근 월별: ${recent}`;
+        if (inTimeseriesView) {
+          const lines = timeseries.map(
+            m => `${m.month}: 수출 ${m.export}억달러, 수입 ${m.import}억달러, 수지 ${m.balance}억달러`,
+          );
+          section += `\n[${country} 월별 시계열 (${year}년)]\n${lines.join("\n")}`;
+        } else {
+          const recent = timeseries.slice(-3).map(m => `${m.month} 수출${m.export}억달러`).join(", ");
+          section += `월별 요약(최근 3개월): ${recent}`;
+        }
       }
-      // 국가별 상위 수출/수입 품목 (트리맵 데이터)
-      const countryProducts = await getCountryTreemapDataAsync(year, country, tradeType);
-      if (countryProducts.length > 0) {
-        const top10 = countryProducts.slice(0, 10);
-        const lines = top10.map((p, i) => `${i + 1}위: ${p.name} — ${p.value.toFixed(1)}억달러`);
-        section += `\n[${country} ${tradeType} 상위 품목]\n${lines.join("\n")}`;
+
+      // 국가별 상위 수출/수입 품목 — 시계열 뷰에서는 화면에 보이지 않으므로 제외
+      if (!inTimeseriesView) {
+        const countryProducts = await getCountryTreemapDataAsync(year, country, tradeType);
+        if (countryProducts.length > 0) {
+          const topN = inProductsView ? 10 : 5;
+          const lines = countryProducts
+            .slice(0, topN)
+            .map((p, i) => `${i + 1}위: ${p.name} — ${p.value.toFixed(1)}억달러`);
+          section += `\n[${country} ${tradeType} 상위 품목]\n${lines.join("\n")}`;
+        }
       }
 
       sections.push(section);
@@ -555,6 +600,12 @@ export async function buildChatContext(
 
   // 품목별 데이터 — Supabase 집계 테이블에서 조회 (전체 품목, Top N 제한 없음)
   // 질문이 수출·수입을 함께 언급한 경우 양방향 모두 제공
+  // 품목 페이지 뷰(trend/countries) narrowing은 화면 참조 시에만 적용
+  const isPageProduct = referencesScreen && pageContext?.productCode;
+  const productView = isPageProduct ? pageContext?.view : undefined;
+  const inTrendView = productView === "trend";
+  const inCountriesView = productView === "countries";
+
   for (let i = 0; i < productCodes.length; i++) {
     const code = productCodes[i];
     const name = productNames[i];
@@ -570,11 +621,16 @@ export async function buildChatContext(
       } catch { /* Supabase 조회 실패 시 빈 데이터로 진행 */ }
 
       let section = `[${name} ${direction} 데이터]\n`;
-      if (topCountries.length > 0) {
-        section += `상위 ${direction}국: ${topCountries.slice(0, 5).map(c => `${c.country}(${c.value}억달러)`).join(", ")}\n`;
+
+      // 금액 추이 뷰에서는 상위 국가를 화면에 보이지 않음 → 제외
+      if (topCountries.length > 0 && !inTrendView) {
+        const topN = inCountriesView ? 10 : 5;
+        section += `상위 ${direction}국: ${topCountries.slice(0, topN).map(c => `${c.country}(${c.value}억달러)`).join(", ")}\n`;
       }
-      if (trend.length > 0) {
-        const recent = trend.slice(-3).map(t => {
+      // 상위 국가 뷰에서는 연도별 추이가 화면에 없음 → 제외
+      if (trend.length > 0 && !inCountriesView) {
+        const slice = inTrendView ? trend : trend.slice(-3);
+        const recent = slice.map(t => {
           const cleanYear = String(t.year).replace(/\(.*\)/, "").trim();
           return `${cleanYear}년 ${t.value}억달러`;
         }).join(", ");
