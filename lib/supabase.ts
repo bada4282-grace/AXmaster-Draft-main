@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import type { ProductNode, TradeType } from "@/lib/data";
-import { MTI_COLORS } from "@/lib/data";
+import { MTI_COLORS, MTI_LOOKUP } from "@/lib/data";
 
 export interface MonthlyCountryMapItem {
   ctr_name: string;
@@ -22,9 +22,11 @@ function mapToProductNode(row: RpcTreemapRow): ProductNode | null {
   const value = rawValue / 1e8; // 달러 → 억달러
   const mti = Number(String(row.mti_cd).charAt(0));
   const color = (MTI_COLORS as Record<number, string>)[mti] ?? "#3B82F6";
+  // CSV 시드 파싱 버그(콤마 포함 이름이 잘림)로 DB 이름이 불완전한 경우를 MTI_LOOKUP로 교정.
+  const canonical = (MTI_LOOKUP as Record<string, string>)[row.mti_cd];
   return {
     code: row.mti_cd,
-    name: row.mti_name,
+    name: canonical ?? row.mti_name,
     value,
     mti,
     color,

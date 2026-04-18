@@ -1,12 +1,12 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
 import { supabase } from "@/lib/supabase";
 import { saveChatLog, getChatLogs } from "@/lib/chat";
-import type { RouteButton } from "@/lib/chatContext";
+import type { PageContext, RouteButton } from "@/lib/chatContext";
 import type { User } from "@supabase/supabase-js";
 import { DEFAULT_YEAR } from "@/lib/data";
 import { getCountryRankingAsync, getTreemapDataAsync } from "@/lib/dataSupabase";
@@ -22,12 +22,15 @@ function TypingIndicator() {
 function renderBotText(text: string): React.ReactNode {
   // ==하이라이트== → <mark> 변환
   // **bold** → <strong> 변환 (ReactMarkdown이 놓치는 경우 대비)
+  // 한국어 범위 표현("1월~12월", "2020년~2025년")이 strikethrough로 잘못 렌더링되지
+  // 않도록 remark-gfm의 strikethrough 자체를 비활성화해서 해결 (아래 plugin 옵션 참고).
   const processed = text
     .replace(/==([^=]+)==/g, "<mark>$1</mark>")
     .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
   return (
     <ReactMarkdown
-      remarkPlugins={[remarkGfm]}
+      // singleTilde: false → "2020년~2025년"처럼 단일 물결표가 strikethrough로 잘못 파싱되지 않도록
+      remarkPlugins={[[remarkGfm, { singleTilde: false }]]}
       rehypePlugins={[rehypeRaw]}
       components={{
         mark: ({ children }) => <mark className="chatbot-highlight">{children}</mark>,
@@ -66,6 +69,49 @@ interface ChatBotProps {
 
 const GUEST_FAQ_KEY = "kstat_guest_faq";
 const USER_FAQ_KEY = "kstat_user_faq";
+// 채팅 내역 sessionStorage 키 접두사 — 사용자별/게스트로 분리해 로그인 전환 시 혼선 방지
+const MESSAGES_KEY_PREFIX = "kstat_chat_messages_";
+const MAX_STORED_MESSAGES = 50;
+
+function messagesKey(userId: string | null | undefined): string {
+  return `${MESSAGES_KEY_PREFIX}${userId ?? "guest"}`;
+}
+
+function loadStoredMessages(userId: string | null | undefined): ChatMessage[] | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem(messagesKey(userId));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return null;
+    const msgs = parsed.filter(
+      (m): m is ChatMessage =>
+        m && (m.role === "bot" || m.role === "user") && typeof m.text === "string",
+    );
+    return msgs.length > 0 ? msgs : null;
+  } catch {
+    return null;
+  }
+}
+
+function persistMessages(userId: string | null | undefined, messages: ChatMessage[]) {
+  if (typeof window === "undefined") return;
+  try {
+    const trimmed = messages.slice(-MAX_STORED_MESSAGES);
+    sessionStorage.setItem(messagesKey(userId), JSON.stringify(trimmed));
+  } catch {
+    /* quota 등 — 무시 */
+  }
+}
+
+function clearStoredMessages(userId: string | null | undefined) {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.removeItem(messagesKey(userId));
+  } catch {
+    /* 무시 */
+  }
+}
 
 const DEFAULT_GUEST_FAQ = [
   "올해 수출 1위 국가는?",
@@ -118,7 +164,7 @@ const LOGGED_IN_DEFAULT_FAQ = [
   "주요 거시경제 지표 변동 알려줘",
 ];
 
-/** 로그인 사용자의 채��� 로그를 AI에 보내 맞춤 FAQ 3개를 생성 */
+/** 로그인 사용자의 채팅 로그를 AI에 보내 맞춤 FAQ 3개를 생성 */
 async function fetchUserFaq(logs: { role: string; content: string }[]): Promise<string[]> {
   try {
     const res = await fetch("/api/faq", {
@@ -137,6 +183,55 @@ async function fetchUserFaq(logs: { role: string; content: string }[]): Promise<
   }
 }
 
+function resolvePageContext(
+  pathname: string | null,
+  searchParams: URLSearchParams | null,
+): PageContext | undefined {
+  if (!pathname) return undefined;
+
+  const year = searchParams?.get("year") ?? undefined;
+  const month = searchParams?.get("month") ?? undefined;
+  // FilterBar는 `tradeType=`을 쓰고 상세 페이지 라우트는 `mode=`를 쓴다 — 둘 다 인식
+  const modeRaw = searchParams?.get("mode") ?? searchParams?.get("tradeType");
+  const tradeType: PageContext["tradeType"] =
+    modeRaw === "import" ? "수입" : modeRaw === "export" ? "수출" : undefined;
+  const tabParam = searchParams?.get("tab");
+  const mtiDepthRaw = searchParams?.get("mtiDepth");
+  const mtiDepth = mtiDepthRaw ? Number(mtiDepthRaw) : undefined;
+
+  const countryMatch = pathname.match(/^\/country\/([^/?#]+)/);
+  if (countryMatch) {
+    const country = decodeURIComponent(countryMatch[1]);
+    const view: PageContext["view"] =
+      tabParam === "timeseries" ? "timeseries" : "products";
+    return { country, year, month, tradeType: tradeType ?? "수출", view, mtiDepth };
+  }
+
+  const productMatch = pathname.match(/^\/product\/([^/?#]+)/);
+  if (productMatch) {
+    const productName = decodeURIComponent(productMatch[1]);
+    const productCode = searchParams?.get("code") ?? undefined;
+    const view: PageContext["view"] =
+      tabParam === "countries" ? "countries" : "trend";
+    return { productName, productCode, year, month, tradeType, view, mtiDepth };
+  }
+
+  // 홈 페이지 (`/`) — 필터(year/month/mode/country/mtiDepth)가 URL에 동기화됨
+  if (pathname === "/") {
+    const country = searchParams?.get("country")
+      ? decodeURIComponent(searchParams.get("country")!)
+      : undefined;
+    // 홈의 대시보드 뷰 타입 — 국가별 탭은 world map, 품목별 탭은 treemap
+    const view: PageContext["view"] =
+      tabParam === "product" ? "products" : "countries";
+    if (country || year || month || tradeType || mtiDepth) {
+      return { country, year, month, tradeType: tradeType ?? "수출", view, mtiDepth };
+    }
+  }
+
+  return year || tradeType || mtiDepth ? { year, tradeType, mtiDepth } : undefined;
+}
+
 export default function ChatBot({
   open,
   onToggle,
@@ -144,6 +239,8 @@ export default function ChatBot({
   showInternalToggle = true,
 }: ChatBotProps) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [user, setUser] = useState<User | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -151,6 +248,11 @@ export default function ChatBot({
   const [isStreaming, setIsStreaming] = useState(false);
   const [guestFaq, setGuestFaq] = useState(DEFAULT_GUEST_FAQ);
   const [userFaq, setUserFaq] = useState<string[] | null>(null);
+
+  // 이메일 모달 state
+  const [emailModal, setEmailModal] = useState(false);
+  const [emailInput, setEmailInput] = useState("");
+  const [sendStatus, setSendStatus] = useState<"idle" | "sending" | "done" | "error">("idle");
 
   // Hydrate FAQ from sessionStorage on client to avoid SSR mismatch
   useEffect(() => {
@@ -167,10 +269,16 @@ export default function ChatBot({
   }, []);
   const [welcomeLoading, setWelcomeLoading] = useState(false);
   const [welcomeTrigger, setWelcomeTrigger] = useState(0);
+  // 초기 세션 확인 완료 여부 — auth 하이드레이션 전에는 welcome/persist 이펙트가 동작하지 않도록 차단
+  const [authChecked, setAuthChecked] = useState(false);
   const currentUserIdRef = useRef<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const welcomeFetchedRef = useRef(false);
+  // 복원 시도 완료 여부 — persist 이펙트가 복원 전에 빈 배열을 덮어쓰지 않도록 가드
+  const hasRestoredRef = useRef(false);
+  // 초기 세션 관측(재하이드레이션) vs 실제 로그인/로그아웃 구분
+  const sessionInitializedRef = useRef(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const increaseFontSize = () => setFontSize(prev => Math.min(prev + 1, 16));
   const decreaseFontSize = () => setFontSize(prev => Math.max(prev - 1, 10));
@@ -186,29 +294,53 @@ export default function ChatBot({
   useEffect(() => { initialMessageRef.current = initialMessage; });
 
   useEffect(() => {
+    // 초기 세션 동기화 — getSession과 onAuthStateChange 중 먼저 도달하는 쪽이 초기화 처리
+    const initializeSession = (userId: string | null, u: User | null) => {
+      if (sessionInitializedRef.current) return;
+      sessionInitializedRef.current = true;
+      currentUserIdRef.current = userId;
+      setUser(u);
+      setAuthChecked(true);
+    };
+
     supabase.auth.getSession().then(({ data: { session } }) => {
-      currentUserIdRef.current = session?.user?.id ?? null;
-      setUser(session?.user ?? null);
+      initializeSession(session?.user?.id ?? null, session?.user ?? null);
+    }).catch(() => {
+      initializeSession(null, null);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       const newUserId = session?.user?.id ?? null;
       const newUser = session?.user ?? null;
-      const prevUserId = currentUserIdRef.current;
 
+      // 마운트 직후 초기 세션 재하이드레이션(INITIAL_SESSION / 최초 SIGNED_IN)은
+      // "사용자 전환"으로 오판하지 않도록 storage를 건드리지 않는다.
+      if (!sessionInitializedRef.current) {
+        initializeSession(newUserId, newUser);
+        return;
+      }
+
+      const prevUserId = currentUserIdRef.current;
       currentUserIdRef.current = newUserId;
 
       if (event === "SIGNED_IN") {
         setUser(newUser);
         if (newUserId !== prevUserId) {
+          // 초기화 이후에 발생한 실제 사용자 전환 — 이전 세션 저장본을 제거
+          clearStoredMessages(prevUserId);
+          clearStoredMessages(newUserId);
           welcomeFetchedRef.current = false;
+          hasRestoredRef.current = false;
           setMessages([]);
           setWelcomeTrigger(t => t + 1);
         }
       } else if (event === "SIGNED_OUT") {
+        clearStoredMessages(prevUserId);
+        clearStoredMessages(null);
         setUser(null);
         setUserFaq(null);
         welcomeFetchedRef.current = true;
+        hasRestoredRef.current = true;
         setMessages([{ role: "bot", text: initialMessageRef.current }]);
       }
     });
@@ -231,7 +363,6 @@ export default function ChatBot({
       if (cancelled) return;
       const hasUserMsgs = logs.filter(l => l.role === "user").length > 0;
       if (!hasUserMsgs) {
-        // 채팅 로그 없음 → 로그인 전용 기본 FAQ
         if (!cancelled) setUserFaq(LOGGED_IN_DEFAULT_FAQ);
         return;
       }
@@ -245,11 +376,21 @@ export default function ChatBot({
   }, [user]);
 
   useEffect(() => {
-    if (!open || welcomeFetchedRef.current) return;
+    // auth 확인 전에는 어떤 메시지도 세팅하지 않는다 — 로그인 사용자가 잠깐 게스트 인사말을 보는 현상 차단
+    if (!open || !authChecked || welcomeFetchedRef.current) return;
     welcomeFetchedRef.current = true;
 
     const currentUser = user;
     const fallback = initialMessageRef.current;
+
+    // 1. sessionStorage에 이전 채팅 내역이 있으면 복원 (새로고침/네비게이션 대응)
+    const restored = loadStoredMessages(currentUser?.id ?? null);
+    if (restored && restored.length > 0) {
+      setMessages(restored);
+      hasRestoredRef.current = true;
+      return;
+    }
+    hasRestoredRef.current = true;
 
     if (!currentUser) {
       setMessages([{ role: "bot", text: fallback }]);
@@ -286,7 +427,15 @@ export default function ChatBot({
     };
 
     loadWelcome();
-  }, [open, user, welcomeTrigger]);
+  }, [open, user, welcomeTrigger, authChecked]);
+
+  // 채팅 내역을 sessionStorage에 백업 — 새로고침/네비게이션 후 복원에 사용
+  // auth 확인 + 복원 시도 완료 이후에만 동작 — 로그인 사용자 키에 게스트 fallback이 덮이는 레이스를 방지
+  useEffect(() => {
+    if (!authChecked || !hasRestoredRef.current) return;
+    if (messages.length === 0) return;
+    persistMessages(user?.id ?? null, messages);
+  }, [messages, user, authChecked]);
 
   useEffect(() => {
     const container = messagesContainerRef.current;
@@ -294,6 +443,37 @@ export default function ChatBot({
       container.scrollTop = container.scrollHeight;
     }
   }, [messages]);
+
+  const sendReport = async () => {
+    if (!emailInput.trim()) return;
+    setSendStatus("sending");
+    try {
+      const reportRes = await fetch("/api/report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages }),
+      });
+      const reportData = await reportRes.json();
+      console.log("report 응답:", reportData);
+
+      const emailRes = await fetch("/api/send-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ to: emailInput, html: reportData.html }),
+      });
+      const emailData = await emailRes.json();
+      console.log("email 응답:", emailData);
+      setSendStatus("done");
+      setTimeout(() => {
+        setEmailModal(false);
+        setEmailInput("");
+        setSendStatus("idle");
+      }, 10000);
+    } catch (e) {
+      console.error("오류:", e);
+      setSendStatus("error");
+    }
+  };
 
   const send = async (overrideMsg?: string) => {
     const msgToSend = overrideMsg ?? input;
@@ -327,10 +507,11 @@ export default function ChatBot({
     let saveResponse = false;
 
     try {
+      const pageContext = resolvePageContext(pathname, searchParams);
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: userMsg, history }),
+        body: JSON.stringify({ message: userMsg, history, pageContext }),
       });
 
       if (!res.body) throw new Error("No response body");
@@ -406,7 +587,75 @@ export default function ChatBot({
   }
 
   return (
-    <div className="chatbot-panel">
+    <div className="chatbot-panel" style={{ position: "relative" }}>
+      {/* 이메일 모달 */}
+      {emailModal && (
+        <div style={{
+          position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          zIndex: 100, borderRadius: 16,
+        }}>
+          <div style={{
+            background: "#fff", borderRadius: 12, padding: "24px 20px",
+            width: 280, display: "flex", flexDirection: "column", gap: 12,
+            boxShadow: "0 4px 24px rgba(0,0,0,0.15)",
+          }}>
+            <div style={{ fontSize: 14, fontWeight: 600, color: "#333" }}>📧 대화 내용 요약 리포트 받기</div>
+            <input
+              type="email"
+              placeholder="이메일 주소 입력"
+              value={emailInput}
+              onChange={e => setEmailInput(e.target.value)}
+              disabled={sendStatus === "sending"}
+              style={{
+                border: "1px solid #ddd", borderRadius: 8, padding: "8px 12px",
+                fontSize: 13, outline: "none", width: "100%", boxSizing: "border-box",
+              }}
+              onKeyDown={e => { if (e.key === "Enter") sendReport(); }}
+            />
+            {sendStatus === "sending" && (
+              <div style={{ fontSize: 12, color: "#C41E3A", textAlign: "center" }}>
+                보고서 생성 중... 잠시만 기다려주세요 ⏳
+              </div>
+            )}
+            {sendStatus === "done" && (
+              <div style={{ fontSize: 12, color: "#2e7d32", textAlign: "center", fontWeight: 600 }}>
+                ✅ 전송 완료! 메일을 확인해주세요
+              </div>
+            )}
+            {sendStatus === "error" && (
+              <div style={{ fontSize: 12, color: "#C41E3A", textAlign: "center" }}>
+                ❌ 오류가 발생했습니다. 다시 시도해주세요
+              </div>
+            )}
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                onClick={() => { setEmailModal(false); setEmailInput(""); setSendStatus("idle"); }}
+                disabled={sendStatus === "sending" || sendStatus === "done"}
+                style={{
+                  flex: 1, padding: "8px 0", borderRadius: 8, border: "1px solid #ddd",
+                  background: "#f5f5f5", fontSize: 13, cursor: (sendStatus === "sending" || sendStatus === "done") ? "not-allowed" : "pointer",
+                  color: "#555",
+                }}
+              >
+                취소
+              </button>
+              <button
+                onClick={sendReport}
+                disabled={sendStatus === "sending" || sendStatus === "done"}
+                style={{
+                  flex: 1, padding: "8px 0", borderRadius: 8, border: "none",
+                  background: (sendStatus === "sending" || sendStatus === "done") ? "#ccc" : "#C41E3A", fontSize: 13,
+                  cursor: (sendStatus === "sending" || sendStatus === "done") ? "not-allowed" : "pointer", color: "#fff", fontWeight: 600,
+                }}
+              >
+                {sendStatus === "sending" ? "전송 중..." : "발송"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="chatbot-header">
         <div style={{
@@ -429,21 +678,40 @@ export default function ChatBot({
             <button onClick={decreaseFontSize} style={{ width: 22, height: 22, borderRadius: "50%", border: "1px solid #ddd", background: "#fff", cursor: "pointer", fontSize: 14, color: "#555", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>−</button>
             <button onClick={increaseFontSize} style={{ width: 22, height: 22, borderRadius: "50%", border: "1px solid #ddd", background: "#fff", cursor: "pointer", fontSize: 14, color: "#555", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>+</button>
           </div>
-          <button
-            onClick={() => setMessages([{ role: "bot", text: initialMessage }])}
-            title="대화 내용 지우기"
-            style={{ width: 22, height: 22, borderRadius: "50%", border: "1px solid #ddd", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
-            onMouseEnter={e => (e.currentTarget.style.background = "#fde8e8")}
-            onMouseLeave={e => (e.currentTarget.style.background = "#fff")}
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="3 6 5 6 21 6" />
-              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-              <path d="M10 11v6" />
-              <path d="M14 11v6" />
-              <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
-            </svg>
-          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <div style={{ position: "relative", display: "inline-flex" }}>
+              <button
+                onClick={() => setEmailModal(true)}
+                title="메일로 받기"
+                style={{ width: 22, height: 22, borderRadius: "50%", border: "1px solid #ddd", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                onMouseEnter={e => (e.currentTarget.style.background = "#fde8e8")}
+                onMouseLeave={e => (e.currentTarget.style.background = "#fff")}
+              >
+                📧
+              </button>
+              {messages.filter(m => m.role === "user").length >= 3 && (
+                <div style={{ position: "absolute", top: -2, right: -2, width: 6, height: 6, borderRadius: "50%", background: "#C41E3A" }} />
+              )}
+            </div>
+            <button
+              onClick={() => {
+                clearStoredMessages(user?.id ?? null);
+                setMessages([{ role: "bot", text: initialMessage }]);
+              }}
+              title="대화 내용 지우기"
+              style={{ width: 22, height: 22, borderRadius: "50%", border: "1px solid #ddd", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+              onMouseEnter={e => (e.currentTarget.style.background = "#fde8e8")}
+              onMouseLeave={e => (e.currentTarget.style.background = "#fff")}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="3 6 5 6 21 6" />
+                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                <path d="M10 11v6" />
+                <path d="M14 11v6" />
+                <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
 

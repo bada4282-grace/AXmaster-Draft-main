@@ -432,83 +432,12 @@ header.w-full {
     width: 34px;
     height: 28px;
   }
-
-  /* 레이아웃 사이드바 → 하단 고정 토글 방식 */
-  .app-shell {
-    flex-direction: column;
-  }
-
-  .app-chatbot-sidebar {
-    position: fixed;
-    bottom: 0;
-    right: 0;
-    top: auto;
-    margin-top: 0;
-    width: clamp(280px, 50vw, 400px);
-    height: 60vh;
-    z-index: 999;
-    align-self: auto;
-  }
-
-  .app-chatbot-sidebar.collapsed {
-    width: 0;
-    height: 0;
-  }
-
-  .app-chatbot-sidebar .chatbot-slider-btn {
-    left: auto;
-    right: 12px;
-    top: -40px;
-    transform: none;
-    border: 1px solid #E02020;
-    border-radius: 10px;
-    width: 40px;
-    height: 40px;
-    font-size: 18px;
-  }
-
-  .app-chatbot-sidebar.collapsed .chatbot-slider-btn {
-    right: 12px;
-    bottom: 20px;
-    top: auto;
-    position: fixed;
-  }
-
-  .app-chatbot-inner {
-    width: 100%;
-  }
-}
-
-@media (max-width: 768px) {
-  .app-chatbot-sidebar {
-    width: 100vw;
-    height: 70vh;
-    right: 0;
-    left: 0;
-  }
-
-  .app-chatbot-inner {
-    width: 100%;
-  }
-
-  .app-chatbot-sidebar .chatbot-slider-btn {
-    right: 16px;
-    top: -44px;
-    width: 44px;
-    height: 44px;
-    font-size: 20px;
-  }
-
-  .app-chatbot-sidebar.collapsed .chatbot-slider-btn {
-    right: 16px;
-    bottom: 16px;
-  }
 }
 
 /* Left info cards */
 /* 상세 페이지 좌측: 돌아가기 + 카드 3개 세로 균등·동일 높이·간격 넓게 */
 .left-cards {
-  width: 110px;
+  width: 134px;
   flex-shrink: 0;
   padding: 8px 8px 10px;
   display: flex;
@@ -827,6 +756,29 @@ header.w-full {
     font-size: 10px;
   }
 
+  /* 상세 페이지 왼쪽 카드: 폭 축소 */
+  .left-cards {
+    width: 110px;
+    padding: 6px 6px 8px;
+  }
+  .info-card {
+    padding: 6px 8px;
+  }
+  .info-card-value {
+    font-size: 16px;
+  }
+  .info-card-label {
+    font-size: 9px;
+  }
+
+  /* 1100px 이하에서도 대시보드 영역이 최소 높이 확보하도록 */
+  .split-panel {
+    min-height: 460px;
+  }
+  .dashboard-area {
+    min-height: 460px;
+  }
+
   /* 상단바: 로고와 오른쪽 메뉴 겹침 방지 — 중앙 정렬 해제, absolute 해제 */
   .header-top {
     justify-content: space-between !important;
@@ -865,6 +817,35 @@ header.w-full {
   /* 거시경제 */
   .macro-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* ★ 핵심 수정: split-panel을 세로 스택 + 명시적 높이
+     트리맵/지도는 ResponsiveContainer height="100%"라서 부모 높이가 없으면 0이 됨 */
+  .split-panel {
+    flex-direction: column;
+    height: auto;
+    min-height: 500px;
+  }
+  .dashboard-area {
+    min-height: 420px;
+    height: 420px;
+    flex: 0 0 auto;
+    width: 100%;
+  }
+
+  /* 상세 페이지 왼쪽 카드: 상단 가로 배치 */
+  .left-cards {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid #f0f0f0;
+    padding: 8px 10px;
+  }
+  .left-cards-stack {
+    flex-direction: row;
+    gap: 8px;
+  }
+  .info-card {
+    flex: 1;
   }
 
   /* iPad 세로: 로고와 오른쪽 메뉴가 겹치지 않도록 상단바 재구성.
@@ -922,6 +903,19 @@ header.w-full {
   /* 거시경제: 2열 유지 */
   .macro-card-value {
     font-size: 13px;
+  }
+
+  /* 대시보드 영역: 모바일에서 트리맵·지도 높이 보장 */
+  .split-panel {
+    min-height: 360px;
+    height: auto;
+    flex-direction: column;
+  }
+  .dashboard-area {
+    min-height: 360px;
+    height: 360px;
+    flex: 0 0 auto;
+    width: 100%;
   }
 
   /* 페이지 컨테이너 패딩 축소 */
@@ -1122,91 +1116,4 @@ header.w-full {
 .chatbot-section.collapsed .chatbot-slider-btn {
   left: auto;
   right: 0;
-}
-
-/* ═══════════════════════════════════════════════════════
-   차트/트리맵/지도 영역 반응형 — 최종 단일 규칙
-   ═══════════════════════════════════════════════════════ */
-@media (max-width: 1320px) {
-  /* 사이드바가 세로 스택되면서 대시보드가 전체 폭 차지할 때 */
-  .split-panel {
-    flex-direction: row;
-    height: 500px;
-  }
-}
-
-@media (max-width: 1100px) {
-  .split-panel {
-    flex-direction: column;
-    height: auto;
-  }
-  .dashboard-area {
-    width: 100%;
-    height: 460px;
-    min-height: 460px;
-    flex: 0 0 auto;
-  }
-  /* 상세 페이지: split-panel 인라인 height 오버라이드 */
-  .split-panel[style*="height"] {
-    height: auto !important;
-  }
-  /* 상세 페이지의 "오른쪽 차트 영역" (className 없이 flex:1인 div) */
-  .split-panel > div:not(.left-cards):not([class]) {
-    width: 100%;
-    height: 460px;
-    min-height: 460px;
-    flex: 0 0 auto;
-  }
-  /* 좌측 카드 3개가 세로 스택에서 위쪽에 배치될 때 */
-  .split-panel > .left-cards {
-    width: 100%;
-    max-height: 120px;
-    border-right: none;
-    border-bottom: 1px solid #f0f0f0;
-  }
-  .split-panel > .left-cards .left-cards-stack {
-    flex-direction: row;
-    gap: 8px;
-  }
-  .split-panel > .left-cards .info-card {
-    flex: 1;
-  }
-}
-
-@media (max-width: 700px) {
-  .dashboard-area,
-  .split-panel > div:not(.left-cards):not([class]) {
-    height: 380px;
-    min-height: 380px;
-  }
-}
-
-/* ═══════════════════════════════════════════════════════
-   데스크톱(1100px 초과): 차트 영역을 부모 크기에 맞춰 꽉 채움
-   .tsx 의 ResponsiveContainer height={고정값} 을 CSS로 오버라이드
-   ═══════════════════════════════════════════════════════ */
-@media (min-width: 1101px) {
-  /* ResponsiveContainer 자체를 부모 크기에 맞게 확장 */
-  .split-panel .recharts-responsive-container {
-    width: 100% !important;
-    height: 100% !important;
-    min-height: 0 !important;
-    max-height: none !important;
-  }
-  .split-panel .recharts-wrapper,
-  .split-panel .recharts-surface {
-    width: 100% !important;
-    height: 100% !important;
-  }
-
-  /* 차트 컨테이너의 minHeight 제거 — 부모 flex가 자연스럽게 제어 */
-  .split-panel > div[style*="flex"] > div[style*="flex"][style*="minHeight"] {
-    min-height: 0 !important;
-  }
-
-  /* TreemapChart 루트 div의 minHeight도 제거 */
-  .split-panel .recharts-responsive-container,
-  .dashboard-area .recharts-responsive-container {
-    min-height: 0 !important;
-  }
 }

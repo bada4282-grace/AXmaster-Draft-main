@@ -1,5 +1,5 @@
 "use client";
-import { useState, useCallback, Suspense } from "react";
+import { useEffect, useState, useCallback, Suspense } from "react";
 import dynamic from "next/dynamic";
 import { useSearchParams, useRouter } from "next/navigation";
 import Header from "@/components/Header";
@@ -18,17 +18,39 @@ function HomeContent() {
   const initialTab = searchParams.get("tab") === "product" ? "품목별" : "국가별";
   const [mainTab, setMainTab] = useState<"국가별" | "품목별">(initialTab);
 
+  // URL에서 필터 상태를 초기 하이드레이트 — 새로고침/챗봇의 pageContext 추출에 대응
+  const initialMode = searchParams.get("mode") === "import" ? "수입" : "수출";
+  const initialYear = searchParams.get("year") ?? DEFAULT_YEAR;
+  const initialMonth = searchParams.get("month") ?? "";
+  const initialCountry = searchParams.get("country") ?? "";
+  const initialMtiDepth = Number(searchParams.get("mtiDepth") ?? 3);
+
+  const [year, setYear] = useState(initialYear);
+  const [tradeType, setTradeType] = useState<TradeType>(initialMode);
+  const [month, setMonth] = useState(initialMonth);
+  const [, setPeriod] = useState("annual");
+  const [mtiDepth, setMtiDepth] = useState(initialMtiDepth);
+  const [productCountry, setProductCountry] = useState(initialCountry);
+  const [mtiCategoryActive, setMtiCategoryActive] = useState(false);
+
+  // 필터 상태 변경 시 URL 동기화 — 챗봇이 pageContext를 URL에서 읽어낼 수 있도록
+  useEffect(() => {
+    const params = new URLSearchParams();
+    params.set("tab", mainTab === "국가별" ? "country" : "product");
+    if (year && year !== DEFAULT_YEAR) params.set("year", year);
+    if (tradeType === "수입") params.set("mode", "import");
+    if (month) params.set("month", month);
+    if (productCountry) params.set("country", productCountry);
+    if (mtiDepth && mtiDepth !== 3) params.set("mtiDepth", String(mtiDepth));
+    const next = `/?${params.toString()}`;
+    if (typeof window !== "undefined" && window.location.pathname + window.location.search !== next) {
+      router.replace(next, { scroll: false });
+    }
+  }, [mainTab, year, tradeType, month, productCountry, mtiDepth, router]);
+
   const handleTabChange = (tab: "국가별" | "품목별") => {
     setMainTab(tab);
-    router.replace(`/?tab=${tab === "국가별" ? "country" : "product"}`);
   };
-  const [year, setYear] = useState(DEFAULT_YEAR);
-  const [tradeType, setTradeType] = useState<TradeType>("수출");
-  const [month, setMonth] = useState("");
-  const [, setPeriod] = useState("annual");
-  const [mtiDepth, setMtiDepth] = useState(3);
-  const [productCountry, setProductCountry] = useState("");
-  const [mtiCategoryActive, setMtiCategoryActive] = useState(false);
 
   // 로딩 상태 관리 (WorldMap / TreemapChart)
   const [loadingCount, setLoadingCount] = useState(0);
