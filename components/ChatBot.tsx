@@ -252,7 +252,7 @@ export default function ChatBot({
   // 이메일 모달 state
   const [emailModal, setEmailModal] = useState(false);
   const [emailInput, setEmailInput] = useState("");
-  const [isSending, setIsSending] = useState(false);
+  const [sendStatus, setSendStatus] = useState<"idle" | "sending" | "done" | "error">("idle");
 
   // Hydrate FAQ from sessionStorage on client to avoid SSR mismatch
   useEffect(() => {
@@ -446,7 +446,7 @@ export default function ChatBot({
 
   const sendReport = async () => {
     if (!emailInput.trim()) return;
-    setIsSending(true);
+    setSendStatus("sending");
     try {
       const reportRes = await fetch("/api/report", {
         method: "POST",
@@ -463,14 +463,15 @@ export default function ChatBot({
       });
       const emailData = await emailRes.json();
       console.log("email 응답:", emailData);
-      alert("전송 완료!");
-      setEmailModal(false);
-      setEmailInput("");
+      setSendStatus("done");
+      setTimeout(() => {
+        setEmailModal(false);
+        setEmailInput("");
+        setSendStatus("idle");
+      }, 2000);
     } catch (e) {
       console.error("오류:", e);
-      alert("오류 발생!");
-    } finally {
-      setIsSending(false);
+      setSendStatus("error");
     }
   };
 
@@ -605,25 +606,35 @@ export default function ChatBot({
               placeholder="이메일 주소 입력"
               value={emailInput}
               onChange={e => setEmailInput(e.target.value)}
-              disabled={isSending}
+              disabled={sendStatus === "sending"}
               style={{
                 border: "1px solid #ddd", borderRadius: 8, padding: "8px 12px",
                 fontSize: 13, outline: "none", width: "100%", boxSizing: "border-box",
               }}
               onKeyDown={e => { if (e.key === "Enter") sendReport(); }}
             />
-            {isSending && (
+            {sendStatus === "sending" && (
               <div style={{ fontSize: 12, color: "#C41E3A", textAlign: "center" }}>
                 보고서 생성 중... 잠시만 기다려주세요 ⏳
               </div>
             )}
+            {sendStatus === "done" && (
+              <div style={{ fontSize: 12, color: "#2e7d32", textAlign: "center", fontWeight: 600 }}>
+                ✅ 전송 완료! 메일을 확인해주세요
+              </div>
+            )}
+            {sendStatus === "error" && (
+              <div style={{ fontSize: 12, color: "#C41E3A", textAlign: "center" }}>
+                ❌ 오류가 발생했습니다. 다시 시도해주세요
+              </div>
+            )}
             <div style={{ display: "flex", gap: 8 }}>
               <button
-                onClick={() => { setEmailModal(false); setEmailInput(""); }}
-                disabled={isSending}
+                onClick={() => { setEmailModal(false); setEmailInput(""); setSendStatus("idle"); }}
+                disabled={sendStatus === "sending"}
                 style={{
                   flex: 1, padding: "8px 0", borderRadius: 8, border: "1px solid #ddd",
-                  background: "#f5f5f5", fontSize: 13, cursor: isSending ? "not-allowed" : "pointer",
+                  background: "#f5f5f5", fontSize: 13, cursor: sendStatus === "sending" ? "not-allowed" : "pointer",
                   color: "#555",
                 }}
               >
@@ -631,14 +642,14 @@ export default function ChatBot({
               </button>
               <button
                 onClick={sendReport}
-                disabled={isSending}
+                disabled={sendStatus === "sending"}
                 style={{
                   flex: 1, padding: "8px 0", borderRadius: 8, border: "none",
-                  background: isSending ? "#ccc" : "#C41E3A", fontSize: 13,
-                  cursor: isSending ? "not-allowed" : "pointer", color: "#fff", fontWeight: 600,
+                  background: sendStatus === "sending" ? "#ccc" : "#C41E3A", fontSize: 13,
+                  cursor: sendStatus === "sending" ? "not-allowed" : "pointer", color: "#fff", fontWeight: 600,
                 }}
               >
-                {isSending ? "전송 중..." : "발송"}
+                {sendStatus === "sending" ? "전송 중..." : "발송"}
               </button>
             </div>
           </div>
