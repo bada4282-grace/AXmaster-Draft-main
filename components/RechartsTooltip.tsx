@@ -155,6 +155,114 @@ export function TimeseriesTooltip({
   );
 }
 
+// ─── 품목 금액 추이(연간) 전용 툴팁 ────────────────────────────────────────
+// 3가지 케이스 분기:
+//  · 확정 연도 호버     → 수출액 + 전년 대비 ▲/▼ % (+절대값)
+//  · 첫 지점 호버        → "- 데이터 없음" (전년 자체 없음)
+//  · 진행 중 연도 호버  → "ⓘ YYYY년 1~N월 누적" + "전년 대비 - 비교 불가" + 하단 ⓘ 연말 확정 전 안내
+function formatBillion(v: number): string {
+  const rounded = Math.round(Math.abs(v) * 10) / 10;
+  const withComma = rounded.toLocaleString("en-US", {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  });
+  const sign = v < 0 ? "-" : "";
+  return `${sign}$${withComma}억`;
+}
+
+interface ProductTrendPoint { year: string; value: number }
+
+export function ProductTrendTooltip({
+  active,
+  payload,
+  label,
+  title,
+  trend,
+  tradeLabel,
+  ongoingYear,
+  ongoingMonthRange,
+}: {
+  active?: boolean;
+  payload?: TooltipPayload;
+  label?: unknown;
+  title: string;
+  trend: ProductTrendPoint[];
+  tradeLabel: string; // "수출" | "수입"
+  ongoingYear: string | null;
+  ongoingMonthRange: string | null;
+}) {
+  if (!active || !payload?.length) return null;
+  const hoveredYear = label != null ? String(label) : "";
+  const current = trend.find((t) => t.year === hoveredYear);
+  if (!current) return null;
+  const prev = trend.find((t) => t.year === String(parseInt(hoveredYear, 10) - 1));
+  const isOngoing = hoveredYear === ongoingYear;
+
+  // 전년 대비 라인
+  let yoyNode: React.ReactNode;
+  if (isOngoing) {
+    yoyNode = <span style={{ color: "#999" }}>- 비교 불가</span>;
+  } else if (!prev || prev.value === 0) {
+    yoyNode = <span style={{ color: "#999" }}>- 데이터 없음</span>;
+  } else {
+    const diff = current.value - prev.value;
+    const pct = (diff / prev.value) * 100;
+    const up = diff >= 0;
+    const noChange = Math.abs(pct) < 0.05;
+    const color = noChange ? "#999" : up ? "#E02020" : "#185FA5";
+    const arrow = noChange ? "–" : up ? "▲" : "▼";
+    const sign = noChange ? "" : up ? "+" : "-";
+    yoyNode = (
+      <span style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", color }}>
+        <span style={{ fontSize: 13, fontWeight: 500 }}>
+          {arrow} {sign}{Math.abs(pct).toFixed(1)}%
+        </span>
+        <span style={{ fontSize: 11 }}>
+          ({sign}{formatBillion(Math.abs(diff))})
+        </span>
+      </span>
+    );
+  }
+
+  const Row = ({ label, value }: { label: string; value: React.ReactNode }) => (
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, marginTop: 6 }}>
+      <span style={{ fontSize: 12, color: "#64748b" }}>{label}</span>
+      <span style={{ fontSize: 13, fontWeight: 500, color: "#1f2937" }}>{value}</span>
+    </div>
+  );
+
+  return (
+    <div style={{
+      background: "#fff",
+      border: "0.5px solid #e5e7eb",
+      borderRadius: 8,
+      padding: "12px 14px",
+      boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+      minWidth: 200,
+      maxWidth: 240,
+    }}>
+      <div style={{ fontSize: 14, fontWeight: 500, color: "#1f2937" }}>{title}</div>
+      <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>{hoveredYear}년</div>
+      {isOngoing && ongoingMonthRange && (
+        <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>
+          ⓘ {hoveredYear}년 {ongoingMonthRange} 누적
+        </div>
+      )}
+      <div style={{ height: 0.5, background: "#e5e7eb", marginTop: 8 }} />
+      <Row label={`${tradeLabel}액`} value={formatBillion(current.value)} />
+      <Row label="전년 대비" value={yoyNode} />
+      {isOngoing && (
+        <>
+          <div style={{ height: 0.5, background: "#e5e7eb", marginTop: 8 }} />
+          <div style={{ fontSize: 11, color: "#64748b", marginTop: 6 }}>
+            ⓘ 연말 확정 전 부분 데이터
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 interface BarPayloadRow {
   country?: string;
   value?: number;
