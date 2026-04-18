@@ -22,12 +22,15 @@ function TypingIndicator() {
 function renderBotText(text: string): React.ReactNode {
   // ==하이라이트== → <mark> 변환
   // **bold** → <strong> 변환 (ReactMarkdown이 놓치는 경우 대비)
+  // 한국어 범위 표현("1월~12월", "2020년~2025년")이 strikethrough로 잘못 렌더링되지
+  // 않도록 remark-gfm의 strikethrough 자체를 비활성화해서 해결 (아래 plugin 옵션 참고).
   const processed = text
     .replace(/==([^=]+)==/g, "<mark>$1</mark>")
     .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
   return (
     <ReactMarkdown
-      remarkPlugins={[remarkGfm]}
+      // singleTilde: false → "2020년~2025년"처럼 단일 물결표가 strikethrough로 잘못 파싱되지 않도록
+      remarkPlugins={[[remarkGfm, { singleTilde: false }]]}
       rehypePlugins={[rehypeRaw]}
       components={{
         mark: ({ children }) => <mark className="chatbot-highlight">{children}</mark>,
