@@ -164,7 +164,7 @@ const LOGGED_IN_DEFAULT_FAQ = [
   "주요 거시경제 지표 변동 알려줘",
 ];
 
-/** 로그인 사용자의 채��� 로그를 AI에 보내 맞춤 FAQ 3개를 생성 */
+/** 로그인 사용자의 채팅 로그를 AI에 보내 맞춤 FAQ 3개를 생성 */
 async function fetchUserFaq(logs: { role: string; content: string }[]): Promise<string[]> {
   try {
     const res = await fetch("/api/faq", {
@@ -248,6 +248,11 @@ export default function ChatBot({
   const [isStreaming, setIsStreaming] = useState(false);
   const [guestFaq, setGuestFaq] = useState(DEFAULT_GUEST_FAQ);
   const [userFaq, setUserFaq] = useState<string[] | null>(null);
+
+  // 이메일 모달 state
+  const [emailModal, setEmailModal] = useState(false);
+  const [emailInput, setEmailInput] = useState("");
+  const [isSending, setIsSending] = useState(false);
 
   // Hydrate FAQ from sessionStorage on client to avoid SSR mismatch
   useEffect(() => {
@@ -358,7 +363,6 @@ export default function ChatBot({
       if (cancelled) return;
       const hasUserMsgs = logs.filter(l => l.role === "user").length > 0;
       if (!hasUserMsgs) {
-        // 채팅 로그 없음 → 로그인 전용 기본 FAQ
         if (!cancelled) setUserFaq(LOGGED_IN_DEFAULT_FAQ);
         return;
       }
@@ -440,31 +444,35 @@ export default function ChatBot({
     }
   }, [messages]);
 
-const sendReport = async () => {
-  const to = prompt("이메일 주소를 입력해주세요:");
-  if (!to) return;
-  try {
-    const reportRes = await fetch("/api/report", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ messages }),
-    });
-    const reportData = await reportRes.json();
-    console.log("report 응답:", reportData);
+  const sendReport = async () => {
+    if (!emailInput.trim()) return;
+    setIsSending(true);
+    try {
+      const reportRes = await fetch("/api/report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages }),
+      });
+      const reportData = await reportRes.json();
+      console.log("report 응답:", reportData);
 
-    const emailRes = await fetch("/api/send-email", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ to, html: reportData.html }),
-    });
-    const emailData = await emailRes.json();
-    console.log("email 응답:", emailData);
-    alert("전송 완료!");
-  } catch (e) {
-    console.error("오류:", e);
-    alert("오류 발생!");
-  }
-};
+      const emailRes = await fetch("/api/send-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ to: emailInput, html: reportData.html }),
+      });
+      const emailData = await emailRes.json();
+      console.log("email 응답:", emailData);
+      alert("전송 완료!");
+      setEmailModal(false);
+      setEmailInput("");
+    } catch (e) {
+      console.error("오류:", e);
+      alert("오류 발생!");
+    } finally {
+      setIsSending(false);
+    }
+  };
 
   const send = async (overrideMsg?: string) => {
     const msgToSend = overrideMsg ?? input;
@@ -578,7 +586,65 @@ const sendReport = async () => {
   }
 
   return (
-    <div className="chatbot-panel">
+    <div className="chatbot-panel" style={{ position: "relative" }}>
+      {/* 이메일 모달 */}
+      {emailModal && (
+        <div style={{
+          position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          zIndex: 100, borderRadius: 16,
+        }}>
+          <div style={{
+            background: "#fff", borderRadius: 12, padding: "24px 20px",
+            width: 280, display: "flex", flexDirection: "column", gap: 12,
+            boxShadow: "0 4px 24px rgba(0,0,0,0.15)",
+          }}>
+            <div style={{ fontSize: 14, fontWeight: 600, color: "#333" }}>📧 보고서 이메일 발송</div>
+            <input
+              type="email"
+              placeholder="이메일 주소 입력"
+              value={emailInput}
+              onChange={e => setEmailInput(e.target.value)}
+              disabled={isSending}
+              style={{
+                border: "1px solid #ddd", borderRadius: 8, padding: "8px 12px",
+                fontSize: 13, outline: "none", width: "100%", boxSizing: "border-box",
+              }}
+              onKeyDown={e => { if (e.key === "Enter") sendReport(); }}
+            />
+            {isSending && (
+              <div style={{ fontSize: 12, color: "#C41E3A", textAlign: "center" }}>
+                보고서 생성 중... 잠시만 기다려주세요 ⏳
+              </div>
+            )}
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                onClick={() => { setEmailModal(false); setEmailInput(""); }}
+                disabled={isSending}
+                style={{
+                  flex: 1, padding: "8px 0", borderRadius: 8, border: "1px solid #ddd",
+                  background: "#f5f5f5", fontSize: 13, cursor: isSending ? "not-allowed" : "pointer",
+                  color: "#555",
+                }}
+              >
+                취소
+              </button>
+              <button
+                onClick={sendReport}
+                disabled={isSending}
+                style={{
+                  flex: 1, padding: "8px 0", borderRadius: 8, border: "none",
+                  background: isSending ? "#ccc" : "#C41E3A", fontSize: 13,
+                  cursor: isSending ? "not-allowed" : "pointer", color: "#fff", fontWeight: 600,
+                }}
+              >
+                {isSending ? "전송 중..." : "발송"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="chatbot-header">
         <div style={{
@@ -604,7 +670,7 @@ const sendReport = async () => {
           <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
             <div style={{ position: "relative", display: "inline-flex" }}>
               <button
-                onClick={() => sendReport()}
+                onClick={() => setEmailModal(true)}
                 title="메일로 받기"
                 style={{ width: 22, height: 22, borderRadius: "50%", border: "1px solid #ddd", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
                 onMouseEnter={e => (e.currentTarget.style.background = "#fde8e8")}
