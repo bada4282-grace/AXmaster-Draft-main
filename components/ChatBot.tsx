@@ -254,6 +254,10 @@ export default function ChatBot({
   const [emailInput, setEmailInput] = useState("");
   const [sendStatus, setSendStatus] = useState<"idle" | "sending" | "done" | "error">("idle");
 
+  // PDF 모달 state
+  const [pdfModal, setPdfModal] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+
   // Hydrate FAQ from sessionStorage on client to avoid SSR mismatch
   useEffect(() => {
     const cached = getOrBuildGuestFaq();
@@ -475,6 +479,40 @@ export default function ChatBot({
     }
   };
 
+  const downloadPdf = async () => {
+    setIsDownloading(true);
+    try {
+      const reportRes = await fetch("/api/report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages }),
+      });
+      const reportData = await reportRes.json();
+
+      // html2pdf 동적 로드
+      const html2pdf = (await import("html2pdf.js")).default;
+      const element = document.createElement("div");
+      element.innerHTML = reportData.html;
+      document.body.appendChild(element);
+
+      await html2pdf().set({
+        margin: 0,
+        filename: "대화요약보고서.pdf",
+        image: { type: "jpeg", quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+      }).from(element).save();
+
+      document.body.removeChild(element);
+      setPdfModal(false);
+    } catch (e) {
+      console.error("PDF 오류:", e);
+      alert("PDF 생성 중 오류가 발생했습니다.");
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   const send = async (overrideMsg?: string) => {
     const msgToSend = overrideMsg ?? input;
     if (!msgToSend.trim() || isStreaming) return;
@@ -656,7 +694,56 @@ export default function ChatBot({
         </div>
       )}
 
-      {/* Header */}
+      {/* PDF 확인 모달 */}
+      {pdfModal && (
+        <div style={{
+          position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          zIndex: 100, borderRadius: 16,
+        }}>
+          <div style={{
+            background: "#fff", borderRadius: 12, padding: "24px 20px",
+            width: 280, display: "flex", flexDirection: "column", gap: 12,
+            boxShadow: "0 4px 24px rgba(0,0,0,0.15)",
+          }}>
+            <div style={{ fontSize: 14, fontWeight: 600, color: "#333" }}>📄 PDF 다운로드</div>
+            <p style={{ margin: 0, fontSize: 13, color: "#555", lineHeight: 1.6 }}>
+              대화 내용 요약 보고서를 PDF로 다운받으시겠습니까?
+            </p>
+            {isDownloading && (
+              <div style={{ fontSize: 12, color: "#C41E3A", textAlign: "center" }}>
+                PDF 생성 중... 잠시만 기다려주세요 ⏳
+              </div>
+            )}
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                onClick={() => setPdfModal(false)}
+                disabled={isDownloading}
+                style={{
+                  flex: 1, padding: "8px 0", borderRadius: 8, border: "1px solid #ddd",
+                  background: "#f5f5f5", fontSize: 13, cursor: isDownloading ? "not-allowed" : "pointer",
+                  color: "#555",
+                }}
+              >
+                취소
+              </button>
+              <button
+                onClick={downloadPdf}
+                disabled={isDownloading}
+                style={{
+                  flex: 1, padding: "8px 0", borderRadius: 8, border: "none",
+                  background: isDownloading ? "#ccc" : "#C41E3A", fontSize: 13,
+                  cursor: isDownloading ? "not-allowed" : "pointer", color: "#fff", fontWeight: 600,
+                }}
+              >
+                {isDownloading ? "생성 중..." : "다운로드"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+
       <div className="chatbot-header">
         <div style={{
           width: 28, height: 28, borderRadius: "50%",
@@ -693,6 +780,15 @@ export default function ChatBot({
                 <div style={{ position: "absolute", top: -2, right: -2, width: 6, height: 6, borderRadius: "50%", background: "#C41E3A" }} />
               )}
             </div>
+            <button
+              onClick={() => setPdfModal(true)}
+              title="PDF로 받기"
+              style={{ width: 22, height: 22, borderRadius: "50%", border: "1px solid #ddd", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+              onMouseEnter={e => (e.currentTarget.style.background = "#fde8e8")}
+              onMouseLeave={e => (e.currentTarget.style.background = "#fff")}
+            >
+              📄
+            </button>
             <button
               onClick={() => {
                 clearStoredMessages(user?.id ?? null);
