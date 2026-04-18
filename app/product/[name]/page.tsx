@@ -24,8 +24,8 @@ import {
 } from "recharts";
 import {
   RechartsPayloadTooltip,
-  RechartsBarCountryTooltip,
   ProductTrendTooltip,
+  TopCountriesTooltip,
   rechartsTooltipFollowProps,
 } from "@/components/RechartsTooltip";
 import { getAvailableMonths } from "@/lib/supabase";
@@ -169,16 +169,26 @@ function ProductDetailContent() {
   const trendMin = trendValues.length ? Math.floor(Math.min(...trendValues) * 0.85) : 0;
   const trendMax = trendValues.length ? Math.ceil(Math.max(...trendValues) * 1.1) : 100;
 
-  // 상위 국가 (Supabase에서 비동기 로드)
-  const [topCountries, setTopCountries] = useState<{ country: string; value: number }[]>([]);
+  // 상위 국가 (Supabase에서 비동기 로드) — 전체 국가 저장, 차트는 렌더 시점에 슬라이스
+  const [topCountriesAll, setTopCountriesAll] = useState<{ country: string; value: number }[]>([]);
+  const [prevTopCountriesAll, setPrevTopCountriesAll] = useState<{ country: string; value: number }[]>([]);
   useEffect(() => {
-    if (!productCode) { setTopCountries([]); return; }
+    if (!productCode) { setTopCountriesAll([]); setPrevTopCountriesAll([]); return; }
     let cancelled = false;
-    getProductTopCountriesAsync(productCode, year, tradeType).then(data => {
-      if (!cancelled) setTopCountries(data.slice(0, 10));
+    const prevYearStr = String(parseInt(year, 10) - 1);
+    // 현재 연도 + 전년 병렬 조회 (getProductTopCountriesAsync는 내부 캐시 5분 TTL 보유 — 중복 호출 자동 회피)
+    Promise.all([
+      getProductTopCountriesAsync(productCode, year, tradeType),
+      getProductTopCountriesAsync(productCode, prevYearStr, tradeType),
+    ]).then(([curr, prev]) => {
+      if (cancelled) return;
+      setTopCountriesAll(curr);
+      setPrevTopCountriesAll(prev);
     }).catch(() => {});
     return () => { cancelled = true; };
   }, [productCode, year, tradeType]);
+  // 차트 표시용 상위 10개 (슬라이스) — 툴팁의 비중·순위는 전체 기준
+  const topCountries = topCountriesAll.slice(0, 10);
 
   // ── 애니메이션: 데이터 로드 완료를 명시적으로 추적 ──
   const [displayTrend, setDisplayTrend] = useState<{ year: string; value: number }[]>([]);
@@ -404,8 +414,22 @@ function ProductDetailContent() {
 
                 {subTab === "금액 추이" ? (
                   trend.length > 0 ? (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={displayTrend} margin={{ top: 8, right: 24, left: 8, bottom: 4 }}>
+                    (() => {
+                      // 단일 데이터 + 두 dataKey (null 마스킹) — X 카테고리 매핑 정합성 유지
+                      // valueConfirmed: 확정 연도만 값, 진행 중 연도는 null
+                      // valueBridge: 진행 중 연도 + 바로 이전 확정 연도(=앵커)만 값, 그 외 null
+                      const ongoingY = ongoingInfo?.year ?? null;
+                      const ongoingIdx = ongoingY ? displayTrend.findIndex((d) => d.year === ongoingY) : -1;
+                      const anchorYear = ongoingIdx > 0 ? displayTrend[ongoingIdx - 1].year : null;
+                      const chartTrend = displayTrend.map((d) => ({
+                        ...d,
+                        valueConfirmed: d.year === ongoingY ? null : d.value,
+                        valueBridge:
+                          d.year === ongoingY || (anchorYear && d.year === anchorYear) ? d.value : null,
+                      }));
+                      return (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={chartTrend} margin={{ top: 8, right: 24, left: 8, bottom: 4 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                         <XAxis dataKey="year" tick={{ fontSize: 11 }} />
                         <YAxis domain={[trendMin, trendMax]} tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v}억`} />
@@ -422,52 +446,37 @@ function ProductDetailContent() {
                           )}
                           {...tooltipFollowProps}
                         />
-                        {(() => {
-                          // 진행 중 연도(예: 2026)가 trend에 포함되면 라인을 두 구간으로 분리:
-                          //  · 확정 구간(실선) — 2020~2025
-                          //  · 브릿지 구간(점선) — 마지막 확정점 → 진행 중 연도
-                          // 그리고 진행 중 연도의 dot은 외곽선만(fill=#fff) 렌더.
-                          const ongoingIdx = ongoingInfo
-                            ? displayTrend.findIndex((d) => d.year === ongoingInfo.year)
-                            : -1;
-                          const hasBridge = ongoingIdx > 0;
-                          const confirmedData = hasBridge ? displayTrend.slice(0, ongoingIdx) : displayTrend;
-                          const bridgeData = hasBridge ? displayTrend.slice(ongoingIdx - 1, ongoingIdx + 1) : [];
-                          return (
-                            <>
-                              <Line
-                                data={confirmedData}
-                                type="monotone" dataKey="value" stroke="#14B8A6" strokeWidth={2.5}
-                                dot={{ r: 4, fill: "#14B8A6" }} activeDot={{ r: 6 }} name={`${tradeLabel}액`}
-                                isAnimationActive={animActive}
-                                animationDuration={700} animationEasing="ease-out"
-                              />
-                              {hasBridge && (
-                                <Line
-                                  data={bridgeData}
-                                  type="monotone" dataKey="value" stroke="#14B8A6" strokeWidth={2.5}
-                                  strokeDasharray="5 4"
-                                  dot={(props: { cx?: number; cy?: number; payload?: { year?: string } }) => {
-                                    const { cx, cy, payload } = props;
-                                    if (cx == null || cy == null) return <g />;
-                                    if (payload?.year === ongoingInfo?.year) {
-                                      return (
-                                        <circle cx={cx} cy={cy} r={4} fill="#fff" stroke="#14B8A6" strokeWidth={2} />
-                                      );
-                                    }
-                                    return <g />;
-                                  }}
-                                  activeDot={{ r: 6, fill: "#14B8A6" }}
-                                  isAnimationActive={animActive}
-                                  animationDuration={700} animationEasing="ease-out"
-                                  legendType="none"
-                                />
-                              )}
-                            </>
-                          );
-                        })()}
+                        <Line
+                          type="monotone" dataKey="valueConfirmed" stroke="#14B8A6" strokeWidth={2.5}
+                          dot={{ r: 4, fill: "#14B8A6" }} activeDot={{ r: 6 }} name={`${tradeLabel}액`}
+                          isAnimationActive={animActive}
+                          animationDuration={700} animationEasing="ease-out"
+                          connectNulls={false}
+                        />
+                        <Line
+                          type="monotone" dataKey="valueBridge" stroke="#14B8A6" strokeWidth={2.5}
+                          strokeDasharray="5 4"
+                          dot={(props: { cx?: number; cy?: number; payload?: { year?: string } }) => {
+                            const { cx, cy, payload } = props;
+                            if (cx == null || cy == null) return <g />;
+                            // 진행 중 연도의 점만 외곽선 렌더, 확정 연도(= 브릿지 앵커)는 점 숨김(확정 Line dot과 중복 방지)
+                            if (payload?.year === ongoingInfo?.year) {
+                              return (
+                                <circle cx={cx} cy={cy} r={4} fill="#fff" stroke="#14B8A6" strokeWidth={2} />
+                              );
+                            }
+                            return <g />;
+                          }}
+                          activeDot={{ r: 6, fill: "#14B8A6" }}
+                          isAnimationActive={animActive}
+                          animationDuration={700} animationEasing="ease-out"
+                          legendType="none"
+                          connectNulls={false}
+                        />
                       </LineChart>
                     </ResponsiveContainer>
+                      );
+                    })()
                   ) : (
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "center",
                       height: "100%", color: "#94a3b8", fontSize: 13 }}>
@@ -482,8 +491,19 @@ function ProductDetailContent() {
                         <XAxis dataKey="country" tick={{ fontSize: 12 }} />
                         <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v}억`} />
                         <Tooltip
-                          content={(props) => <RechartsBarCountryTooltip {...props} tradeLabel={tradeLabel} />}
+                          content={(props) => (
+                            <TopCountriesTooltip
+                              {...props}
+                              year={year}
+                              tradeLabel={tradeLabel}
+                              currentData={topCountriesAll}
+                              prevData={prevTopCountriesAll}
+                              ongoingYear={ongoingInfo?.year ?? null}
+                              ongoingMonthRange={ongoingInfo?.monthRange ?? null}
+                            />
+                          )}
                           {...tooltipFollowProps}
+                          cursor={{ fill: "transparent" }}
                         />
                         <Bar
                           dataKey="value"
