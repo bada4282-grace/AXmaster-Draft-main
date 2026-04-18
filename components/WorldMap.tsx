@@ -670,27 +670,6 @@ export default function WorldMap({
             setZoomPct(Math.round((Math.pow(2, z) / Math.pow(2, BASE_ZOOM)) * 100));
           }}
         >
-          {/* 부분 데이터 배지 — 우상단 (진행 중 연도에만 표시) */}
-          {ongoingInfo && ongoingInfo.year === year && (
-            <div style={{
-              position: "absolute",
-              top: 12,
-              right: 120,
-              zIndex: 10,
-              background: "#fff",
-              border: "0.5px solid #e5e7eb",
-              borderRadius: 6,
-              padding: "4px 8px",
-              fontSize: 11,
-              color: "#64748b",
-              boxShadow: "0 2px 6px rgba(0,0,0,0.06)",
-              pointerEvents: "none",
-              whiteSpace: "nowrap",
-            }}>
-              ⓘ {year}년 {ongoingInfo.monthRange} 누적
-            </div>
-          )}
-
           {/* 순위 구간 필터 — 우상단 */}
           <div style={{
             position:        "absolute",
