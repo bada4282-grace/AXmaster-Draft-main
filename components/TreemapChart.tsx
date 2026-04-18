@@ -65,7 +65,7 @@ const MTI_FONT_COLORS: Record<number, string> = {
 };
 
 function CustomContent({ x = 0, y = 0, width = 0, height = 0, name, value = 0, data, animKey = 0 }: CustomContentProps) {
-  if (width < 10 || height < 10) return null;
+  if (width <= 0 || height <= 0) return null;
   if (!name || name === "root") return null;
 
   const item = data.find((d) => d.name === name);
@@ -96,6 +96,7 @@ function CustomContent({ x = 0, y = 0, width = 0, height = 0, name, value = 0, d
 
   return (
     <g
+      data-cell-name={name}
       style={{
         cursor: "pointer",
         transformOrigin: `${cx}px ${cy}px`,
@@ -353,14 +354,9 @@ export default function TreemapChart({
 
   const onTreemapMouseMove = useCallback((e: React.MouseEvent) => {
     const target = e.target as SVGElement;
-    const g = target.closest?.("g");
-    const rect = g?.querySelector?.("rect");
-    if (!rect) { setTooltip(null); return; }
-    const fill = rect.getAttribute("fill");
-    if (!fill || fill === "#fff" || fill === "transparent") { setTooltip(null); return; }
-    const fo = g?.querySelector?.("foreignObject");
-    const nameSpan = fo?.querySelector?.("span");
-    const cellName = nameSpan?.textContent;
+    const g = target.closest?.("g[data-cell-name]");
+    if (!g) { setTooltip(null); return; }
+    const cellName = g.getAttribute("data-cell-name");
     if (!cellName) { setTooltip(null); return; }
     const item = displayData.find((d) => d.name === cellName);
     if (!item) { setTooltip(null); return; }
