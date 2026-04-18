@@ -279,8 +279,9 @@ function CountryDetailContent() {
               <div className="left-cards-stack">
                 <div className="info-card">
                   <div className="info-card-label" style={{ fontSize: 12 }}>선택 국가</div>
-                  <div style={{ fontSize: 18, fontWeight: 900, display: "flex", alignItems: "center", gap: 8 }}>
-                    {country.iso && country.iso !== "??" && (
+                  <div style={{ fontSize: 18, fontWeight: 900 }}>{country.name}</div>
+                  {country.iso && country.iso !== "??" && (
+                    <div style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 6 }}>
                       <span style={{
                         fontSize: 11,
                         fontWeight: 700,
@@ -293,18 +294,13 @@ function CountryDetailContent() {
                       }}>
                         {country.iso}
                       </span>
-                    )}
-                    <span>{country.name}</span>
-                  </div>
-                  {country.iso && country.iso !== "??" && (
-                    <div style={{ marginTop: 8 }}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={`https://flagcdn.com/w80/${country.iso.toLowerCase()}.png`}
                         srcSet={`https://flagcdn.com/w160/${country.iso.toLowerCase()}.png 2x`}
                         alt={`${country.name} 국기`}
-                        width={40}
-                        height={30}
+                        width={28}
+                        height={21}
                         style={{
                           borderRadius: 3,
                           border: "1px solid #e2e8f0",
@@ -323,7 +319,7 @@ function CountryDetailContent() {
                     {country.rank}위
                     {totalCountries > 0 && (
                       <span style={{ fontSize: 13, fontWeight: 500, color: "#64748b", marginLeft: 4 }}>
-                        / {totalCountries}개국
+                        / {totalCountries}
                       </span>
                     )}
                   </div>
