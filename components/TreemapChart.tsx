@@ -72,10 +72,15 @@ function CustomContent({ x = 0, y = 0, width = 0, height = 0, name, value = 0, d
   const color = item?.color ?? "#3B82F6";
   const mti = item?.mti ?? 0;
   const fontColor = MTI_FONT_COLORS[mti] ?? "#333";
-  const fontSize = width > 120 ? 14 : width > 60 ? 11 : 9;
+  const pad = 4;
+  const baseFontSize = width > 120 ? 14 : width > 60 ? 11 : 9;
+  const nameLen = (name ?? "").length;
+  const availWidth = width - pad * 2;
+  const maxLines = height > 50 ? 3 : 2;
+  const maxFitSize = nameLen > 0 ? Math.floor((availWidth * maxLines) / (nameLen * 0.9)) : baseFontSize;
+  const fontSize = Math.max(7, Math.min(baseFontSize, maxFitSize));
   const cx = x + width / 2;
   const cy = y + height / 2;
-  const pad = 4;
 
   return (
     <g
@@ -391,7 +396,7 @@ export default function TreemapChart({
               <span style={{
                 fontSize: 9,
                 fontWeight: 600,
-                color: "#fff",
+                color: isActive ? "#fff" : "#475569",
                 whiteSpace: "nowrap",
                 overflow: "hidden",
                 textOverflow: "ellipsis",
