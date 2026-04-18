@@ -336,7 +336,7 @@ function ProductDetailContent() {
               balancePositive={prodKpi.expCur >= prodKpi.impCur}
             />
 
-            <div className="split-panel" style={{ height: 380 }}>
+            <div className="split-panel" style={{ position: "relative" }}>
             {/* Left info cards */}
             <div className="left-cards">
               <div className="left-cards-stack">
@@ -388,7 +388,7 @@ function ProductDetailContent() {
             </div>
 
             {/* Main viz */}
-            <div className="dashboard-area" style={{ display: "flex", flexDirection: "column" }}>
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
               {/* Sub tabs */}
               <div className="subtab-bar">
                 {(["금액 추이", "상위 국가"] as const).map((tab) => (
@@ -403,7 +403,7 @@ function ProductDetailContent() {
                 </span>
               </div>
 
-              <div style={{ flex: 1, padding: 12, overflow: "hidden" }}>
+              <div style={{ flex: 1, padding: 8, overflow: "hidden" }}>
                 {subTab === "금액 추이" ? (
                   trend.length > 0 ? (
                     <ResponsiveContainer width="100%" height="100%">
