@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useRouter, useSearchParams } from "next/navigation";
-import { getCountryRankingAsync, getTreemapDataAsync } from "@/lib/dataSupabase";
+import { getCountryRankingAsync } from "@/lib/dataSupabase";
 
 interface FilterBarProps {
   mode?: "country" | "product";
@@ -73,14 +73,10 @@ export default function FilterBar({
 
   // 해당 연도의 국가/품목 목록 (Supabase에서 비동기 로드)
   const [countryNames, setCountryNames] = useState<string[]>([]);
-  const [productNames, setProductNames] = useState<string[]>([]);
   useEffect(() => {
     let cancelled = false;
     getCountryRankingAsync(year, tradeType).then(ranks => {
       if (!cancelled) setCountryNames(ranks.map(r => r.country));
-    }).catch(() => {});
-    getTreemapDataAsync(year, tradeType).then(data => {
-      if (!cancelled) setProductNames([...new Set(data.map(p => p.name))]);
     }).catch(() => {});
     return () => { cancelled = true; };
   }, [year, tradeType]);
@@ -98,13 +94,6 @@ export default function FilterBar({
     const params = new URLSearchParams(searchParams.toString());
     if (m) params.set("month", m);
     else params.delete("month");
-    router.replace(`?${params.toString()}`, { scroll: false });
-  };
-
-  const handleProduct = (p: string) => {
-    const params = new URLSearchParams(searchParams.toString());
-    if (p) params.set("product", p);
-    else params.delete("product");
     router.replace(`?${params.toString()}`, { scroll: false });
   };
 
@@ -204,17 +193,6 @@ export default function FilterBar({
             </>
           ) : (
             <>
-              <select
-                className="filter-select"
-                style={{ width: 140 }}
-                value={searchParams.get("product") ?? ""}
-                onChange={(e) => handleProduct(e.target.value)}
-              >
-                <option value="">품목 (전체)</option>
-                {productNames.map((n) => (
-                  <option key={n} value={n}>{n}</option>
-                ))}
-              </select>
               <select
                 className="filter-select"
                 style={{ width: 140 }}
