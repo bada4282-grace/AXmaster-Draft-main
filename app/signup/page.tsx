@@ -8,6 +8,7 @@ export default function SignupPage() {
   const router = useRouter();
   const [name, setName] = useState("");
   const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
@@ -24,7 +25,7 @@ export default function SignupPage() {
 
     setLoading(true);
     try {
-      await signUp(name, username, password);
+      await signUp(name, username, password, email);
       router.push("/login");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "회원가입에 실패했습니다.");
@@ -58,6 +59,20 @@ export default function SignupPage() {
               value={username}
               onChange={e => setUsername(e.target.value)}
               required
+              style={{ width: "100%", padding: "10px 12px", border: "1px solid #ddd", borderRadius: 8, fontSize: 14, boxSizing: "border-box" }}
+            />
+          </div>
+
+          {/* 이메일 */}
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ fontSize: 13, color: "#555", display: "block", marginBottom: 6 }}>이메일</label>
+            <input
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              required
+              autoComplete="email"
+              placeholder="example@domain.com"
               style={{ width: "100%", padding: "10px 12px", border: "1px solid #ddd", borderRadius: 8, fontSize: 14, boxSizing: "border-box" }}
             />
           </div>
