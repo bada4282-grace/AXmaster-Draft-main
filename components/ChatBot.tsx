@@ -583,40 +583,53 @@ const sendEmail = async (to: string) => {
             <button onClick={decreaseFontSize} style={{ width: 22, height: 22, borderRadius: "50%", border: "1px solid #ddd", background: "#fff", cursor: "pointer", fontSize: 14, color: "#555", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>−</button>
             <button onClick={increaseFontSize} style={{ width: 22, height: 22, borderRadius: "50%", border: "1px solid #ddd", background: "#fff", cursor: "pointer", fontSize: 14, color: "#555", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>+</button>
           </div>
-          <button
-            onClick={() => {
-              clearStoredMessages(user?.id ?? null);
-              setMessages([{ role: "bot", text: initialMessage }]);
-            }}
-            title="대화 내용 지우기"
-            style={{ width: 22, height: 22, borderRadius: "50%", border: "1px solid #ddd", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
-            onMouseEnter={e => (e.currentTarget.style.background = "#fde8e8")}
-            onMouseLeave={e => (e.currentTarget.style.background = "#fff")}
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="3 6 5 6 21 6" />
-              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-              <path d="M10 11v6" />
-              <path d="M14 11v6" />
-              <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
-            </svg>
-          </button>
-          <div style={{ position: "relative", display: "inline-flex" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <div style={{ position: "relative", display: "inline-flex" }}>
+              <button
+                onClick={() => {
+                  const to = prompt("이메일 주소를 입력해주세요:");
+                  if (to) sendEmail(to);
+                }}
+                title="메일로 받기"
+                style={{ width: 22, height: 22, borderRadius: "50%", border: "1px solid #ddd", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                onMouseEnter={e => (e.currentTarget.style.background = "#fde8e8")}
+                onMouseLeave={e => (e.currentTarget.style.background = "#fff")}
+              >
+                ✉️
+              </button>
+              {messages.filter(m => m.role === "user").length >= 3 && (
+                <div style={{ position: "absolute", top: -2, right: -2, width: 6, height: 6, borderRadius: "50%", background: "#C41E3A" }} />
+              )}
+            </div>
             <button
               onClick={() => {
                 const to = prompt("이메일 주소를 입력해주세요:");
                 if (to) sendEmail(to);
               }}
-              title="메일로 받기"
+              style={{ height: 22, borderRadius: 11, border: "1px solid #ddd", background: "#fff", cursor: "pointer", fontSize: 11, color: "#555", paddingLeft: 6, paddingRight: 8, display: "flex", alignItems: "center", justifyContent: "center", whiteSpace: "nowrap" }}
+              onMouseEnter={e => (e.currentTarget.style.background = "#fde8e8")}
+              onMouseLeave={e => (e.currentTarget.style.background = "#fff")}
+            >
+              메일 받기
+            </button>
+            <button
+              onClick={() => {
+                clearStoredMessages(user?.id ?? null);
+                setMessages([{ role: "bot", text: initialMessage }]);
+              }}
+              title="대화 내용 지우기"
               style={{ width: 22, height: 22, borderRadius: "50%", border: "1px solid #ddd", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
               onMouseEnter={e => (e.currentTarget.style.background = "#fde8e8")}
               onMouseLeave={e => (e.currentTarget.style.background = "#fff")}
             >
-              ✉️
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="3 6 5 6 21 6" />
+                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                <path d="M10 11v6" />
+                <path d="M14 11v6" />
+                <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+              </svg>
             </button>
-            {messages.filter(m => m.role === "user").length >= 3 && (
-              <div style={{ position: "absolute", top: -2, right: -2, width: 6, height: 6, borderRadius: "50%", background: "#C41E3A" }} />
-            )}
           </div>
         </div>
       </div>
