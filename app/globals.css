@@ -437,7 +437,7 @@ header.w-full {
 /* Left info cards */
 /* 상세 페이지 좌측: 돌아가기 + 카드 3개 세로 균등·동일 높이·간격 넓게 */
 .left-cards {
-  width: 110px;
+  width: 126px;
   flex-shrink: 0;
   padding: 8px 8px 10px;
   display: flex;
@@ -758,7 +758,7 @@ header.w-full {
 
   /* 상세 페이지 왼쪽 카드: 폭 축소 */
   .left-cards {
-    width: 90px;
+    width: 102px;
     padding: 6px 6px 8px;
   }
   .info-card {
