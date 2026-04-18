@@ -66,7 +66,7 @@ function HomeContent() {
 
       <div className="page-main-container">
         {/* Main tabs — 국가별/품목별 (dashboard-card 바깥 위쪽) */}
-        <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+        <div style={{ display: "flex", gap: 8, marginBottom: 6 }}>
           <button
             className={mainTab === "국가별" ? "main-tab-active" : "main-tab-inactive"}
             onClick={() => handleTabChange("국가별")}
