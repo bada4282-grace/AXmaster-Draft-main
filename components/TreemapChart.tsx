@@ -512,7 +512,8 @@ export default function TreemapChart({
         />
       </div>
 
-      {/* 마우스 추적 툴팁 — 카테고리 dot + 품목 / 카테고리·MTI코드 / 금액·비중 / 전년 대비 */}
+      {/* 셀 호버 툴팁 — 헤더(품목/연도/카테고리·MTI) + 본문(수출액·비중·전년대비) */}
+      {/* 금액 추이·상위 국가·지도 툴팁과 일관된 양식 */}
       {tooltip && typeof document !== "undefined" && (() => {
         const item = tooltip.item;
         const sharePct = (item.value / totalValue) * 100;
@@ -520,67 +521,116 @@ export default function TreemapChart({
           ? prevRawByCode.get(item.code) ?? 0
           : prevAggByCode.get(item.code) ?? 0;
 
-        // 전년 대비 줄 계산 — 불완전 연도·연간 조회면 "부분 데이터(1~N월)", 전년 0/미존재면 "-"
-        let yoyLine: React.ReactNode;
+        // 단위 통일 포맷 — 앞선 툴팁(금액 추이·상위 국가·지도)와 동일
+        const fmt1 = (v: number) => {
+          const rounded = Math.round(Math.abs(v) * 10) / 10;
+          const withComma = rounded.toLocaleString("en-US", {
+            minimumFractionDigits: 1,
+            maximumFractionDigits: 1,
+          });
+          const sign = v < 0 ? "-" : "";
+          return `${sign}$${withComma}억`;
+        };
+        const shareLabel = sharePct > 0 && sharePct < 0.1 ? "<0.1%" : `${sharePct.toFixed(1)}%`;
+        const tradeLabel = tradeType === "수입" ? "수입" : "수출";
+
+        // 전년 대비 노드 (앞선 툴팁과 동일 시각 포맷)
+        let yoyNode: React.ReactNode;
         if (isAnnualIncomplete) {
-          yoyLine = (
-            <span style={{ color: "#999" }}>
-              - <span style={{ fontSize: 10, opacity: 0.7, marginLeft: 2 }}>
-                ⓘ 부분 데이터{incompleteMonthRange ? `(${incompleteMonthRange})` : ""}
-              </span>
-            </span>
-          );
+          yoyNode = <span style={{ color: "#999" }}>- 비교 불가</span>;
         } else if (prevValue <= 0) {
-          yoyLine = <span style={{ color: "#999" }}>- 전년 대비</span>;
+          yoyNode = <span style={{ color: "#999" }}>- 데이터 없음</span>;
         } else {
           const diff = item.value - prevValue;
-          const pct = Math.abs(diff / prevValue) * 100;
+          const pct = (diff / prevValue) * 100;
+          const abs = Math.abs(pct);
           const up = diff >= 0;
-          const noChange = Math.abs(diff) < 1e-9;
+          const noChange = abs < 0.05;
           const color = noChange ? "#999" : up ? "#E02020" : "#185FA5";
-          const arrow = noChange ? "-" : up ? "▲" : "▼";
+          const arrow = noChange ? "–" : up ? "▲" : "▼";
           const sign = noChange ? "" : up ? "+" : "-";
-          yoyLine = (
-            <span style={{ color }}>
-              {arrow} 전년 대비 {sign}{pct.toFixed(1)}%
+          yoyNode = (
+            <span style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", color }}>
+              <span style={{ fontSize: 13, fontWeight: 500 }}>
+                {arrow} {sign}{abs.toFixed(1)}%
+              </span>
+              <span style={{ fontSize: 11 }}>
+                ({sign}{fmt1(Math.abs(diff))})
+              </span>
             </span>
           );
         }
 
+        // 위치: 커서 오른쪽+아래쪽 10px, 트리맵 경계(우측 15%·하단 20%)에서 flip
+        const vw = typeof window !== "undefined" ? window.innerWidth : 1920;
+        const vh = typeof window !== "undefined" ? window.innerHeight : 1080;
+        const flipX = tooltip.x > vw * 0.85;
+        const flipY = tooltip.y > vh * 0.8;
+        const translateX = flipX ? "calc(-100% - 10px)" : "10px";
+        const translateY = flipY ? "calc(-100% - 10px)" : "10px";
+
+        const Row = ({ label, value }: { label: string; value: React.ReactNode }) => (
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, marginTop: 6 }}>
+            <span style={{ fontSize: 12, color: "#64748b" }}>{label}</span>
+            <span style={{ fontSize: 13, fontWeight: 500, color: "#1f2937" }}>{value}</span>
+          </div>
+        );
+        const Divider = () => <div style={{ height: 0.5, background: "#e5e7eb", marginTop: 8 }} />;
+
         return createPortal(
           <div
-            className="tooltip-shell tooltip-shell--fixed"
             style={{
+              position: "fixed",
               left: tooltip.x,
               top: tooltip.y,
-              transform: "translate(-50%, calc(-100% - 12px))",
+              transform: `translate(${translateX}, ${translateY})`,
+              background: "#fff",
+              border: "0.5px solid #e5e7eb",
+              borderRadius: 8,
+              padding: "12px 14px",
+              boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+              minWidth: 200,
+              maxWidth: 240,
+              zIndex: 1000,
+              pointerEvents: "none",
             }}
           >
-            {/* 1줄: 카테고리 dot + 품목명 */}
-            <div style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 700, fontSize: 13 }}>
-              <span
-                aria-hidden
-                style={{
-                  display: "inline-block",
-                  width: 8,
-                  height: 8,
-                  borderRadius: 4,
-                  background: item.color,
-                  flexShrink: 0,
-                }}
-              />
-              <span>{item.name}</span>
+            {/* 헤더: 품목명 / 연도(+월) / 카테고리·MTI / (진행중) 누적 배지 */}
+            <div style={{ fontSize: 14, fontWeight: 500, color: "#1f2937" }}>{item.name}</div>
+            <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>
+              {year}년{month ? ` ${parseInt(month, 10)}월` : ""}
             </div>
-            {/* 2줄: 카테고리명 · MTI 코드 */}
-            <div style={{ fontSize: 11, color: "#64748b", marginTop: 4 }}>
+            <div style={{
+              fontSize: 11,
+              color: "#94a3b8",
+              marginTop: 2,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}>
               {MTI_NAMES[item.mti] ?? "기타"} · MTI {item.code}
             </div>
-            {/* 3줄: 금액 · 비중 */}
-            <div style={{ fontSize: 12, marginTop: 4, fontWeight: 500 }}>
-              {formatAmount(item.value)} · {sharePct.toFixed(1)}%
-            </div>
-            {/* 4줄: 전년 대비 증감 */}
-            <div style={{ fontSize: 12, marginTop: 4 }}>{yoyLine}</div>
+            {isAnnualIncomplete && incompleteMonthRange && (
+              <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>
+                ⓘ {year}년 {incompleteMonthRange} 누적
+              </div>
+            )}
+
+            <Divider />
+            <Row label={`${tradeLabel}액`} value={fmt1(item.value)} />
+            <Row label="비중" value={shareLabel} />
+
+            <Divider />
+            <Row label="전년 대비" value={yoyNode} />
+
+            {isAnnualIncomplete && (
+              <>
+                <Divider />
+                <div style={{ fontSize: 11, color: "#64748b", marginTop: 6 }}>
+                  ⓘ 연말 확정 전 부분 데이터
+                </div>
+              </>
+            )}
           </div>,
           document.body,
         );
