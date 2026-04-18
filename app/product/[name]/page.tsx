@@ -25,10 +25,11 @@ import {
 import {
   RechartsPayloadTooltip,
   RechartsBarCountryTooltip,
+  ProductTrendTooltip,
   rechartsTooltipFollowProps,
 } from "@/components/RechartsTooltip";
 import { getAvailableMonths } from "@/lib/supabase";
-import { useIncompleteMonthRange } from "@/lib/useIncompleteMonthRange";
+import { useIncompleteMonthRange, useOngoingYearInfo } from "@/lib/useIncompleteMonthRange";
 
 export default function ProductDetailPage() {
   return (
@@ -239,6 +240,8 @@ function ProductDetailContent() {
   const changeRate = (isComplete && prevVal) ? ((currentVal - prevVal) / prevVal * 100).toFixed(1) : null;
   const tradeLabel = tradeType === "수입" ? "수입" : "수출";
   const productMonthRange = useIncompleteMonthRange(year);
+  // 진행 중인 연도 정보 (2026년 1~N월 누적) — 금액 추이 툴팁/점선 처리용
+  const ongoingInfo = useOngoingYearInfo();
 
   // ─── 품목별 KPI: 수출·수입 양쪽 데이터로 KPIBar에 전달 (Supabase 비동기) ───
   const [prodKpi, setProdKpi] = useState({ expCur: 0, expPrev: 0, impCur: 0, impPrev: 0 });
@@ -405,16 +408,61 @@ function ProductDetailContent() {
                         <YAxis domain={[trendMin, trendMax]} tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v}억`} />
                         <Tooltip
                           content={(props) => (
-                            <RechartsPayloadTooltip {...props} title={name} incompleteLabels={resolvedIncompleteYears} incompleteMonthRanges={incompleteMonthRanges} />
+                            <ProductTrendTooltip
+                              {...props}
+                              title={name}
+                              trend={displayTrend}
+                              tradeLabel={tradeLabel}
+                              ongoingYear={ongoingInfo?.year ?? null}
+                              ongoingMonthRange={ongoingInfo?.monthRange ?? null}
+                            />
                           )}
                           {...tooltipFollowProps}
                         />
-                        <Line
-                          type="monotone" dataKey="value" stroke="#14B8A6" strokeWidth={2.5}
-                          dot={{ r: 4, fill: "#14B8A6" }} activeDot={{ r: 6 }} name={`${tradeLabel}액(억$)`}
-                          isAnimationActive={animActive}
-                          animationDuration={700} animationEasing="ease-out"
-                        />
+                        {(() => {
+                          // 진행 중 연도(예: 2026)가 trend에 포함되면 라인을 두 구간으로 분리:
+                          //  · 확정 구간(실선) — 2020~2025
+                          //  · 브릿지 구간(점선) — 마지막 확정점 → 진행 중 연도
+                          // 그리고 진행 중 연도의 dot은 외곽선만(fill=#fff) 렌더.
+                          const ongoingIdx = ongoingInfo
+                            ? displayTrend.findIndex((d) => d.year === ongoingInfo.year)
+                            : -1;
+                          const hasBridge = ongoingIdx > 0;
+                          const confirmedData = hasBridge ? displayTrend.slice(0, ongoingIdx) : displayTrend;
+                          const bridgeData = hasBridge ? displayTrend.slice(ongoingIdx - 1, ongoingIdx + 1) : [];
+                          return (
+                            <>
+                              <Line
+                                data={confirmedData}
+                                type="monotone" dataKey="value" stroke="#14B8A6" strokeWidth={2.5}
+                                dot={{ r: 4, fill: "#14B8A6" }} activeDot={{ r: 6 }} name={`${tradeLabel}액`}
+                                isAnimationActive={animActive}
+                                animationDuration={700} animationEasing="ease-out"
+                              />
+                              {hasBridge && (
+                                <Line
+                                  data={bridgeData}
+                                  type="monotone" dataKey="value" stroke="#14B8A6" strokeWidth={2.5}
+                                  strokeDasharray="5 4"
+                                  dot={(props: { cx?: number; cy?: number; payload?: { year?: string } }) => {
+                                    const { cx, cy, payload } = props;
+                                    if (cx == null || cy == null) return <g />;
+                                    if (payload?.year === ongoingInfo?.year) {
+                                      return (
+                                        <circle cx={cx} cy={cy} r={4} fill="#fff" stroke="#14B8A6" strokeWidth={2} />
+                                      );
+                                    }
+                                    return <g />;
+                                  }}
+                                  activeDot={{ r: 6, fill: "#14B8A6" }}
+                                  isAnimationActive={animActive}
+                                  animationDuration={700} animationEasing="ease-out"
+                                  legendType="none"
+                                />
+                              )}
+                            </>
+                          );
+                        })()}
                       </LineChart>
                     </ResponsiveContainer>
                   ) : (
