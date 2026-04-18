@@ -575,13 +575,15 @@ export async function buildChatContext(
   const kpi = (KPI_BY_YEAR as Record<string, {
     export: { value: string };
     import: { value: string };
-    balance: { value: string };
+    balance: { value: string; positive: boolean };
   }>)[year];
   if (kpi) {
     const overallCoverage = await getYearCoverageNote(year);
     const overallLine = overallCoverage ? `\n※ ${overallCoverage}` : "";
+    const balSign = kpi.balance.positive ? "" : "-";
+    const balLabel = kpi.balance.positive ? "흑자" : "적자";
     sections.push(
-      `[${year}년 전체 무역 요약]\n수출: ${kpi.export.value}억달러, 수입: ${kpi.import.value}억달러, 무역수지: ${kpi.balance.value}억달러${overallLine}`
+      `[${year}년 전체 무역 요약]\n수출: ${kpi.export.value}억달러, 수입: ${kpi.import.value}억달러, 무역수지: ${balSign}${kpi.balance.value}억달러 (${balLabel})${overallLine}`
     );
   }
 
@@ -634,10 +636,14 @@ export async function buildChatContext(
       }
       if (countryRank) {
         const fmt1 = (v: number) => (Math.round(v / 1e8 * 10) / 10).toFixed(1);
-        section += `수출순위: ${countryRank.rank_exp}위, 수출액: ${fmt1(countryRank.exp_amt)}억달러, 수입액: ${fmt1(countryRank.imp_amt)}억달러\n`;
+        const rank = tradeType === "수입" ? countryRank.rank_imp : countryRank.rank_exp;
+        const rankLabel = tradeType === "수입" ? "수입순위" : "수출순위";
+        section += `${rankLabel}: ${rank}위, 수출액: ${fmt1(countryRank.exp_amt)}억달러, 수입액: ${fmt1(countryRank.imp_amt)}억달러\n`;
       }
       if (kpiData) {
-        section += `KPI — 수출: ${kpiData.export}억달러, 수입: ${kpiData.import}억달러, 수지: ${kpiData.balance}억달러\n`;
+        const kpiBalSign = kpiData.positive ? "" : "-";
+        const kpiBalLabel = kpiData.positive ? "흑자" : "적자";
+        section += `KPI — 수출: ${kpiData.export}억달러, 수입: ${kpiData.import}억달러, 수지: ${kpiBalSign}${kpiData.balance}억달러(${kpiBalLabel})\n`;
       }
 
       // 시계열 뷰: 화면에 월별 차트가 보이므로 12개월 전체를 제공
@@ -649,7 +655,11 @@ export async function buildChatContext(
           );
           section += `\n[${country} 월별 시계열 (${year}년)]\n${lines.join("\n")}`;
         } else {
-          const recent = timeseries.slice(-3).map(m => `${m.month} 수출${m.export}억달러`).join(", ");
+          const recentLabel = tradeType === "수입" ? "수입" : "수출";
+          const recent = timeseries.slice(-3).map(m => {
+            const val = tradeType === "수입" ? m.import : m.export;
+            return `${m.month} ${recentLabel}${val}억달러`;
+          }).join(", ");
           section += `월별 요약(최근 3개월): ${recent}`;
         }
       }
