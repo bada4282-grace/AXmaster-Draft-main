@@ -280,7 +280,7 @@ export default function TreemapChart({
           to   { opacity: 1; transform: scale(1); }
         }
         .mti-icon-btn {
-          width: 30px; height: 30px;
+          height: 22px;
           display: flex; align-items: center; justify-content: center;
           border-radius: 6px;
           border: 2px solid transparent;
@@ -362,27 +362,30 @@ export default function TreemapChart({
       <div style={{ display: "flex", width: "100%", flexShrink: 0, paddingTop: 4 }}>
         {Object.entries(MTI_COLORS).map(([mti, color]) => {
           const n = Number(mti);
-          const isActive = zoomedMti === n || zoomedMti === null;
+          const isActive = zoomedMti === n;
           return (
             <button
               key={mti}
               data-tooltip={MTI_NAMES[n]}
               onClick={() => {
-                const next = zoomedMti === n ? null : n;
+                const next = isActive ? null : n;
                 setZoomedMti(next);
                 onCategoryChange?.(next);
                 startTreemapAnimation();
               }}
-              className="mti-icon-btn"
+              className={`mti-icon-btn${isActive ? " mti-icon-btn--active" : ""}`}
               style={{
                 "--mti-color": color as string,
                 flex: 1,
                 borderRadius: 0,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
                 background: isActive ? (color as string) : undefined,
                 borderColor: isActive ? (color as string) : "transparent",
               } as React.CSSProperties}
             >
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke={isActive ? "#fff" : (color as string)} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 {MTI_ICON_PATHS[n]}
               </svg>
               <span style={{
@@ -407,6 +410,9 @@ export default function TreemapChart({
             "--mti-color": "#94A3B8",
             flex: 1,
             borderRadius: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
             background: zoomedMti === null ? "#94A3B8" : undefined,
             borderColor: zoomedMti === null ? "#94A3B8" : "transparent",
           } as React.CSSProperties}
