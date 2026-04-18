@@ -48,7 +48,10 @@ function ProductDetailContent() {
 
   const initialYear = searchParams.get("year") ?? DEFAULT_YEAR;
   const [year, setYear] = useState(initialYear);
-  const [tradeType, setTradeType] = useState<TradeType>("수출");
+  const urlMode = searchParams.get("mode");
+  const [tradeType, setTradeType] = useState<TradeType>(
+    urlMode === "import" ? "수입" : "수출"
+  );
   const [country, setCountry] = useState("");
   const [subTab, setSubTab] = useState<"금액 추이" | "상위 국가">(
     searchParams.get("tab") === "countries" ? "상위 국가" : "금액 추이"
