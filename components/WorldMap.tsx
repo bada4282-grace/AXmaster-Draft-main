@@ -350,16 +350,33 @@ export default function WorldMap({
 
   // ─ 월별 Supabase 데이터 ─
   const [monthlyRanks, setMonthlyRanks] = useState<MonthlyCountryMapItem[] | null>(null);
+  // 전년 동기(같은 월) — 툴팁 YoY 계산용
+  const [prevMonthlyRanks, setPrevMonthlyRanks] = useState<MonthlyCountryMapItem[]>([]);
   useEffect(() => {
     let mounted = true;
-    if (!month) { return () => { mounted = false; }; }
+    if (!month) {
+      setPrevMonthlyRanks([]);
+      return () => { mounted = false; };
+    }
     onLoadingChange?.(true);
-    getMonthlyCountryMapData(year, month, tradeType)
-      .then((rows) => { if (mounted) setMonthlyRanks(rows); })
-      .catch(() => { if (mounted) setMonthlyRanks(null); })
+    const prevYear = String(parseInt(year, 10) - 1);
+    Promise.all([
+      getMonthlyCountryMapData(year, month, tradeType),
+      getMonthlyCountryMapData(prevYear, month, tradeType),
+    ])
+      .then(([curr, prev]) => {
+        if (!mounted) return;
+        setMonthlyRanks(curr);
+        setPrevMonthlyRanks(prev);
+      })
+      .catch(() => {
+        if (!mounted) return;
+        setMonthlyRanks(null);
+        setPrevMonthlyRanks([]);
+      })
       .finally(() => { if (mounted) onLoadingChange?.(false); });
     return () => { mounted = false; };
-  }, [year, month, tradeType]);
+  }, [year, month, tradeType, onLoadingChange]);
 
   // ─ 연간 집계: 정적 데이터 사용 (Supabase 호출 불필요) ─
 
@@ -931,23 +948,19 @@ export default function WorldMap({
             const translateX = flipX ? "calc(-100% - 12px)" : "12px";
             const translateY = flipY ? "calc(-100% - 12px)" : "12px";
 
-            // 전년 대비 노드 (연간 모드 전용 — 월별은 별도 처리가 필요해 생략)
-            let yoyNode: React.ReactNode = null;
-            if (isMonthly) {
-              yoyNode = null;
-            } else if (isOngoing) {
-              yoyNode = <span style={{ color: "#999" }}>- 비교 불가</span>;
-            } else if (!prev || prevAmt === 0) {
-              yoyNode = <span style={{ color: "#999" }}>- 데이터 없음</span>;
-            } else {
-              const diff = currAmtAnnual - prevAmt;
-              const pct = (diff / prevAmt) * 100;
+            // 전년 대비 / 전년 동기 대비 노드
+            // - 연간 모드: rawRankings(연간) vs prevRawRankings(전년 연간)
+            // - 월별 모드: monthlyRanks(현재 월) vs prevMonthlyRanks(전년 동월)
+            const yoyLabel = isMonthly ? "전년 동기 대비" : "전년 대비";
+            const renderYoyDiff = (currAmtRef: number, prevAmtRef: number): React.ReactNode => {
+              const diff = currAmtRef - prevAmtRef;
+              const pct = (diff / prevAmtRef) * 100;
               const up = diff >= 0;
               const noChange = Math.abs(pct) < 0.05;
               const color = noChange ? "#999" : up ? "#E02020" : "#185FA5";
               const arrow = noChange ? "–" : up ? "▲" : "▼";
               const sign = noChange ? "" : up ? "+" : "-";
-              yoyNode = (
+              return (
                 <span style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", color }}>
                   <span style={{ fontSize: 13, fontWeight: 500 }}>
                     {arrow} {sign}{Math.abs(pct).toFixed(1)}%
@@ -957,6 +970,26 @@ export default function WorldMap({
                   </span>
                 </span>
               );
+            };
+
+            let yoyNode: React.ReactNode = null;
+            if (isMonthly) {
+              // 월별: 전년 동기 vs 현재 — monthlyRanks에서 국가명으로 조인
+              const currMonthly = monthlyRanks?.find((r) => r.ctr_name === tooltip.country);
+              const prevMonthly = prevMonthlyRanks.find((r) => r.ctr_name === tooltip.country);
+              const cAmt = currMonthly ? currMonthly.total_amt / 1e8 : 0;
+              const pAmt = prevMonthly ? prevMonthly.total_amt / 1e8 : 0;
+              if (pAmt === 0) {
+                yoyNode = <span style={{ color: "#999" }}>- 데이터 없음</span>;
+              } else {
+                yoyNode = renderYoyDiff(cAmt, pAmt);
+              }
+            } else if (isOngoing) {
+              yoyNode = <span style={{ color: "#999" }}>- 비교 불가</span>;
+            } else if (!prev || prevAmt === 0) {
+              yoyNode = <span style={{ color: "#999" }}>- 데이터 없음</span>;
+            } else {
+              yoyNode = renderYoyDiff(currAmtAnnual, prevAmt);
             }
 
             const Row = ({ label, value }: { label: string; value: React.ReactNode }) => (
@@ -1012,12 +1045,8 @@ export default function WorldMap({
                     <Row label={`${tradeLabel}액`} value={currAmtDisplay} />
                     {!isMonthly && <Row label="비중" value={shareLabel} />}
                     <Row label="순위" value={`${rank}위 / ${totalCountries}`} />
-                    {!isMonthly && (
-                      <>
-                        <Divider />
-                        <Row label="전년 대비" value={yoyNode} />
-                      </>
-                    )}
+                    <Divider />
+                    <Row label={yoyLabel} value={yoyNode} />
                     {productName && (
                       <>
                         <Divider />
