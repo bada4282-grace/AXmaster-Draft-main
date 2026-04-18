@@ -243,11 +243,16 @@ export default function KPIBar({
 
   // 증감율 상태 판별:
   // loading: 불완전 연도 + 월 미선택 + 자동탐지 미완료 (비동기 로딩 중)
+  // annualIncomplete: 집계가 1~12월 전체가 아닌 연도의 "연간 조회" — 전년 대비 비교가 무의미
+  //   (예: 2026년은 1~2월만 집계됨. 2025년 연간과 비교하면 -80% 같은 거짓 신호가 나옴)
   // hidden: 전년도 데이터 자체가 없는 경우 (noPrevYear)
   const isChangeLoading = !effectiveMonth && isIncompleteYear && !incMom && !hasCustom;
+  const isAnnualIncomplete = !effectiveMonth && isIncompleteYear;
   const hideExportChange = isChangeLoading
+    || isAnnualIncomplete
     || (!useMom && !useIncMom && noPrevYear);
   const hideImportChange = isChangeLoading
+    || isAnnualIncomplete
     || (!useMom && !useIncMom && noPrevYear);
 
   // 상승: 빨간색, 하락: 파란색, 변화 없음(0.0%): 회색 (한국 금융 관례)
@@ -264,16 +269,26 @@ export default function KPIBar({
     </div>
   );
 
+  // 공통 "데이터 불충분" 표시 — 다른 컴포넌트(RechartsTooltip/country page)와 문구 통일
+  const insufficientIndicator = (
+    <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 2, fontSize: 12, color: "#999" }}>
+      <span>-</span>
+      <span style={{ fontSize: 10, opacity: 0.7 }}>⚠ 데이터 불충분</span>
+    </div>
+  );
+
   const exportCard = (
     <div className="kpi-item">
       <div className="kpi-label">수출</div>
       <div className="kpi-value">$ {ev} 억</div>
       {hideExportChange ? (
-        isChangeLoading ? loadingIndicator : (
-          <div style={{ fontSize: 12, color: "#999", marginTop: 2 }}>
-            - <span style={{ fontSize: 10, opacity: 0.55 }}>{periodLabel}</span>
-          </div>
-        )
+        isChangeLoading ? loadingIndicator
+          : isAnnualIncomplete ? insufficientIndicator
+          : (
+            <div style={{ fontSize: 12, color: "#999", marginTop: 2 }}>
+              - <span style={{ fontSize: 10, opacity: 0.55 }}>{periodLabel}</span>
+            </div>
+          )
       ) : (
         <div className="kpi-change-up" style={{ color: expColor }}>
           <span className="kpi-change-icon">{ec === 0 ? "-" : eu ? "▲" : "▼"}</span>
@@ -291,11 +306,13 @@ export default function KPIBar({
       <div className="kpi-label">수입</div>
       <div className="kpi-value">$ {iv} 억</div>
       {hideImportChange ? (
-        isChangeLoading ? loadingIndicator : (
-          <div style={{ fontSize: 12, color: "#999", marginTop: 2 }}>
-            - <span style={{ fontSize: 10, opacity: 0.55 }}>{periodLabel}</span>
-          </div>
-        )
+        isChangeLoading ? loadingIndicator
+          : isAnnualIncomplete ? insufficientIndicator
+          : (
+            <div style={{ fontSize: 12, color: "#999", marginTop: 2 }}>
+              - <span style={{ fontSize: 10, opacity: 0.55 }}>{periodLabel}</span>
+            </div>
+          )
       ) : (
         <div className="kpi-change-up" style={{ color: impColor }}>
           <span className="kpi-change-icon">{ic === 0 ? "-" : iu ? "▲" : "▼"}</span>
