@@ -22,6 +22,17 @@ interface ExtractedKeywords {
   year: string;
 }
 
+// 사용자가 현재 보고 있는 대시보드 페이지의 상태
+// (URL에서 추출 — 국가 페이지, 품목 페이지 등)
+export interface PageContext {
+  country?: string;
+  productName?: string;
+  productCode?: string;
+  year?: string;
+  tradeType?: "수출" | "수입";
+  view?: "timeseries" | "products" | "countries" | "trend";
+}
+
 // MTI_LOOKUP에서 품목명 → 코드 역조회 맵 구성 (경량, 전체 품목 포함)
 function buildProductLookup(): Map<string, string> {
   const lookup = new Map<string, string>();
@@ -211,8 +222,11 @@ export async function resolveRouteButtons(question: string): Promise<RouteButton
 }
 
 // 질문에서 수출/수입 방향 감지
-function detectTradeType(question: string): "수출" | "수입" {
+// pageContext가 있으면 질문에서 명시되지 않은 경우 폴백으로 사용
+function detectTradeType(question: string, pageContext?: PageContext): "수출" | "수입" {
   if (question.includes("수입")) return "수입";
+  if (question.includes("수출")) return "수출";
+  if (pageContext?.tradeType) return pageContext.tradeType;
   return "수출";
 }
 
@@ -246,8 +260,17 @@ function isAnalysisQuery(question: string): boolean {
   return keywords.some(kw => question.includes(kw));
 }
 
+// 거시경제 지표를 포괄적으로 지칭하는 일반 표현
+const MACRO_GENERAL_KEYWORDS = [
+  "거시경제", "거시 경제", "거시지표", "거시 지표",
+  "경제지표", "경제 지표", "경기지표", "경기 지표",
+];
+
 // 거시경제 지표 언급 감지
 function detectMacroKeywords(question: string): string[] {
+  if (MACRO_GENERAL_KEYWORDS.some(kw => question.includes(kw))) {
+    return ["__GENERAL__"];
+  }
   const MACRO_KEYWORD_MAP: Record<string, string[]> = {
     KR_BASE_RATE: ["금리", "기준금리", "한국은행", "통화정책"],
     KR_BSI_MFG: ["BSI", "bsi", "기업경기", "제조업 경기", "경기실사"],
@@ -293,12 +316,19 @@ function isProductOverviewQuery(question: string): boolean {
 }
 
 // 질문에서 국가명, 품목명, 연도 추출 (부분 일치)
-export async function extractKeywords(question: string): Promise<ExtractedKeywords> {
+// pageContext가 있으면 질문에서 누락된 필드의 폴백으로 사용
+export async function extractKeywords(
+  question: string,
+  pageContext?: PageContext,
+): Promise<ExtractedKeywords> {
   const yearMatch = question.match(/\b(20\d{2})\b/);
-  const year = yearMatch ? yearMatch[1] : DEFAULT_YEAR;
+  const year = yearMatch ? yearMatch[1] : (pageContext?.year ?? DEFAULT_YEAR);
 
   const countryList = await getCountryList();
   const countries = countryList.filter(name => question.includes(name));
+  if (countries.length === 0 && pageContext?.country) {
+    countries.push(pageContext.country);
+  }
 
   const productCodes: string[] = [];
   const productNames: string[] = [];
@@ -333,6 +363,12 @@ export async function extractKeywords(question: string): Promise<ExtractedKeywor
         break; // 가장 적합한 1개만
       }
     }
+  }
+
+  // 페이지 컨텍스트 폴백: 품목 상세 페이지에서 질문이 품목명을 생략한 경우
+  if (productCodes.length === 0 && pageContext?.productCode && pageContext?.productName) {
+    productCodes.push(pageContext.productCode);
+    productNames.push(pageContext.productName);
   }
 
   return { countries, productCodes, productNames, year };
@@ -389,10 +425,28 @@ async function buildMacroContext(question: string, year: string): Promise<string
 }
 
 // 추출된 키워드 기반으로 무역 데이터 조회 후 컨텍스트 문자열 조립
-export async function buildChatContext(question: string): Promise<string> {
-  const { countries, productCodes, productNames, year } = await extractKeywords(question);
-  const tradeType = detectTradeType(question);
+// pageContext가 있으면 사용자가 현재 보고 있는 화면 상태를 기준으로 답변
+export async function buildChatContext(
+  question: string,
+  pageContext?: PageContext,
+): Promise<string> {
+  const { countries, productCodes, productNames, year } = await extractKeywords(question, pageContext);
+  const tradeType = detectTradeType(question, pageContext);
   const sections: string[] = [];
+
+  // 현재 보고 있는 화면 상태 — LLM이 "화면에 나온 내용" 질문에 정확히 답하도록
+  if (pageContext && (pageContext.country || pageContext.productName)) {
+    const parts: string[] = [];
+    if (pageContext.country) parts.push(`국가: ${pageContext.country}`);
+    if (pageContext.productName) parts.push(`품목: ${pageContext.productName}`);
+    parts.push(`연도: ${year}년`);
+    parts.push(`방향: ${tradeType}`);
+    if (pageContext.view === "timeseries") parts.push("활성 뷰: 시계열 추이(월별)");
+    else if (pageContext.view === "products") parts.push("활성 뷰: 품목별 트리맵");
+    else if (pageContext.view === "countries") parts.push("활성 뷰: 상위 국가");
+    else if (pageContext.view === "trend") parts.push("활성 뷰: 금액 추이");
+    sections.push(`[현재 화면 상태]\n${parts.join(" | ")}\n사용자가 "화면", "여기", "지금 보고 있는" 같은 표현을 쓰면 위 상태를 기준으로 답변하세요.`);
+  }
 
   // 전체 KPI 요약 (항상 포함)
   const kpi = (KPI_BY_YEAR as Record<string, {
@@ -555,10 +609,13 @@ export async function buildChatContext(question: string): Promise<string> {
     }
   }
 
-  // 거시경제 지표 컨텍스트
-  const macroCtx = await buildMacroContext(question, year);
-  if (macroCtx) {
-    sections.push(macroCtx);
+  // 거시경제 지표 컨텍스트 — 질문에 거시 키워드가 있을 때만 포함
+  // (사용자가 명시적으로 요청하지 않은 경우 LLM 답변에 거시 지표가 섞이지 않도록)
+  if (detectMacroKeywords(question).length > 0) {
+    const macroCtx = await buildMacroContext(question, year);
+    if (macroCtx) {
+      sections.push(macroCtx);
+    }
   }
 
   return sections.join("\n\n");

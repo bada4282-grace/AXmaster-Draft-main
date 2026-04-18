@@ -1,12 +1,12 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
 import { supabase } from "@/lib/supabase";
 import { saveChatLog, getChatLogs } from "@/lib/chat";
-import type { RouteButton } from "@/lib/chatContext";
+import type { PageContext, RouteButton } from "@/lib/chatContext";
 import type { User } from "@supabase/supabase-js";
 import { DEFAULT_YEAR } from "@/lib/data";
 import { getCountryRankingAsync, getTreemapDataAsync } from "@/lib/dataSupabase";
@@ -137,6 +137,38 @@ async function fetchUserFaq(logs: { role: string; content: string }[]): Promise<
   }
 }
 
+function resolvePageContext(
+  pathname: string | null,
+  searchParams: URLSearchParams | null,
+): PageContext | undefined {
+  if (!pathname) return undefined;
+
+  const year = searchParams?.get("year") ?? undefined;
+  const mode = searchParams?.get("mode");
+  const tradeType: PageContext["tradeType"] =
+    mode === "import" ? "수입" : mode === "export" ? "수출" : undefined;
+  const tabParam = searchParams?.get("tab");
+
+  const countryMatch = pathname.match(/^\/country\/([^/?#]+)/);
+  if (countryMatch) {
+    const country = decodeURIComponent(countryMatch[1]);
+    const view: PageContext["view"] =
+      tabParam === "timeseries" ? "timeseries" : "products";
+    return { country, year, tradeType: tradeType ?? "수출", view };
+  }
+
+  const productMatch = pathname.match(/^\/product\/([^/?#]+)/);
+  if (productMatch) {
+    const productName = decodeURIComponent(productMatch[1]);
+    const productCode = searchParams?.get("code") ?? undefined;
+    const view: PageContext["view"] =
+      tabParam === "countries" ? "countries" : "trend";
+    return { productName, productCode, year, tradeType, view };
+  }
+
+  return year || tradeType ? { year, tradeType } : undefined;
+}
+
 export default function ChatBot({
   open,
   onToggle,
@@ -144,6 +176,8 @@ export default function ChatBot({
   showInternalToggle = true,
 }: ChatBotProps) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [user, setUser] = useState<User | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -327,10 +361,11 @@ export default function ChatBot({
     let saveResponse = false;
 
     try {
+      const pageContext = resolvePageContext(pathname, searchParams);
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: userMsg, history }),
+        body: JSON.stringify({ message: userMsg, history, pageContext }),
       });
 
       if (!res.body) throw new Error("No response body");
