@@ -31,9 +31,14 @@ function toProductNode(row: DbRow, amtCol: string): ProductNode | null {
   const value = fmt1(Number(row[amtCol]) || 0);
   if (value <= 0) return null;
   const mti = Number(row.mti) || 0;
+  const code = String(row.code);
+  // Supabase agg_treemap.name은 시드 스크립트의 CSV 콤마 파싱 버그로
+  // "불꽃점화식 1,500시시 이하"가 "불꽃점화식 1"로 잘려 저장된 케이스가 있음.
+  // MTI_LOOKUP(staticData.ts)에 올바른 이름이 있으면 그 값을 우선 사용한다.
+  const canonical = (MTI_LOOKUP as Record<string, string>)[code];
   return {
-    code: row.code,
-    name: row.name,
+    code,
+    name: canonical ?? row.name,
     value,
     mti,
     color: (MTI_COLORS as Record<number, string>)[mti] ?? "#9CA3AF",
