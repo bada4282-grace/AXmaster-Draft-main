@@ -187,6 +187,7 @@ function resolvePageContext(
   if (!pathname) return undefined;
 
   const year = searchParams?.get("year") ?? undefined;
+  const month = searchParams?.get("month") ?? undefined;
   const mode = searchParams?.get("mode");
   const tradeType: PageContext["tradeType"] =
     mode === "import" ? "수입" : mode === "export" ? "수출" : undefined;
@@ -197,7 +198,7 @@ function resolvePageContext(
     const country = decodeURIComponent(countryMatch[1]);
     const view: PageContext["view"] =
       tabParam === "timeseries" ? "timeseries" : "products";
-    return { country, year, tradeType: tradeType ?? "수출", view };
+    return { country, year, month, tradeType: tradeType ?? "수출", view };
   }
 
   const productMatch = pathname.match(/^\/product\/([^/?#]+)/);
@@ -206,7 +207,20 @@ function resolvePageContext(
     const productCode = searchParams?.get("code") ?? undefined;
     const view: PageContext["view"] =
       tabParam === "countries" ? "countries" : "trend";
-    return { productName, productCode, year, tradeType, view };
+    return { productName, productCode, year, month, tradeType, view };
+  }
+
+  // 홈 페이지 (`/`) — 필터(year/month/mode/country)가 URL에 동기화되어 있으므로 파싱
+  if (pathname === "/") {
+    const country = searchParams?.get("country")
+      ? decodeURIComponent(searchParams.get("country")!)
+      : undefined;
+    // 홈의 대시보드 뷰 타입 — 국가별 탭은 world map, 품목별 탭은 treemap
+    const view: PageContext["view"] =
+      tabParam === "product" ? "products" : "countries";
+    if (country || year || month || tradeType) {
+      return { country, year, month, tradeType: tradeType ?? "수출", view };
+    }
   }
 
   return year || tradeType ? { year, tradeType } : undefined;
