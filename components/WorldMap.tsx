@@ -11,7 +11,13 @@ import { feature as topoFeature } from "topojson-client";
 
 import { DEFAULT_YEAR, type TradeType, type CountryData } from "@/lib/data";
 import { KO_NAME_TO_ISO } from "@/lib/countryIso";
-import { getCountryRankingAsync, getTreemapDataAsync } from "@/lib/dataSupabase";
+import {
+  getCountryRankingAsync,
+  getCountryTreemapDataAsync,
+  getTreemapDataAsync,
+  type CountryRanking,
+} from "@/lib/dataSupabase";
+import { useOngoingYearInfo } from "@/lib/useIncompleteMonthRange";
 import type { ProductNode } from "@/lib/data";
 
 // 수출: 블루 그라데이션 / 수입: 코럴 그라데이션
@@ -242,6 +248,52 @@ export default function WorldMap({
 
   // FilterBar에서 선택한 품목을 URL에서 읽어 지도 필터로 적용
   const selectedProduct = useSearchParams().get("product") ?? "";
+
+  // ─ 진행 중 연도 정보 (부분 데이터 배지 + 툴팁 "ⓘ 누적" 라벨) ─
+  const ongoingInfo = useOngoingYearInfo();
+
+  // ─ Raw rankings (현재 + 전년) — 비중·순위·전년 대비 계산용 ─
+  const [rawRankings, setRawRankings] = useState<CountryRanking[]>([]);
+  const [prevRawRankings, setPrevRawRankings] = useState<CountryRanking[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    const prevYearStr = String(parseInt(year, 10) - 1);
+    Promise.all([
+      getCountryRankingAsync(year, tradeType),
+      getCountryRankingAsync(prevYearStr, tradeType),
+    ]).then(([curr, prev]) => {
+      if (cancelled) return;
+      setRawRankings(curr);
+      setPrevRawRankings(prev);
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [year, tradeType]);
+
+  // ─ 국가별 1위 품목 on-demand 캐시 ─
+  // 호버 시점에 fetch, 5분 TTL은 getCountryTreemapDataAsync 내부에 이미 있음
+  const [topProductMap, setTopProductMap] = useState<Map<string, { name: string; value: number } | null>>(new Map());
+  const fetchingTopProductRef = useRef<Set<string>>(new Set());
+  const topProductKey = useCallback(
+    (country: string) => `${country}|${year}|${tradeType}`,
+    [year, tradeType],
+  );
+  const ensureTopProduct = useCallback((country: string) => {
+    const key = topProductKey(country);
+    if (topProductMap.has(key) || fetchingTopProductRef.current.has(key)) return;
+    fetchingTopProductRef.current.add(key);
+    getCountryTreemapDataAsync(year, country, tradeType)
+      .then((items) => {
+        const sorted = [...items].sort((a, b) => b.value - a.value);
+        const top = sorted[0];
+        setTopProductMap((prev) => {
+          const next = new Map(prev);
+          next.set(key, top ? { name: top.name, value: top.value } : null);
+          return next;
+        });
+      })
+      .catch(() => {})
+      .finally(() => { fetchingTopProductRef.current.delete(key); });
+  }, [topProductMap, topProductKey, year, tradeType]);
 
   // ─ 국가 데이터 (Supabase에서 비동기 로드) ─
   const [countryData, setCountryData] = useState<CountryData[]>([]);
@@ -539,7 +591,11 @@ export default function WorldMap({
         : [],
       isTop30: !!p.is_top30,
     });
-  }, [clearHover, coloredGeoJSON]);
+    // 수출 데이터 있는 국가면 1위 품목 사전 로드 (캐시됨)
+    if (countryName && p.rank !== undefined && Number(p.rank) < 999) {
+      ensureTopProduct(countryName);
+    }
+  }, [clearHover, coloredGeoJSON, ensureTopProduct]);
 
   const onMouseLeave = useCallback(() => clearHover(), [clearHover]);
 
@@ -614,6 +670,27 @@ export default function WorldMap({
             setZoomPct(Math.round((Math.pow(2, z) / Math.pow(2, BASE_ZOOM)) * 100));
           }}
         >
+          {/* 부분 데이터 배지 — 우상단 (진행 중 연도에만 표시) */}
+          {ongoingInfo && ongoingInfo.year === year && (
+            <div style={{
+              position: "absolute",
+              top: 12,
+              right: 120,
+              zIndex: 10,
+              background: "#fff",
+              border: "0.5px solid #e5e7eb",
+              borderRadius: 6,
+              padding: "4px 8px",
+              fontSize: 11,
+              color: "#64748b",
+              boxShadow: "0 2px 6px rgba(0,0,0,0.06)",
+              pointerEvents: "none",
+              whiteSpace: "nowrap",
+            }}>
+              ⓘ {year}년 {ongoingInfo.monthRange} 누적
+            </div>
+          )}
+
           {/* 순위 구간 필터 — 우상단 */}
           <div style={{
             position:        "absolute",
@@ -827,55 +904,170 @@ export default function WorldMap({
         </div>
       </div>
 
-      {/* 툴팁 */}
+      {/* 툴팁 — 금액 추이·상위 국가 툴팁과 일관된 양식 */}
       {tooltip &&
         typeof document !== "undefined" &&
         createPortal(
-          <div
-            className="tooltip-shell tooltip-shell--fixed"
-            style={{
-              left:      tooltip.x,
-              top:       tooltip.y,
-              transform: "translate(-50%, calc(-100% - 12px))",
-            }}
-          >
-            <p className="tooltip-shell-title">{tooltip.country}</p>
-            {tooltip.rank ? (
-              <>
-                <p className="tooltip-shell-line">
-                  {tradeType === "수입" ? "수입" : "수출"} 순위:{" "}
-                  <strong>{tooltip.rank}위</strong>
-                </p>
-                <p className="tooltip-shell-line">
-                  {tradeType === "수입" ? "수입액" : "수출액"}:{" "}
-                  <strong>${tooltip.exportVal}억</strong>
-                </p>
-                {tooltip.isTop30 && tooltip.topProducts && tooltip.topProducts.length > 0 && (
+          (() => {
+            const rank = tooltip.rank;
+            const hasData = rank !== undefined && rank > 0;
+            // 월별 조회 모드에서는 rawRankings(연간)과 데이터 스페이스가 다르므로
+            // 비중·전년 대비는 생략하고 feature가 넣어준 mode-aware 수치만 표시.
+            const isMonthly = !!month;
+            const curr = !isMonthly && hasData
+              ? rawRankings.find((r) => r.country === tooltip.country)
+              : null;
+            const prev = !isMonthly && hasData
+              ? prevRawRankings.find((r) => r.country === tooltip.country)
+              : null;
+            const isOngoing = !isMonthly && ongoingInfo?.year === year;
+            const isImport = tradeType === "수입";
+            const tradeLabel = isImport ? "수입" : "수출";
+            const fmt1 = (v: number) => {
+              const rounded = Math.round(Math.abs(v) * 10) / 10;
+              const withComma = rounded.toLocaleString("en-US", {
+                minimumFractionDigits: 1,
+                maximumFractionDigits: 1,
+              });
+              const sign = v < 0 ? "-" : "";
+              return `${sign}$${withComma}억`;
+            };
+            // 현재 값
+            //  · 연간 모드: rawRankings의 정확한 억달러 수치
+            //  · 월별 모드: feature의 mode-aware 문자열(formatted) 사용
+            const currAmtAnnual = curr ? (isImport ? curr.imp_amt : curr.exp_amt) / 1e8 : 0;
+            const currAmtDisplay = isMonthly
+              ? (tooltip.exportVal ? `$${tooltip.exportVal}억` : "-")
+              : fmt1(currAmtAnnual);
+            const prevAmt = prev ? (isImport ? prev.imp_amt : prev.exp_amt) / 1e8 : 0;
+            const share = curr ? (isImport ? curr.share_imp : curr.share_exp) : 0;
+            const totalCountries = rawRankings.length;
+            const topProd = topProductMap.get(topProductKey(tooltip.country)) ?? null;
+
+            // 위치: 커서 오른쪽·아래쪽 12px 오프셋 (화면 경계에서 반전)
+            const vw = typeof window !== "undefined" ? window.innerWidth : 1920;
+            const vh = typeof window !== "undefined" ? window.innerHeight : 1080;
+            const flipX = tooltip.x > vw * 0.8;
+            const flipY = tooltip.y > vh * 0.8;
+            const translateX = flipX ? "calc(-100% - 12px)" : "12px";
+            const translateY = flipY ? "calc(-100% - 12px)" : "12px";
+
+            // 전년 대비 노드 (연간 모드 전용 — 월별은 별도 처리가 필요해 생략)
+            let yoyNode: React.ReactNode = null;
+            if (isMonthly) {
+              yoyNode = null;
+            } else if (isOngoing) {
+              yoyNode = <span style={{ color: "#999" }}>- 비교 불가</span>;
+            } else if (!prev || prevAmt === 0) {
+              yoyNode = <span style={{ color: "#999" }}>- 데이터 없음</span>;
+            } else {
+              const diff = currAmtAnnual - prevAmt;
+              const pct = (diff / prevAmt) * 100;
+              const up = diff >= 0;
+              const noChange = Math.abs(pct) < 0.05;
+              const color = noChange ? "#999" : up ? "#E02020" : "#185FA5";
+              const arrow = noChange ? "–" : up ? "▲" : "▼";
+              const sign = noChange ? "" : up ? "+" : "-";
+              yoyNode = (
+                <span style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", color }}>
+                  <span style={{ fontSize: 13, fontWeight: 500 }}>
+                    {arrow} {sign}{Math.abs(pct).toFixed(1)}%
+                  </span>
+                  <span style={{ fontSize: 11 }}>
+                    ({sign}{fmt1(Math.abs(diff))})
+                  </span>
+                </span>
+              );
+            }
+
+            const Row = ({ label, value }: { label: string; value: React.ReactNode }) => (
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, marginTop: 6 }}>
+                <span style={{ fontSize: 12, color: "#64748b" }}>{label}</span>
+                <span style={{ fontSize: 13, fontWeight: 500, color: "#1f2937" }}>{value}</span>
+              </div>
+            );
+            const Divider = () => <div style={{ height: 0.5, background: "#e5e7eb", marginTop: 8 }} />;
+
+            // 품목명 10자 ellipsis
+            const productName = topProd
+              ? (topProd.name.length > 10 ? `${topProd.name.slice(0, 10)}…` : topProd.name)
+              : null;
+            const shareLabel = share < 0.1 && share > 0 ? "<0.1%" : `${share.toFixed(1)}%`;
+
+            return (
+              <div
+                style={{
+                  position: "fixed",
+                  left: tooltip.x,
+                  top: tooltip.y,
+                  transform: `translate(${translateX}, ${translateY})`,
+                  background: "#fff",
+                  border: "0.5px solid #e5e7eb",
+                  borderRadius: 8,
+                  padding: "12px 14px",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+                  minWidth: 220,
+                  maxWidth: 260,
+                  zIndex: 1000,
+                  pointerEvents: "none",
+                }}
+              >
+                <div style={{ fontSize: 14, fontWeight: 500, color: "#1f2937" }}>{tooltip.country}</div>
+                <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>
+                  {year}년{isMonthly ? ` ${parseInt(month, 10)}월` : ""}
+                </div>
+                {isOngoing && ongoingInfo?.monthRange && (
+                  <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>
+                    ⓘ {year}년 {ongoingInfo.monthRange} 누적
+                  </div>
+                )}
+
+                {!hasData ? (
                   <>
-                    <p
-                      className="tooltip-shell-line"
-                      style={{ marginTop: 10, fontWeight: 600, color: "#64748b" }}
-                    >
-                      상위 품목:
-                    </p>
-                    <ul className="tooltip-shell-list">
-                      {tooltip.topProducts.map((p) => (
-                        <li key={p}>• {p}</li>
-                      ))}
-                    </ul>
+                    <Divider />
+                    <Row label={`${tradeLabel}액`} value={<span style={{ color: "#999" }}>- 데이터 없음</span>} />
+                  </>
+                ) : (
+                  <>
+                    <Divider />
+                    <Row label={`${tradeLabel}액`} value={currAmtDisplay} />
+                    {!isMonthly && <Row label="비중" value={shareLabel} />}
+                    <Row label="순위" value={`${rank}위 / ${totalCountries}`} />
+                    {!isMonthly && (
+                      <>
+                        <Divider />
+                        <Row label="전년 대비" value={yoyNode} />
+                      </>
+                    )}
+                    {productName && (
+                      <>
+                        <Divider />
+                        <div style={{ fontSize: 12, color: "#64748b", marginTop: 6 }}>
+                          주요 {isImport ? "수입 " : ""}품목
+                        </div>
+                        <div style={{ display: "flex", justifyContent: "space-between", gap: 8, marginTop: 4, fontSize: 12 }}>
+                          <span style={{ color: "#1f2937" }}>1위  {productName}</span>
+                          <span style={{ color: "#1f2937", fontWeight: 500 }}>{fmt1(topProd!.value)}</span>
+                        </div>
+                      </>
+                    )}
+                    {isOngoing && (
+                      <>
+                        <Divider />
+                        <div style={{ fontSize: 11, color: "#64748b", marginTop: 6 }}>
+                          ⓘ 연말 확정 전 부분 데이터
+                        </div>
+                      </>
+                    )}
+                    <Divider />
+                    <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 6, textAlign: "right" }}>
+                      클릭하여 상세 보기 →
+                    </div>
                   </>
                 )}
-                <p className="tooltip-shell-hint">클릭 → 상세페이지</p>
-              </>
-            ) : (
-              <p
-                className="tooltip-shell-sub"
-                style={{ margin: 0, color: "#94a3b8" }}
-              >
-                교역 데이터 없음
-              </p>
-            )}
-          </div>,
+              </div>
+            );
+          })(),
           document.body
         )}
     </div>
