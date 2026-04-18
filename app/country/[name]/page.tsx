@@ -23,6 +23,7 @@ import {
 } from "recharts";
 import { TimeseriesTooltip, rechartsTooltipFollowProps } from "@/components/RechartsTooltip";
 import { KO_NAME_TO_ISO } from "@/lib/countryIso";
+import { useIncompleteMonthRange } from "@/lib/useIncompleteMonthRange";
 
 const TreemapChart = dynamic(() => import("@/components/TreemapChart"), { ssr: false });
 import MacroSection from "@/components/MacroSection";
@@ -74,10 +75,14 @@ function CountryDetailContent() {
   const [kpi, setKpi] = useState<CountryKPIAsync | undefined>(undefined);
   const [prevKpi, setPrevKpi] = useState<CountryKPIAsync | undefined>(undefined);
   const [timeseries, setTimeseries] = useState<MonthlyData[]>([]);
+  /** 전년 12월 — 1월 지점의 전월 대비 계산용 */
+  const [prevYearDecember, setPrevYearDecember] = useState<MonthlyData | null>(null);
   /** 총 교역국 수 (분모) */
   const [totalCountries, setTotalCountries] = useState(0);
   /** 전년 동기 순위 (null = 전년도에 교역 없음/데이터 없음) */
   const [prevRank, setPrevRank] = useState<number | null>(null);
+  /** 부분 집계 월 범위 ("1~2월" 형식), 완전 집계면 null */
+  const monthRangeForYear = useIncompleteMonthRange(year);
 
   useEffect(() => {
     let cancelled = false;
@@ -113,8 +118,14 @@ function CountryDetailContent() {
     getCountryKpiAsync(year, name).then(d => { if (!cancelled) setKpi(d); }).catch(() => {});
     getCountryKpiAsync(prevYearStr, name).then(d => { if (!cancelled) setPrevKpi(d); }).catch(() => {});
 
-    // 시계열
+    // 시계열 (현재 연도)
     getCountryTimeseriesAsync(year, name).then(d => { if (!cancelled) setTimeseries(d); }).catch(() => {});
+
+    // 전년 시계열 — 1월 데이터 포인트의 전월(전년 12월) 매칭용
+    getCountryTimeseriesAsync(prevYearStr, name).then(d => {
+      if (cancelled) return;
+      setPrevYearDecember(d.find(m => m.month === "12월") ?? null);
+    }).catch(() => { if (!cancelled) setPrevYearDecember(null); });
 
     return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -362,14 +373,10 @@ function CountryDetailContent() {
                   >{tab}</button>
                 ))}
                 <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6 }}>
-                  {subTab === "시계열 추이" && (
-                    <>
-                      {year === "2026" && (
-                        <span style={{ fontSize: 12, color: "#f59e0b", fontWeight: 600 }}>
-                          ⚠ 데이터 불충분
-                        </span>
-                      )}
-                    </>
+                  {subTab === "시계열 추이" && monthRangeForYear && (
+                    <span style={{ fontSize: 12, color: "#f59e0b", fontWeight: 600 }}>
+                      ⓘ 부분 데이터({monthRangeForYear})
+                    </span>
                   )}
                   {subTab === "품목별" && (
                     <select
@@ -410,6 +417,7 @@ function CountryDetailContent() {
                             {...props}
                             title={country.name}
                             allData={timeseries}
+                            prevYearLastMonth={prevYearDecember}
                             rows={[
                               { key: "export", name: "수출", color: "#185FA5" },
                               { key: "import", name: "수입", color: "#F97316" },

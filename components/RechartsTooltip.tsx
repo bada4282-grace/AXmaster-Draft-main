@@ -39,7 +39,7 @@ export function RechartsPayloadTooltip({
       {sub && <p className="tooltip-shell-sub">{sub}</p>}
       {isIncomplete && monthRange && (
         <p style={{ margin: "4px 0", padding: "2px 6px", background: "#FEF3C7", color: "#92400E", fontSize: 12, fontWeight: 600, borderRadius: 3, textAlign: "center" }}>
-          ⚠ 데이터 불충분
+          ⓘ 부분 데이터({monthRange})
         </p>
       )}
       {payload.map((p, i) => (
@@ -89,6 +89,7 @@ export function TimeseriesTooltip({
   title,
   allData,
   rows,
+  prevYearLastMonth,
 }: {
   active?: boolean;
   payload?: TooltipPayload;
@@ -96,13 +97,18 @@ export function TimeseriesTooltip({
   title: string;
   allData: TimeseriesPoint[];
   rows: TimeseriesRowSpec[];
+  /** 1월 데이터의 "전월" 대응 값 — 전년도 12월 시계열 포인트 (없으면 undefined) */
+  prevYearLastMonth?: TimeseriesPoint | null;
 }) {
   if (!active || !payload?.length) return null;
   const monthLabel = label !== undefined && label !== null ? String(label) : "";
   const current = payload[0]?.payload as TimeseriesPoint | undefined;
   if (!current) return null;
   const idx = allData.findIndex((d) => d.month === monthLabel);
-  const prev = idx > 0 ? allData[idx - 1] : null;
+  // 1월의 전월은 당해 데이터 배열 밖(=전년 12월). 전년 12월 데이터가 주어지면 사용.
+  const prev = idx > 0
+    ? allData[idx - 1]
+    : (idx === 0 && prevYearLastMonth ? prevYearLastMonth : null);
 
   const fmtAmt = (v: number) => {
     const sign = v < 0 ? "-" : "";

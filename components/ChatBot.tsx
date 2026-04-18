@@ -594,7 +594,7 @@ export default function ChatBot({
         const btnRes = await fetch("/api/route-buttons", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ question: userMsg, answer: fullResponse }),
+          body: JSON.stringify({ question: userMsg, answer: fullResponse, pageContext }),
         });
         const { buttons } = await btnRes.json();
         if (Array.isArray(buttons) && buttons.length > 0) {
