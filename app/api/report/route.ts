@@ -19,34 +19,40 @@ inline CSS 기반의 table-layout HTML 이메일을 작성한다.
 - [발신자 정보]: 이름, 소속, 연락처, 이메일 (없으면 placeholder 유지)
 
 # 로고 처리 규칙
-출력 시 기본값은 /h1_logo_og.jpg로 작성.
+출력 시 기본값은 /h1_logo_og.jpg로 작성. 절대 변경하지 말 것.
 
 # 디자인 규칙
-## 브랜드 컬러 팔레트
-- 메인 텍스트/헤더: 딥 네이비 #1A237E
-- 그라데이션 바: #FF6B35 → #E91E63 → #9C27B0 → #3F51B5 → #00BCD4 → #4CAF50
-- 섹션 ① 핵심요약: 핑크 #E91E63
-- 섹션 ② 주요논의: 퍼플 #9C27B0
-- 섹션 ③ 액션아이템: 틸 #00BCD4
-- 섹션 ④ 참고사항: 그린 #4CAF50
-- 링크: 인디고 #3F51B5
-- 본문: 다크 그레이 #37474F
-- 서브 텍스트: 미들 그레이 #78909C
-- 배경: 라이트 그레이 #F5F7FA
-- 카드 배경: 화이트 #FFFFFF
-- 인포박스 배경: 아이보리 그레이 #F8F9FC
 
-## 구조 원칙
+## 1. 키컬러 시스템 (2색 한정)
+- 메인 (헤더/제목/강조): 딥 네이비 #1A237E
+- 액센트 (그라데이션 바/보더/링크): 시안 #00BCD4
+- 액센트 텍스트: 다크 시안 #00838F
+- 본문: #37474F, 부가 본문: #455A64, 서브 텍스트: #78909C
+- 배경: #F5F7FA, 카드: #FFFFFF, 인포박스: #F8F9FC, 액션박스: #E0F7FA, 구분선: #ECEFF1
+⚠️ 핑크/퍼플/그린/오렌지 등 추가 컬러 사용 금지. 모든 섹션 제목은 네이비(#1A237E)로 통일.
+③ 결론 및 액션 아이템 섹션 제목만 시안 텍스트(#00838F) 허용.
+
+## 2. 구조 원칙
 - 최대 너비 600px 중앙 정렬 카드 레이아웃
-- 상·하단 6px 레인보우 그라데이션 바
-- 섹션별 넘버링(①②③④) + 컬러 키로 시각적 계층 분리
-- 논리 흐름: 인사말 → 메타정보 → 핵심요약 → 주요논의 → 액션아이템 → 참고사항 → 서명
+- 상단 5px / 하단 4px 네이비→시안 그라데이션 바
+- 섹션별 넘버링(①②③④)
+- 논리 흐름: 헤더(로고+날짜라벨) → 인사말 → 메타정보 → 핵심요약 → 주요논의 → 액션아이템 → 참고사항 → 서명
 - 모든 CSS는 inline style로만 작성
 - 레이아웃은 table 기반
-- 한글 폰트 스택: 'Malgun Gothic','맑은 고딕','Apple SD Gothic Neo',sans-serif
+- 한글 폰트 스택: 'Malgun Gothic','맑은 고딕','Apple SD Gothic Neo',Arial,sans-serif
+
+## 3. 헤더 라인 규칙
+- 좌측: K-stat 로고 이미지
+- 우측: {{날짜라벨}} = YYYY.MM.DD · 대화주제기반_부제(한국어 8-15자)
+- 예시: 2026.04.18 · 무역통계 일일 브리핑
+- "DAILY CONVERSATION REPORT" 같은 영문 라벨 사용 금지
+
+## 4. 콘텐츠 톤
+- 간결하고 정중한 비즈니스 한국어
+- 불릿포인트는 ul/li 사용
+- 핵심요약은 두괄식
 
 # HTML 템플릿
-아래 템플릿의 {{변수}}를 실제 내용으로 채워서 출력:
 
 <!DOCTYPE html>
 <html lang="ko">
@@ -61,12 +67,20 @@ inline CSS 기반의 table-layout HTML 이메일을 작성한다.
       <td align="center">
         <table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;background-color:#FFFFFF;border-radius:8px;overflow:hidden;box-shadow:0 2px 12px rgba(26,35,126,0.08);">
           <tr>
-            <td style="height:6px;background:linear-gradient(90deg,#FF6B35 0%,#E91E63 20%,#9C27B0 40%,#3F51B5 60%,#00BCD4 80%,#4CAF50 100%);font-size:0;line-height:0;">&nbsp;</td>
+            <td style="height:5px;background:linear-gradient(90deg,#1A237E 0%,#00BCD4 100%);font-size:0;line-height:0;">&nbsp;</td>
           </tr>
           <tr>
-            <td align="center" style="padding:40px 40px 24px 40px;">
-              <img src="/h1_logo_og.jpg" alt="KITA" width="140" style="display:block;border:0;outline:none;max-width:140px;height:auto;">
-              <p style="margin:14px 0 0 0;font-size:12px;color:#78909C;letter-spacing:2px;font-weight:500;">DAILY CONVERSATION REPORT</p>
+            <td style="padding:32px 40px 22px 40px;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td align="left" valign="middle" style="font-size:0;line-height:0;">
+                    <img src="/h1_logo_og.jpg" alt="KITA" width="100" style="display:inline-block;border:0;outline:none;max-width:100px;height:auto;vertical-align:middle;">
+                  </td>
+                  <td align="right" valign="middle" style="font-size:11px;color:#78909C;letter-spacing:0.5px;font-weight:500;line-height:1;">
+                    {{날짜라벨}}
+                  </td>
+                </tr>
+              </table>
             </td>
           </tr>
           <tr><td style="padding:0 40px;"><div style="height:1px;background-color:#ECEFF1;font-size:0;line-height:0;">&nbsp;</div></td></tr>
@@ -78,7 +92,7 @@ inline CSS 기반의 table-layout HTML 이메일을 작성한다.
           </tr>
           <tr>
             <td style="padding:4px 40px 24px 40px;">
-              <table width="100%" cellpadding="14" cellspacing="0" border="0" style="background-color:#F8F9FC;border-left:4px solid #3F51B5;border-radius:4px;">
+              <table width="100%" cellpadding="14" cellspacing="0" border="0" style="background-color:#F8F9FC;border-left:4px solid #00BCD4;border-radius:4px;">
                 <tr>
                   <td style="font-size:13px;color:#546E7A;line-height:1.9;">
                     <strong style="color:#1A237E;">📅 대화 일시</strong>ㆍ{{대화날짜}}<br>
@@ -91,32 +105,32 @@ inline CSS 기반의 table-layout HTML 이메일을 작성한다.
           </tr>
           <tr>
             <td style="padding:0 40px 20px 40px;">
-              <h2 style="margin:0;font-size:18px;color:#1A237E;font-weight:700;border-bottom:2px solid #3F51B5;padding-bottom:12px;letter-spacing:-0.3px;">📋 대화 내용 보고서</h2>
+              <h2 style="margin:0;font-size:18px;color:#1A237E;font-weight:700;border-bottom:2px solid #1A237E;padding-bottom:12px;letter-spacing:-0.3px;">📋 대화 내용 보고서</h2>
             </td>
           </tr>
           <tr>
             <td style="padding:8px 40px 8px 40px;">
-              <h3 style="margin:0 0 10px 0;font-size:15px;color:#E91E63;font-weight:700;">① 핵심 요약</h3>
+              <h3 style="margin:0 0 10px 0;font-size:15px;color:#1A237E;font-weight:700;">① 핵심 요약</h3>
               <p style="margin:0;font-size:14px;color:#37474F;line-height:1.75;">{{핵심요약내용}}</p>
             </td>
           </tr>
           <tr>
             <td style="padding:20px 40px 8px 40px;">
-              <h3 style="margin:0 0 10px 0;font-size:15px;color:#9C27B0;font-weight:700;">② 주요 논의 사항</h3>
+              <h3 style="margin:0 0 10px 0;font-size:15px;color:#1A237E;font-weight:700;">② 주요 논의 사항</h3>
               <ul style="margin:0;padding-left:20px;font-size:14px;color:#37474F;line-height:1.85;">{{주요논의리스트_li태그들}}</ul>
             </td>
           </tr>
           <tr>
             <td style="padding:20px 40px 8px 40px;">
-              <h3 style="margin:0 0 10px 0;font-size:15px;color:#00BCD4;font-weight:700;">③ 결론 및 액션 아이템</h3>
-              <table width="100%" cellpadding="14" cellspacing="0" border="0" style="background-color:#E0F7FA;border-radius:4px;">
-                <tr><td style="font-size:14px;color:#37474F;line-height:1.75;">{{액션아이템}}</td></tr>
+              <h3 style="margin:0 0 10px 0;font-size:15px;color:#00838F;font-weight:700;">③ 결론 및 액션 아이템</h3>
+              <table width="100%" cellpadding="16" cellspacing="0" border="0" style="background-color:#E0F7FA;border-left:4px solid #00BCD4;border-radius:4px;">
+                <tr><td style="font-size:14px;color:#37474F;line-height:1.85;">{{액션아이템}}</td></tr>
               </table>
             </td>
           </tr>
           <tr>
             <td style="padding:20px 40px 28px 40px;">
-              <h3 style="margin:0 0 10px 0;font-size:15px;color:#4CAF50;font-weight:700;">④ 추가 참고사항</h3>
+              <h3 style="margin:0 0 10px 0;font-size:15px;color:#1A237E;font-weight:700;">④ 추가 참고사항</h3>
               <p style="margin:0;font-size:14px;color:#37474F;line-height:1.75;">{{추가메모}}</p>
             </td>
           </tr>
@@ -127,12 +141,12 @@ inline CSS 기반의 table-layout HTML 이메일을 작성한다.
               <p style="margin:18px 0 0 0;font-size:13px;color:#37474F;line-height:1.7;">
                 <strong style="color:#1A237E;">Best Regards,</strong><br>
                 {{발신자명}}<br>{{소속}}<br>Tel. {{연락처}}<br>
-                Email. <a href="mailto:{{이메일}}" style="color:#3F51B5;text-decoration:none;border-bottom:1px solid #3F51B5;">{{이메일}}</a>
+                Email. <a href="mailto:{{이메일}}" style="color:#00838F;text-decoration:none;border-bottom:1px solid #00BCD4;">{{이메일}}</a>
               </p>
             </td>
           </tr>
           <tr>
-            <td style="height:4px;background:linear-gradient(90deg,#FF6B35 0%,#E91E63 20%,#9C27B0 40%,#3F51B5 60%,#00BCD4 80%,#4CAF50 100%);font-size:0;line-height:0;">&nbsp;</td>
+            <td style="height:4px;background:linear-gradient(90deg,#1A237E 0%,#00BCD4 100%);font-size:0;line-height:0;">&nbsp;</td>
           </tr>
         </table>
         <table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;">
@@ -147,20 +161,22 @@ inline CSS 기반의 table-layout HTML 이메일을 작성한다.
 </html>
 
 # 변수 매핑 규칙
-- {{수신자}}: 입력으로 받은 수신자 이름
-- {{대화날짜}}: YYYY년 MM월 DD일 (요일) 형식
-- {{대화주제}}: 대화 전체를 관통하는 1줄 주제
-- {{참여자}}: 예) "사용자, Claude"
+- {{날짜라벨}}: YYYY.MM.DD · 한국어 부제 8-15자 (예: 2026.04.18 · 무역통계 일일 브리핑)
+- {{수신자}}: 수신자 이름
+- {{대화날짜}}: YYYY년 MM월 DD일 (요일)
+- {{대화주제}}: 대화 전체 1줄 주제
+- {{참여자}}: 예) "사용자, K-stat AI"
 - {{핵심요약내용}}: 3~4문장 두괄식 요약
-- {{주요논의리스트_li태그들}}: <li>항목</li> 형태로 3~6개
-- {{액션아이템}}: 향후 할 일, ☑️ 이모지 활용 가능
+- {{주요논의리스트_li태그들}}: li 태그 3~6개
+- {{액션아이템}}: 향후 할 일, ☑️ 이모지 + 항목 간 br 줄바꿈
 - {{추가메모}}: 없으면 "해당 없음"
 - {{발신자명}}, {{소속}}, {{연락처}}, {{이메일}}: 미제공 시 placeholder 유지
 
 # 출력 지시사항
 1. 모든 {{변수}}를 실제 내용으로 치환한 완성된 HTML만 출력.
-2. 코드블록 없이 순수 HTML만 반환 (파싱을 위해 마크다운 불필요).
-3. 민감정보(API 키, 개인정보 등)는 자동 마스킹.`;
+2. 코드블록 없이 순수 HTML만 반환 (마크다운 불필요).
+3. 민감정보(API 키, 개인정보 등)는 자동 마스킹.
+4. 로고 경로 /h1_logo_og.jpg 절대 변경 금지.`;
 
 export async function POST(req: NextRequest) {
   const { messages } = await req.json();
