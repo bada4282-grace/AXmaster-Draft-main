@@ -21,7 +21,7 @@ import {
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from "recharts";
-import { RechartsPayloadTooltip, rechartsTooltipSurfaceProps } from "@/components/RechartsTooltip";
+import { TimeseriesTooltip, rechartsTooltipFollowProps } from "@/components/RechartsTooltip";
 import { KO_NAME_TO_ISO } from "@/lib/countryIso";
 
 const TreemapChart = dynamic(() => import("@/components/TreemapChart"), { ssr: false });
@@ -150,22 +150,17 @@ function CountryDetailContent() {
     return { min, max, step, ticks };
   }
 
-  const allValues = timeseries.flatMap((d) => [d.export, d.import]);
+  // 수출·수입·무역수지 3개 시리즈를 모두 왼쪽 Y축 한 스케일에 함께 표시
+  // (오른쪽 Y축은 제거됨 — 단위가 같은 $ 금액이라 양축 병행이 혼란 유발)
+  const allValues = timeseries.flatMap((d) => [d.export, d.import, d.balance]);
   const rawMin = allValues.length ? Math.min(...allValues) : 0;
   const rawMax = allValues.length ? Math.max(...allValues) : 100;
-  const leftScale = niceScale(rawMin * 0.9, rawMax * 1.1);
+  const leftScale = niceScale(
+    rawMin < 0 ? rawMin * 1.1 : rawMin * 0.9,
+    rawMax > 0 ? rawMax * 1.1 : rawMax * 0.9,
+  );
   const minVal = leftScale.min;
   const maxVal = leftScale.max;
-
-  const balances = timeseries.map((d) => d.balance);
-  const rawMinBal = balances.length ? Math.min(...balances) : -50;
-  const rawMaxBal = balances.length ? Math.max(...balances) : 50;
-  const balScale = niceScale(
-    rawMinBal < 0 ? rawMinBal * 1.1 : rawMinBal * 0.9,
-    rawMaxBal > 0 ? rawMaxBal * 1.1 : rawMaxBal * 0.9,
-  );
-  const minBal = balScale.min;
-  const maxBal = balScale.max;
 
   const [displayData, setDisplayData] = useState<MonthlyData[]>([]);
   const [lineAnimActive, setLineAnimActive] = useState(false);
@@ -197,7 +192,7 @@ function CountryDetailContent() {
       ...d,
       export: minVal,
       import: minVal,
-      balance: minBal,
+      balance: minVal,
     })));
 
     const startTimeout = setTimeout(() => {
@@ -399,42 +394,41 @@ function CountryDetailContent() {
                   <TreemapChart forCountry countryName={country.name} year={year} month={month} tradeType={tradeType} mtiDepth={mtiDepth} onLoadingChange={handleLoadingChange} onCategoryChange={(mti) => setMtiCategoryActive(mti !== null)} />
                 ) : timeseries.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={displayData} margin={{ top: 8, right: 44, left: 8, bottom: 4 }}>
+                    <LineChart data={displayData} margin={{ top: 8, right: 16, left: 8, bottom: 4 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                       <XAxis dataKey="month" tick={{ fontSize: 10 }} />
                       <YAxis
-                        yAxisId="left"
                         domain={[minVal, maxVal]}
                         ticks={leftScale.ticks}
                         tick={{ fontSize: 10 }}
-                        tickFormatter={(v) => `$${v}억`}
+                        tickFormatter={(v) => (v === 0 ? "$0" : `$${v}억`)}
                         width={52}
-                      />
-                      <YAxis
-                        yAxisId="right"
-                        orientation="right"
-                        domain={[minBal, maxBal]}
-                        ticks={balScale.ticks}
-                        tick={{ fontSize: 10 }}
-                        tickFormatter={(v) => `${v}억`}
-                        width={44}
                       />
                       <Tooltip
                         content={(props) => (
-                          <RechartsPayloadTooltip {...props} title={country.name} />
+                          <TimeseriesTooltip
+                            {...props}
+                            title={country.name}
+                            allData={timeseries}
+                            rows={[
+                              { key: "export", name: "수출", color: "#185FA5" },
+                              { key: "import", name: "수입", color: "#F97316" },
+                              { key: "balance", name: "무역수지", color: "#22C55E" },
+                            ]}
+                          />
                         )}
-                        {...rechartsTooltipSurfaceProps}
+                        {...rechartsTooltipFollowProps}
                       />
                       <Legend wrapperStyle={{ fontSize: 11 }} />
-                      <Line yAxisId="left" type="monotone" dataKey="export" stroke="#185FA5"
+                      <Line type="monotone" dataKey="export" stroke="#185FA5"
                         strokeWidth={2} dot={{ r: 3 }} name="수출"
                         isAnimationActive={lineAnimActive}
                         animationDuration={700} animationEasing="ease-out" />
-                      <Line yAxisId="left" type="monotone" dataKey="import" stroke="#F97316"
+                      <Line type="monotone" dataKey="import" stroke="#F97316"
                         strokeWidth={2} strokeDasharray="5 3" dot={{ r: 3 }} name="수입"
                         isAnimationActive={lineAnimActive}
                         animationDuration={700} animationEasing="ease-out" />
-                      <Line yAxisId="right" type="monotone" dataKey="balance" stroke="#22C55E"
+                      <Line type="monotone" dataKey="balance" stroke="#22C55E"
                         strokeWidth={2} dot={{ r: 3 }} name="무역수지"
                         isAnimationActive={lineAnimActive}
                         animationDuration={700} animationEasing="ease-out" />
