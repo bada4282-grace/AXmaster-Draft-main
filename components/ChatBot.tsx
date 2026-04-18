@@ -440,6 +440,14 @@ export default function ChatBot({
     }
   }, [messages]);
 
+const sendEmail = async (to: string) => {
+  await fetch("/api/send-email", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ to, messages }),
+  });
+};
+
   const send = async (overrideMsg?: string) => {
     const msgToSend = overrideMsg ?? input;
     if (!msgToSend.trim() || isStreaming) return;
@@ -593,6 +601,23 @@ export default function ChatBot({
               <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
             </svg>
           </button>
+          <div style={{ position: "relative", display: "inline-flex" }}>
+            <button
+              onClick={() => {
+                const to = prompt("이메일 주소를 입력해주세요:");
+                if (to) sendEmail(to);
+              }}
+              title="메일로 받기"
+              style={{ width: 22, height: 22, borderRadius: "50%", border: "1px solid #ddd", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+              onMouseEnter={e => (e.currentTarget.style.background = "#fde8e8")}
+              onMouseLeave={e => (e.currentTarget.style.background = "#fff")}
+            >
+              ✉️
+            </button>
+            {messages.filter(m => m.role === "user").length >= 3 && (
+              <div style={{ position: "absolute", top: -2, right: -2, width: 6, height: 6, borderRadius: "50%", background: "#C41E3A" }} />
+            )}
+          </div>
         </div>
       </div>
 
