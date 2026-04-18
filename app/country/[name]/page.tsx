@@ -22,6 +22,7 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from "recharts";
 import { RechartsPayloadTooltip, rechartsTooltipSurfaceProps } from "@/components/RechartsTooltip";
+import { KO_NAME_TO_ISO, isoToFlagEmoji } from "@/lib/countryIso";
 
 const TreemapChart = dynamic(() => import("@/components/TreemapChart"), { ssr: false });
 import MacroSection from "@/components/MacroSection";
@@ -73,19 +74,25 @@ function CountryDetailContent() {
   const [kpi, setKpi] = useState<CountryKPIAsync | undefined>(undefined);
   const [prevKpi, setPrevKpi] = useState<CountryKPIAsync | undefined>(undefined);
   const [timeseries, setTimeseries] = useState<MonthlyData[]>([]);
+  /** 총 교역국 수 (분모) */
+  const [totalCountries, setTotalCountries] = useState(0);
+  /** 전년 동기 순위 (null = 전년도에 교역 없음/데이터 없음) */
+  const [prevRank, setPrevRank] = useState<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     const prevYearStr = String(parseInt(year) - 1);
 
-    // 국가 순위
+    // 국가 순위 (현재 연도)
     getCountryRankingAsync(year, tradeType).then(ranks => {
       if (cancelled) return;
       const fmt1 = (v: number) => (Math.round(v / 1e8 * 10) / 10).toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
       const r = ranks.find(r => r.country === name);
+      setTotalCountries(ranks.length);
       if (r) {
         setCountry({
           ...defaultCountry,
+          iso: KO_NAME_TO_ISO[name] ?? "??",
           rank: tradeType === "수입" ? r.rank_imp : r.rank_exp,
           export: fmt1(r.exp_amt),
           import: fmt1(r.imp_amt),
@@ -93,6 +100,14 @@ function CountryDetailContent() {
         });
       }
     }).catch(() => {});
+
+    // 전년 순위 (변동 계산용)
+    getCountryRankingAsync(prevYearStr, tradeType).then(ranks => {
+      if (cancelled) return;
+      const r = ranks.find(r => r.country === name);
+      const rk = r ? (tradeType === "수입" ? r.rank_imp : r.rank_exp) : 0;
+      setPrevRank(rk > 0 ? rk : null);
+    }).catch(() => { if (!cancelled) setPrevRank(null); });
 
     // KPI (현재 + 전년)
     getCountryKpiAsync(year, name).then(d => { if (!cancelled) setKpi(d); }).catch(() => {});
@@ -264,16 +279,53 @@ function CountryDetailContent() {
               <div className="left-cards-stack">
                 <div className="info-card">
                   <div className="info-card-label" style={{ fontSize: 12 }}>선택 국가</div>
-                  <div style={{ fontSize: 18, fontWeight: 900 }}>{country.name}</div>
+                  <div style={{ fontSize: 18, fontWeight: 900, display: "flex", alignItems: "center", gap: 8 }}>
+                    {isoToFlagEmoji(country.iso) && (
+                      <span style={{ fontSize: 22, lineHeight: 1 }} aria-hidden>
+                        {isoToFlagEmoji(country.iso)}
+                      </span>
+                    )}
+                    <span>{country.name}</span>
+                  </div>
                 </div>
 
                 <div className="info-card">
                   <div className="info-card-label" style={{ fontSize: 12 }}>{tradeType} 국가 순위 ({year})</div>
-                  <div className="info-card-value">{country.rank}위</div>
+                  <div className="info-card-value">
+                    {country.rank}위
+                    {totalCountries > 0 && (
+                      <span style={{ fontSize: 13, fontWeight: 500, color: "#64748b", marginLeft: 4 }}>
+                        / {totalCountries}개국
+                      </span>
+                    )}
+                  </div>
+                  {(() => {
+                    if (prevRank == null || country.rank <= 0) {
+                      return (
+                        <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 2 }}>
+                          전년 순위 없음
+                        </div>
+                      );
+                    }
+                    const delta = prevRank - country.rank; // >0 상승, <0 하락, 0 동일
+                    const tag =
+                      delta === 0
+                        ? <span style={{ color: "#6b7280" }}>–</span>
+                        : delta > 0
+                          ? <span style={{ color: "#E02020" }}>▲{delta}</span>
+                          : <span style={{ color: "#185FA5" }}>▼{Math.abs(delta)}</span>;
+                    return (
+                      <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>
+                        전년 {prevRank}위 {tag}
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 <div className="info-card">
-                  <div className="info-card-label" style={{ fontSize: 12 }}>{tradeType} 비중</div>
+                  <div className="info-card-label" style={{ fontSize: 12 }}>
+                    한국 전체 {tradeType} 중 {country.name} 비중
+                  </div>
                   <div className="info-card-value">{country.share}%</div>
                 </div>
               </div>

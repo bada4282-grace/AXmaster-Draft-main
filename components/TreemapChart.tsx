@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { Treemap, ResponsiveContainer } from "recharts";
 import { aggregateTreemapByDepth, MTI_COLORS, MTI_NAMES, type ProductNode, DEFAULT_YEAR, type TradeType } from "@/lib/data";
@@ -180,6 +180,7 @@ export default function TreemapChart({
   const router = useRouter();
 
   const [treemapData, setTreemapData] = useState<ProductNode[]>([]);
+  const [prevYearRaw, setPrevYearRaw] = useState<ProductNode[]>([]);
   const [noData, setNoData] = useState(false);
   const [zoomedMti, setZoomedMti] = useState<number | null>(null);
   const [animKey, setAnimKey] = useState(0);
@@ -240,6 +241,29 @@ export default function TreemapChart({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [year, month, tradeType, countryName, forCountry]);
 
+  // 전년 대비 증감률을 위한 전년 동기 데이터 로드 (툴팁에 사용)
+  // 연간: 전년 연간 | 월별: 전년 동일 월
+  useEffect(() => {
+    let mounted = true;
+    const prevYear = String(parseInt(year, 10) - 1);
+    const loadPrev = async () => {
+      try {
+        const prevData = !month
+          ? (forCountry && countryName
+              ? await getCountryTreemapDataAsync(prevYear, countryName, tradeType)
+              : await getTreemapDataAsync(prevYear, tradeType))
+          : (forCountry && countryName
+              ? await getCountryMonthlyTreemapData(prevYear, month, countryName, tradeType)
+              : await getMonthlyTreemapData(prevYear, month, tradeType));
+        if (mounted) setPrevYearRaw(prevData);
+      } catch {
+        if (mounted) setPrevYearRaw([]);
+      }
+    };
+    loadPrev();
+    return () => { mounted = false; };
+  }, [year, month, tradeType, countryName, forCountry]);
+
   useEffect(() => {
     return () => {
       if (animTimeoutRef.current) {
@@ -257,6 +281,31 @@ export default function TreemapChart({
         .sort((a, b) => b.value - a.value)
         .slice(0, 30)
     : aggregatedData;
+
+  // 비중(%) 계산용 전체 합계 — 화면에 표시된 데이터 전체 기준
+  const totalValue = useMemo(
+    () => treemapData.reduce((s, d) => s + d.value, 0) || 1,
+    [treemapData],
+  );
+
+  // 전년 데이터 code → value 매핑 (6자리 원본 기준, 확대 뷰에서 사용)
+  const prevRawByCode = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const p of prevYearRaw) m.set(p.code, p.value);
+    return m;
+  }, [prevYearRaw]);
+
+  // 전년 데이터 code → value 매핑 (mtiDepth로 집계, 일반 뷰에서 사용)
+  const prevAggByCode = useMemo(() => {
+    const agg = aggregateTreemapByDepth(prevYearRaw, mtiDepth);
+    const m = new Map<string, number>();
+    for (const p of agg) m.set(p.code, p.value);
+    return m;
+  }, [prevYearRaw, mtiDepth]);
+
+  // 불완전 연도 + 연간 조회 판별 (KPIBar와 동일 기준) — 전년 대비 비교가 무의미
+  const currentCalendarYear = new Date().getFullYear();
+  const isAnnualIncomplete = !month && parseInt(year, 10) >= currentCalendarYear;
 
   const onTreemapMouseMove = useCallback((e: React.MouseEvent) => {
     const target = e.target as SVGElement;
@@ -438,39 +487,77 @@ export default function TreemapChart({
         </button>
       </div>
 
-      {/* 마우스 추적 툴팁 */}
-      {tooltip && typeof document !== "undefined" && createPortal(
-        <div
-          className="tooltip-shell tooltip-shell--fixed"
-          style={{
-            left: tooltip.x,
-            top: tooltip.y,
-            transform: "translate(-50%, calc(-100% - 12px))",
-          }}
-        >
-          <p className="tooltip-shell-title">{tooltip.item.name}</p>
-          <p className="tooltip-shell-line">
-            {tradeType === "수입" ? "수입액" : "수출액"}:{" "}
-            <strong>{formatAmount(tooltip.item.value)}</strong>
-          </p>
-          {tooltip.item.topCountries && tooltip.item.topCountries.length > 0 && (
-            <>
-              <p className="tooltip-shell-line" style={{ marginTop: 8, fontWeight: 600, color: "#64748b" }}>
-                {tradeType === "수입" ? "상위 수입국" : "상위 수출국"}:
-              </p>
-              <ul className="tooltip-shell-list">
-                {tooltip.item.topCountries.map((c) => (
-                  <li key={c}>• {c}</li>
-                ))}
-              </ul>
-            </>
-          )}
-          {!forCountry && (
-            <p className="tooltip-shell-hint">클릭 → 상세페이지</p>
-          )}
-        </div>,
-        document.body,
-      )}
+      {/* 마우스 추적 툴팁 — 카테고리 dot + 품목 / 카테고리·MTI코드 / 금액·비중 / 전년 대비 */}
+      {tooltip && typeof document !== "undefined" && (() => {
+        const item = tooltip.item;
+        const sharePct = (item.value / totalValue) * 100;
+        const prevValue = zoomedMti !== null
+          ? prevRawByCode.get(item.code) ?? 0
+          : prevAggByCode.get(item.code) ?? 0;
+
+        // 전년 대비 줄 계산 — 불완전 연도·연간 조회면 "데이터 불충분", 전년 0/미존재면 "-"
+        let yoyLine: React.ReactNode;
+        if (isAnnualIncomplete) {
+          yoyLine = (
+            <span style={{ color: "#999" }}>
+              - <span style={{ fontSize: 10, opacity: 0.7, marginLeft: 2 }}>⚠ 데이터 불충분</span>
+            </span>
+          );
+        } else if (prevValue <= 0) {
+          yoyLine = <span style={{ color: "#999" }}>- 전년 대비</span>;
+        } else {
+          const diff = item.value - prevValue;
+          const pct = Math.abs(diff / prevValue) * 100;
+          const up = diff >= 0;
+          const noChange = Math.abs(diff) < 1e-9;
+          const color = noChange ? "#999" : up ? "#E02020" : "#185FA5";
+          const arrow = noChange ? "-" : up ? "▲" : "▼";
+          const sign = noChange ? "" : up ? "+" : "-";
+          yoyLine = (
+            <span style={{ color }}>
+              {arrow} 전년 대비 {sign}{pct.toFixed(1)}%
+            </span>
+          );
+        }
+
+        return createPortal(
+          <div
+            className="tooltip-shell tooltip-shell--fixed"
+            style={{
+              left: tooltip.x,
+              top: tooltip.y,
+              transform: "translate(-50%, calc(-100% - 12px))",
+            }}
+          >
+            {/* 1줄: 카테고리 dot + 품목명 */}
+            <div style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 700, fontSize: 13 }}>
+              <span
+                aria-hidden
+                style={{
+                  display: "inline-block",
+                  width: 8,
+                  height: 8,
+                  borderRadius: 4,
+                  background: item.color,
+                  flexShrink: 0,
+                }}
+              />
+              <span>{item.name}</span>
+            </div>
+            {/* 2줄: 카테고리명 · MTI 코드 */}
+            <div style={{ fontSize: 11, color: "#64748b", marginTop: 4 }}>
+              {MTI_NAMES[item.mti] ?? "기타"} · MTI {item.code}
+            </div>
+            {/* 3줄: 금액 · 비중 */}
+            <div style={{ fontSize: 12, marginTop: 4, fontWeight: 500 }}>
+              {formatAmount(item.value)} · {sharePct.toFixed(1)}%
+            </div>
+            {/* 4줄: 전년 대비 증감 */}
+            <div style={{ fontSize: 12, marginTop: 4 }}>{yoyLine}</div>
+          </div>,
+          document.body,
+        );
+      })()}
     </div>
   );
 }
