@@ -268,7 +268,7 @@ interface BarPayloadRow {
   value?: number;
 }
 
-/** 막대 차트: 행 데이터에 country가 있을 때 볼드 제목 = 국가명 */
+/** 막대 차트: 행 데이터에 country가 있을 때 볼드 제목 = 국가명 (레거시 간단 버전) */
 export function RechartsBarCountryTooltip({
   active,
   payload,
@@ -288,6 +288,118 @@ export function RechartsBarCountryTooltip({
         <span>{tradeLabel}액</span>
         <span>${row.value}억</span>
       </div>
+    </div>
+  );
+}
+
+// ─── 상위 국가 차트 전용 툴팁 ───────────────────────────────────────────────
+// 제공 정보: 국가명+연도, 수출액, 비중(전체 국가 합계 대비), 순위(N/전체), 전년 대비 %+절대값.
+// 3-case 분기: 확정 연도 / 신규 진입국(전년 없음) / 진행 중 연도(비교 불가).
+interface CountryValue { country: string; value: number }
+
+export function TopCountriesTooltip({
+  active,
+  payload,
+  year,
+  tradeLabel,
+  currentData,
+  prevData,
+  ongoingYear,
+  ongoingMonthRange,
+}: {
+  active?: boolean;
+  payload?: TooltipPayload;
+  year: string;
+  tradeLabel: string; // "수출" | "수입"
+  currentData: CountryValue[];
+  prevData: CountryValue[];
+  ongoingYear: string | null;
+  ongoingMonthRange: string | null;
+}) {
+  if (!active || !payload?.length) return null;
+  const row = payload[0]?.payload as BarPayloadRow | undefined;
+  if (!row?.country) return null;
+  const hovered = row.country;
+
+  // 현재 연도 기준 비중·순위 계산 (분모 = 전체 국가 합계, 표시 막대 합계 아님)
+  const curItem = currentData.find((c) => c.country === hovered);
+  if (!curItem) return null;
+  const total = currentData.reduce((s, c) => s + c.value, 0);
+  const share = total > 0 ? (curItem.value / total) * 100 : 0;
+  const sorted = [...currentData].sort((a, b) => b.value - a.value);
+  const rankIdx = sorted.findIndex((c) => c.country === hovered);
+  const rank = rankIdx >= 0 ? rankIdx + 1 : 0;
+  const totalCountries = currentData.length;
+
+  const isOngoing = year === ongoingYear;
+
+  // 전년 대비 라인
+  let yoyNode: React.ReactNode;
+  if (isOngoing) {
+    yoyNode = <span style={{ color: "#999" }}>- 비교 불가</span>;
+  } else {
+    const prev = prevData.find((c) => c.country === hovered);
+    if (!prev || prev.value === 0) {
+      yoyNode = <span style={{ color: "#999" }}>- 데이터 없음</span>;
+    } else {
+      const diff = curItem.value - prev.value;
+      const pct = (diff / prev.value) * 100;
+      const up = diff >= 0;
+      const noChange = Math.abs(pct) < 0.05;
+      const color = noChange ? "#999" : up ? "#E02020" : "#185FA5";
+      const arrow = noChange ? "–" : up ? "▲" : "▼";
+      const sign = noChange ? "" : up ? "+" : "-";
+      yoyNode = (
+        <span style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", color }}>
+          <span style={{ fontSize: 13, fontWeight: 500 }}>
+            {arrow} {sign}{Math.abs(pct).toFixed(1)}%
+          </span>
+          <span style={{ fontSize: 11 }}>
+            ({sign}{formatBillion(Math.abs(diff))})
+          </span>
+        </span>
+      );
+    }
+  }
+
+  const Row = ({ label, value }: { label: string; value: React.ReactNode }) => (
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, marginTop: 6 }}>
+      <span style={{ fontSize: 12, color: "#64748b" }}>{label}</span>
+      <span style={{ fontSize: 13, fontWeight: 500, color: "#1f2937" }}>{value}</span>
+    </div>
+  );
+
+  return (
+    <div style={{
+      background: "#fff",
+      border: "0.5px solid #e5e7eb",
+      borderRadius: 8,
+      padding: "12px 14px",
+      boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+      minWidth: 200,
+      maxWidth: 240,
+    }}>
+      <div style={{ fontSize: 14, fontWeight: 500, color: "#1f2937" }}>{hovered}</div>
+      <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>{year}년</div>
+      {isOngoing && ongoingMonthRange && (
+        <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>
+          ⓘ {year}년 {ongoingMonthRange} 누적
+        </div>
+      )}
+      <div style={{ height: 0.5, background: "#e5e7eb", marginTop: 8 }} />
+      <Row label={`${tradeLabel}액`} value={formatBillion(curItem.value)} />
+      <Row label="비중" value={`${share.toFixed(1)}%`} />
+      <Row label="순위" value={rank > 0 ? `${rank}위 / ${totalCountries}` : "-"} />
+      <div style={{ height: 0.5, background: "#e5e7eb", marginTop: 8 }} />
+      <Row label="전년 대비" value={yoyNode} />
+      {isOngoing && (
+        <>
+          <div style={{ height: 0.5, background: "#e5e7eb", marginTop: 8 }} />
+          <div style={{ fontSize: 11, color: "#64748b", marginTop: 6 }}>
+            ⓘ 연말 확정 전 부분 데이터
+          </div>
+        </>
+      )}
     </div>
   );
 }
