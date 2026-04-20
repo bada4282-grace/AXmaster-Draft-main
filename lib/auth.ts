@@ -39,3 +39,24 @@ export async function getUser() {
   const { data: { user } } = await supabase.auth.getUser();
   return user;
 }
+
+// ─────────────────────────────────────────────────────────────
+// 회원 등급
+// ─────────────────────────────────────────────────────────────
+
+export type UserTier = "guest" | "free" | "paid";
+
+// 현재 사용자의 등급 반환. 비로그인은 'guest'.
+export async function getUserTier(): Promise<UserTier> {
+  const user = await getUser();
+  if (!user) return "guest";
+
+  const { data, error } = await supabase
+    .from("user_profiles")
+    .select("tier")
+    .eq("user_id", user.id)
+    .single();
+
+  if (error || !data) return "free"; // 프로필 조회 실패 시 free로 간주
+  return data.tier as UserTier;
+}
