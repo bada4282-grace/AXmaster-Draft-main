@@ -950,8 +950,15 @@ export default function ChatBot({
             </button>
             <button
               onClick={() => {
+                // sessionStorage + 발화 기록 초기화
                 clearStoredMessages(user?.id ?? null);
-                setMessages([{ role: "bot", text: initialMessage }]);
+                setMessages([]);
+                // FAQ 숨김 플래그 해제 → 로그인 사용자의 맞춤 FAQ 재표시
+                setSentInSession(false);
+                // welcome 재-페치 허용 → 로그인 사용자는 개인화 인사말 다시 받기
+                welcomeFetchedRef.current = false;
+                hasRestoredRef.current = false;
+                setWelcomeTrigger(t => t + 1);
               }}
               title="대화 내용 지우기"
               style={{ width: 22, height: 22, borderRadius: "50%", border: "1px solid #ddd", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
