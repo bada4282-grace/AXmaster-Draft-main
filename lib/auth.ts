@@ -55,8 +55,13 @@ export async function getUserTier(): Promise<UserTier> {
     .from("user_profiles")
     .select("tier")
     .eq("user_id", user.id)
-    .single();
+    .maybeSingle();
 
-  if (error || !data) return "free"; // 프로필 조회 실패 시 free로 간주
-  return data.tier as UserTier;
+  if (error) {
+    // RLS 설정/네트워크 이슈 시 DevTools에서 원인 파악용 경고
+    console.warn("[getUserTier] profile read failed:", error.message);
+    return "free";
+  }
+  if (!data) return "free"; // 프로필 없음 → free로 간주 (fail-closed)
+  return data.tier as "free" | "paid";
 }
