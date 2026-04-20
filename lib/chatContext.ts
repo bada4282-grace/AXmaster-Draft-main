@@ -269,6 +269,10 @@ function isAnalysisQuery(question: string): boolean {
 const MACRO_GENERAL_KEYWORDS = [
   "거시경제", "거시 경제", "거시지표", "거시 지표",
   "경제지표", "경제 지표", "경기지표", "경기 지표",
+  "경제환경", "경제 환경", "경기환경", "경기 환경",
+  "경제상황", "경제 상황", "경기상황", "경기 상황",
+  "거시환경", "거시 환경",
+  "한국 경제", "글로벌 경제", "세계 경제",
 ];
 
 // 거시경제 지표 언급 감지
@@ -1101,9 +1105,11 @@ export async function buildChatContext(
     }
   }
 
-  // 거시경제 지표 컨텍스트 — 질문에 거시 키워드가 있을 때만 포함
-  // (사용자가 명시적으로 요청하지 않은 경우 LLM 답변에 거시 지표가 섞이지 않도록)
-  if (detectMacroKeywords(question).length > 0) {
+  // 거시경제 지표 컨텍스트 — 아래 조건 중 하나라도 만족 시 포함:
+  //   (1) 매크로 키워드 직접 언급 ("거시경제", "경제환경", "한국 경제" 등)
+  //   (2) 분석형 질문 ("왜/원인/이유/배경/영향/요인/때문/변화/증가/감소/하락/상승/추이")
+  // 단순 팩트형 질문(예: "한국 수출 1위는?")에는 포함하지 않아 답변 오염 방지.
+  if (detectMacroKeywords(question).length > 0 || isAnalysisQuery(question)) {
     const macroCtx = await buildMacroContext(question, year);
     if (macroCtx) {
       sections.push(macroCtx);

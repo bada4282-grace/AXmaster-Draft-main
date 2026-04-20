@@ -54,6 +54,14 @@ function CountryDetailContent() {
   const [subTab, setSubTab] = useState<"품목별" | "시계열 추이">(
     searchParams.get("tab") === "timeseries" ? "시계열 추이" : "품목별"
   );
+
+  // 같은 페이지에서 URL 의 tab 파라미터가 외부 요인(챗봇 라우팅 버튼 등) 으로
+  // 변경되었을 때 subTab state 를 동기화한다.
+  useEffect(() => {
+    const tabParam = searchParams.get("tab");
+    setSubTab(tabParam === "timeseries" ? "시계열 추이" : "품목별");
+  }, [searchParams]);
+
   const [mtiDepth, setMtiDepth] = useState(
     Number(searchParams.get("mtiDepth") ?? 3)
   );

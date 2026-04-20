@@ -57,6 +57,14 @@ function ProductDetailContent() {
     searchParams.get("tab") === "countries" ? "상위 국가" : "금액 추이"
   );
 
+  // 같은 페이지에서 URL 의 tab 파라미터가 외부 요인(챗봇 라우팅 버튼 등)으로
+  // 변경되었을 때 subTab state 를 동기화한다. 사용자가 탭 버튼을 수동 클릭하는
+  // 경로는 setSubTab + router.push 가 같은 값을 쓰므로 루프 없음.
+  useEffect(() => {
+    const tabParam = searchParams.get("tab");
+    setSubTab(tabParam === "countries" ? "상위 국가" : "금액 추이");
+  }, [searchParams]);
+
   const isAggregated = codeParam.length > 0 && codeParam.length < 6;
 
   // 품목 정보 + 추이 데이터 — Supabase에서 비동기 로드
