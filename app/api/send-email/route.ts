@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
 
   try {
     await resend.emails.send({
-      from: "K-stat <onboarding@resend.dev>",
+      from: "K-stat <noreply@kitaaxmu4.kr>",
       to,
       subject: "K-stat 무역 분석 보고서",
       html,

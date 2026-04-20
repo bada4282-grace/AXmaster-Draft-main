@@ -42,8 +42,18 @@ export default function Header() {
         </Link>
 
         <div style={{ display: "flex", alignItems: "center", gap: 0, fontSize: 13, color: "#555", position: "absolute", right: 32 }}>
+          {/* 회원사 가입 */}
+          <span style={{ display: "flex", alignItems: "center" }}>
+            <Link href="/upgrade" style={{ color: "#555", textDecoration: "none", whiteSpace: "nowrap" }}
+              onMouseEnter={e => (e.currentTarget.style.color = "#E02020")}
+              onMouseLeave={e => (e.currentTarget.style.color = "#555")}>
+              회원사 가입
+            </Link>
+          </span>
+
           {/* KITA.NET */}
           <span style={{ display: "flex", alignItems: "center" }}>
+            <span style={{ color: "#ddd", margin: "0 8px" }}>|</span>
             <a href="#" style={{ color: "#555", textDecoration: "none", whiteSpace: "nowrap" }}
               onMouseEnter={e => (e.currentTarget.style.color = "#E02020")}
               onMouseLeave={e => (e.currentTarget.style.color = "#555")}>
@@ -55,13 +65,21 @@ export default function Header() {
           <span style={{ display: "flex", alignItems: "center" }}>
             <span style={{ color: "#ddd", margin: "0 8px" }}>|</span>
             {user ? (
-              <button
-                onClick={handleLogout}
-                style={{ background: "none", border: "none", padding: 0, color: "#555", fontSize: 13, cursor: "pointer", whiteSpace: "nowrap" }}
-                onMouseEnter={e => (e.currentTarget.style.color = "#E02020")}
-                onMouseLeave={e => (e.currentTarget.style.color = "#555")}>
-                로그아웃
-              </button>
+              <>
+                <Link href="/mypage" style={{ color: "#555", textDecoration: "none", whiteSpace: "nowrap" }}
+                  onMouseEnter={e => (e.currentTarget.style.color = "#E02020")}
+                  onMouseLeave={e => (e.currentTarget.style.color = "#555")}>
+                  마이페이지
+                </Link>
+                <span style={{ color: "#ddd", margin: "0 8px" }}>|</span>
+                <button
+                  onClick={handleLogout}
+                  style={{ background: "none", border: "none", padding: 0, color: "#555", fontSize: 13, cursor: "pointer", whiteSpace: "nowrap" }}
+                  onMouseEnter={e => (e.currentTarget.style.color = "#E02020")}
+                  onMouseLeave={e => (e.currentTarget.style.color = "#555")}>
+                  로그아웃
+                </button>
+              </>
             ) : (
               <Link href="/login" style={{ color: "#555", textDecoration: "none", whiteSpace: "nowrap" }}
                 onMouseEnter={e => (e.currentTarget.style.color = "#E02020")}

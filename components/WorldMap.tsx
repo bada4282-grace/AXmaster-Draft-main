@@ -687,41 +687,14 @@ export default function WorldMap({
             setZoomPct(Math.round((Math.pow(2, z) / Math.pow(2, BASE_ZOOM)) * 100));
           }}
         >
-          {/* 순위 구간 필터 — 우상단 */}
+          {/* 순위 구간 필터 — 우상단 (커스텀 드롭다운: 체크마크·호버·중립 트리거) */}
           <div style={{
-            position:        "absolute",
-            top:             12,
-            right:           12,
-            zIndex:          10,
+            position: "absolute",
+            top: 12,
+            right: 12,
+            zIndex: 10,
           }}>
-            <select
-              value={filterTier}
-              onChange={(e) => setFilterTier(e.target.value)}
-              style={{
-                appearance:      "none",
-                backgroundColor: "rgba(255,255,255,0.88)",
-                backdropFilter:  "blur(6px)",
-                border:          "1px solid rgba(255,255,255,0.6)",
-                borderRadius:    8,
-                padding:         "5px 28px 5px 11px",
-                fontSize:        11,
-                fontWeight:      600,
-                color:           "#1f2937",
-                boxShadow:       "0 2px 10px rgba(0,0,0,0.12)",
-                cursor:          "pointer",
-                outline:         "none",
-                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2.5' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
-                backgroundRepeat:   "no-repeat",
-                backgroundPosition: "right 9px center",
-              }}
-            >
-              <option value="all">전체 보기</option>
-              <option value="1-3">1 ~ 3위</option>
-              <option value="4-9">4 ~ 9위</option>
-              <option value="10-15">10 ~ 15위</option>
-              <option value="16-21">16 ~ 21위</option>
-              <option value="22-30">22 ~ 30위</option>
-            </select>
+            <TierDropdown value={filterTier} onChange={setFilterTier} />
           </div>
 
           {coloredGeoJSON && (
@@ -765,11 +738,12 @@ export default function WorldMap({
               >
                 <span
                   style={{
+                    // 흰 텍스트 + 어두운 halo, 플랫폼 공통 폰트(Noto Sans KR)
                     color:         "white",
-                    fontSize:      10,
+                    fontSize:      12,
                     fontWeight:    700,
-                    fontFamily:    "'Pretendard', 'Noto Sans KR', sans-serif",
-                    textShadow:    "0 0 4px rgba(4,22,30,1), 0 0 4px rgba(4,22,30,1), 0 0 8px rgba(4,22,30,0.8)",
+                    fontFamily:    "'Noto Sans KR', sans-serif",
+                    textShadow:    "0 0 4px rgba(0,0,0,1), 0 0 4px rgba(0,0,0,1), 0 0 8px rgba(0,0,0,1)",
                     pointerEvents: "auto",
                     whiteSpace:    "nowrap",
                     userSelect:    "none",
@@ -865,7 +839,7 @@ export default function WorldMap({
         gap: 10,
         flexShrink: 0,
       }}>
-        <span style={{ fontSize: 9, color: "#4b5563", fontWeight: 600, whiteSpace: "nowrap" }}>
+        <span style={{ fontSize: 11, color: "#4b5563", fontWeight: 600, whiteSpace: "nowrap" }}>
           {tradeType === "수입" ? "수입액" : "수출액"} 순위
         </span>
         <div style={{ flex: 1 }}>
@@ -893,7 +867,7 @@ export default function WorldMap({
           <div style={{ display: "flex", marginTop: 3 }}>
             {["30위 밖", "22~30위", "16~21위", "10~15위", "4~9위", "1~3위"].map((label) => (
               <div key={label} style={{ flex: 1, textAlign: "center" }}>
-                <span style={{ fontSize: 8, color: "#6b7280" }}>{label}</span>
+                <span style={{ fontSize: 10, color: "#6b7280" }}>{label}</span>
               </div>
             ))}
           </div>
@@ -1078,6 +1052,155 @@ export default function WorldMap({
           })(),
           document.body
         )}
+    </div>
+  );
+}
+
+// ─── 지도 우상단 순위 구간 드롭다운 ─────────────────────────────────────────
+// 네이티브 <select>는 option 내부 스타일 커스터마이징 불가(OS 기본 하이라이트 사용)
+// → 커스텀 버튼 + 팝오버로 체크마크·호버·높이 모두 일관 표현
+interface TierOption { value: string; label: string }
+const TIER_OPTIONS: TierOption[] = [
+  { value: "all",    label: "전체 보기" },
+  { value: "1-3",    label: "1~3위" },
+  { value: "4-9",    label: "4~9위" },
+  { value: "10-15",  label: "10~15위" },
+  { value: "16-21",  label: "16~21위" },
+  { value: "22-30",  label: "22~30위" },
+];
+
+function TierDropdown({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const current = TIER_OPTIONS.find((o) => o.value === value) ?? TIER_OPTIONS[0];
+
+  // click outside·ESC 로 닫기
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  // 트리거·옵션 공통 폰트 — 브라우저 기본 <button> UA 스타일(system-ui)로 인한 불일치 방지
+  const commonFont = {
+    fontFamily: "inherit",
+    fontSize: 12,
+    fontWeight: 400 as const,
+  };
+
+  return (
+    <div ref={ref} style={{ position: "relative" }}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          // 필터 적용 여부와 무관하게 배경·테두리 완전 동일 (옵션 A)
+          // 상태 변화는 트리거 텍스트(전체 → 1~3위 등)로만 전달
+          backgroundColor: "rgba(255,255,255,0.9)",
+          backdropFilter: "blur(6px)",
+          border: "0.5px solid #e5e7eb",
+          borderRadius: 8,
+          padding: "6px 11px",
+          color: "#1f2937",
+          boxShadow: "0 2px 10px rgba(0,0,0,0.10)",
+          cursor: "pointer",
+          outline: "none",
+          minWidth: 92,
+          whiteSpace: "nowrap",
+          ...commonFont,
+        }}
+      >
+        <span>{current.label}</span>
+        <svg
+          width="10"
+          height="10"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="#6b7280"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          style={{ marginLeft: "auto" }}
+          aria-hidden
+        >
+          <path d="M6 9l6 6 6-6" />
+        </svg>
+      </button>
+
+      {open && (
+        <div
+          role="listbox"
+          style={{
+            position: "absolute",
+            top: "calc(100% + 4px)",
+            right: 0,
+            background: "#fff",
+            border: "0.5px solid #e5e7eb",
+            borderRadius: 8,
+            boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+            padding: "4px 0",
+            minWidth: 130,
+            zIndex: 30,
+          }}
+        >
+          {TIER_OPTIONS.map((opt) => {
+            const selected = opt.value === value;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                role="option"
+                aria-selected={selected}
+                onClick={() => {
+                  onChange(opt.value);
+                  setOpen(false);
+                }}
+                onMouseEnter={(e) => {
+                  if (!selected) e.currentTarget.style.background = "#f8fafc";
+                }}
+                onMouseLeave={(e) => {
+                  if (!selected) e.currentTarget.style.background = "transparent";
+                }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  width: "100%",
+                  height: 36,
+                  padding: "8px 12px",
+                  background: selected ? "#f1f5f9" : "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "#1f2937",
+                  textAlign: "left",
+                  ...commonFont,
+                  // 선택된 옵션만 weight 500 (체크 마크와 함께 강조)
+                  fontWeight: selected ? 500 : 400,
+                }}
+              >
+                <span style={{ width: 12, display: "inline-block", color: "#1f2937", flexShrink: 0 }}>
+                  {selected ? "✓" : ""}
+                </span>
+                <span>{opt.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

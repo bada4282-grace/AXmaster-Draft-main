@@ -32,6 +32,36 @@ function buildCatalog(): string {
 const _resultCache = new Map<string, { code: string; name: string }[]>();
 const MAX_CACHE = 200;
 
+// 자주 쓰이는 동의어·통칭의 하드코딩 매핑. LLM 호출 전 사전 검사 → 안정성·속도 향상.
+// 각 값은 MTI_LOOKUP 에 실제 존재하는 3 또는 4자리 코드여야 한다.
+const COMMON_SYNONYMS: { keywords: string[]; code: string }[] = [
+  { keywords: ["제약", "신약", "의약", "약품"], code: "2262" },           // 의약품
+  { keywords: ["화장품", "뷰티"], code: "2272" },                          // 화장품 (2272: 비누치약및화장품)
+  { keywords: ["자동차", "승용차", "완성차"], code: "7412" },              // 승용차
+  { keywords: ["스마트폰", "휴대폰", "핸드폰"], code: "8123" },             // 이동전화기
+  { keywords: ["반도체", "메모리"], code: "8311" },                       // 전자집적회로
+  { keywords: ["디스플레이", "OLED", "oled", "LCD", "lcd"], code: "8361" }, // 평판디스플레이
+  { keywords: ["조선", "선박", "배", "컨테이너선", "유조선"], code: "7461" }, // 선박
+  { keywords: ["배터리", "이차전지"], code: "8352" },                      // 축전지
+  { keywords: ["석유제품", "경유", "휘발유", "원유"], code: "133" },       // 석유제품
+  { keywords: ["철강", "강판"], code: "61" },                             // 철강제품
+];
+
+function resolveBySynonymMap(question: string): ResolvedProduct[] {
+  const lookup = MTI_LOOKUP as Record<string, string>;
+  const matched: ResolvedProduct[] = [];
+  const seen = new Set<string>();
+  for (const entry of COMMON_SYNONYMS) {
+    if (entry.keywords.some((kw) => question.includes(kw))) {
+      if (!seen.has(entry.code) && lookup[entry.code]) {
+        matched.push({ code: entry.code, name: lookup[entry.code] });
+        seen.add(entry.code);
+      }
+    }
+  }
+  return matched;
+}
+
 export interface ResolvedProduct {
   code: string;
   name: string;
@@ -44,12 +74,21 @@ export interface ResolvedProduct {
 export async function resolveProductCodesViaLLM(
   question: string,
 ): Promise<ResolvedProduct[]> {
-  if (!process.env.ANTHROPIC_API_KEY) return [];
   if (!question || question.trim().length === 0) return [];
 
   const cacheKey = question.trim();
   const cached = _resultCache.get(cacheKey);
   if (cached) return cached;
+
+  // 1) 하드코딩된 동의어 맵 선검사 — 가장 흔한 키워드는 LLM 없이 즉시 해소
+  const synonymHits = resolveBySynonymMap(question);
+  if (synonymHits.length > 0) {
+    _resultCache.set(cacheKey, synonymHits);
+    return synonymHits;
+  }
+
+  // 2) LLM 기반 의미 매핑 (키 누락 시 폴백 없음 → 빈 배열)
+  if (!process.env.ANTHROPIC_API_KEY) return [];
 
   const catalog = buildCatalog();
   const model = process.env.ANTHROPIC_MODEL ?? "claude-haiku-4-5-20251001";
