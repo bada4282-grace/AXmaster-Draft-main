@@ -248,6 +248,7 @@ export default function ChatBot({
   const [isStreaming, setIsStreaming] = useState(false);
   const [guestFaq, setGuestFaq] = useState(DEFAULT_GUEST_FAQ);
   const [userFaq, setUserFaq] = useState<string[] | null>(null);
+  const [sentInSession, setSentInSession] = useState(false);
 
   // 이메일 모달 state
   const [emailModal, setEmailModal] = useState(false);
@@ -550,6 +551,7 @@ export default function ChatBot({
     const userMsg = msgToSend.trim();
     if (!overrideMsg) setInput("");
     setIsStreaming(true);
+    setSentInSession(true);
 
     type HistoryMsg = { role: "user" | "assistant"; content: string };
     const rawHistory = messages.slice(-10)
@@ -920,8 +922,8 @@ export default function ChatBot({
         <div ref={bottomRef} />
       </div>
 
-      {/* FAQ 버튼 — 비로그인: 첫 메시지 전까지만, 로그인: 맞춤 FAQ 항상 표시 */}
-      {(user ? !!userFaq : !messages.some(m => m.role === "user")) && (
+      {/* FAQ 버튼 — 비로그인: 첫 메시지 전까지만, 로그인: 맞춤 FAQ (현재 세션에서 질문 전까지) */}
+      {(user ? (!!userFaq && !sentInSession) : !messages.some(m => m.role === "user")) && (
       <div style={{ display: "flex", flexDirection: "column", gap: 6, padding: "0 12px 8px" }}>
         {(user && userFaq ? userFaq : guestFaq).map((q, i) => (
           <button
