@@ -26,6 +26,8 @@ export async function saveChatLog(role: "user" | "bot", content: string) {
 }
 
 // 최근 채팅 로그 조회 (비로그인 시 빈 배열)
+// DB 에서 최신 N 개를 역순으로 가져온 뒤 시간 정방향(오래된→최신)으로 뒤집어 반환.
+// LLM 프롬프트(welcome·FAQ)가 자연스러운 대화 흐름을 읽을 수 있도록 최신이 마지막에 오게 함.
 export async function getChatLogs(limit = 50): Promise<ChatLog[]> {
   const userId = await getCurrentUserId();
   if (!userId) return [];
@@ -34,12 +36,12 @@ export async function getChatLogs(limit = 50): Promise<ChatLog[]> {
     .from("chat_logs")
     .select("*")
     .eq("user_id", userId)
-    .order("created_at", { ascending: true })
+    .order("created_at", { ascending: false })
     .limit(limit);
 
   if (error) {
     console.error("[getChatLogs] 조회 실패:", error.message);
     return [];
   }
-  return (data ?? []) as ChatLog[];
+  return ((data ?? []) as ChatLog[]).reverse();
 }
