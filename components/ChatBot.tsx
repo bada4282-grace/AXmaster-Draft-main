@@ -59,7 +59,12 @@ function renderBotText(text: string): React.ReactNode {
   );
 }
 
-interface ChatMessage { role: "bot" | "user"; text: string; routeButtons?: RouteButton[]; }
+interface ChatMessage {
+  role: "bot" | "user";
+  text: string;
+  routeButtons?: RouteButton[];
+  kind?: "notice"; // 말풍선 variant — 연노랑 공지 박스로 분기
+}
 
 interface ChatBotProps {
   open: boolean;
@@ -73,6 +78,9 @@ const USER_FAQ_KEY = "kstat_user_faq";
 // 채팅 내역 sessionStorage 키 접두사 — 사용자별/게스트로 분리해 로그인 전환 시 혼선 방지
 const MESSAGES_KEY_PREFIX = "kstat_chat_messages_";
 const MAX_STORED_MESSAGES = 50;
+
+// 보고서 기능 안내 notice 의 현재 표준 문구 (주입 지점과 동일)
+const NOTICE_TEXT_REPORT = "💡 대화 요약 보고서를 📋 PDF 또는 📧 메일로 받아보세요!";
 
 function messagesKey(userId: string | null | undefined): string {
   return `${MESSAGES_KEY_PREFIX}${userId ?? "guest"}`;
@@ -89,7 +97,11 @@ function loadStoredMessages(userId: string | null | undefined): ChatMessage[] | 
       (m): m is ChatMessage =>
         m && (m.role === "bot" || m.role === "user") && typeof m.text === "string",
     );
-    return msgs.length > 0 ? msgs : null;
+    // notice 메시지는 과거 버전 문구가 저장되어 있을 수 있음 — 복원 시점에 현재 표준 문구로 정규화
+    const normalized = msgs.map(m =>
+      m.kind === "notice" && m.role === "bot" ? { ...m, text: NOTICE_TEXT_REPORT } : m
+    );
+    return normalized.length > 0 ? normalized : null;
   } catch {
     return null;
   }
@@ -465,7 +477,7 @@ export default function ChatBot({
     if (!currentUser) {
       setMessages([{ role: "bot", text: fallback }]);
       setTimeout(() => {
-        setMessages(prev => [...prev, { role: "bot", text: "💡 대화 요약 보고서를 📋 PDF 또는 📧 메일로 받아보세요!" }]);
+        setMessages(prev => [...prev, { role: "bot", text: NOTICE_TEXT_REPORT, kind: "notice" }]);
       }, 1000);
       welcomeFetchedRef.current = false;
       return;
@@ -481,7 +493,7 @@ export default function ChatBot({
         if (logs.length === 0) {
           setMessages([{ role: "bot", text: fallback }]);
           setTimeout(() => {
-            setMessages(prev => [...prev, { role: "bot", text: "💡 대화 요약 보고서를 📋 PDF 또는 📧 메일로 받아보세요!" }]);
+            setMessages(prev => [...prev, { role: "bot", text: NOTICE_TEXT_REPORT, kind: "notice" }]);
           }, 1000);
           return;
         }
@@ -496,12 +508,12 @@ export default function ChatBot({
 
         setMessages([{ role: "bot", text: message ?? fallback }]);
         setTimeout(() => {
-          setMessages(prev => [...prev, { role: "bot", text: "💡 대화 요약 보고서를 📋 PDF 또는 📧 메일로 받아보세요!" }]);
+          setMessages(prev => [...prev, { role: "bot", text: NOTICE_TEXT_REPORT, kind: "notice" }]);
         }, 1000);
       } catch {
         setMessages([{ role: "bot", text: fallback }]);
         setTimeout(() => {
-          setMessages(prev => [...prev, { role: "bot", text: "💡 대화 요약 보고서를 📋 PDF 또는 📧 메일로 받아보세요!" }]);
+          setMessages(prev => [...prev, { role: "bot", text: NOTICE_TEXT_REPORT, kind: "notice" }]);
         }, 1000);
       } finally {
         setWelcomeLoading(false);
@@ -914,7 +926,7 @@ export default function ChatBot({
               {((user.user_metadata as { name?: string; username?: string; email?: string } | undefined)?.name
                 ?? (user.user_metadata as { username?: string } | undefined)?.username
                 ?? (user.user_metadata as { email?: string } | undefined)?.email
-                ?? "")} 로그인 중
+                ?? "")}님 로그인 중
             </div>
           )}
         </div>
@@ -987,7 +999,11 @@ export default function ChatBot({
               )}
               <div
                 className={msg.role === "bot" ? "chatbot-msg-bot" : "chatbot-msg-user"}
-                style={{ fontSize }}
+                style={
+                  msg.kind === "notice"
+                    ? { fontSize, background: "#FEF3C7", color: "#92400E" }
+                    : { fontSize }
+                }
               >
                 {msg.role === "bot"
                   ? (msg.text === "" && (isStreaming || welcomeLoading) && i === messages.length - 1
