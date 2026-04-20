@@ -6,6 +6,7 @@ import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
 import { supabase } from "@/lib/supabase";
 import { saveChatLog, getChatLogs } from "@/lib/chat";
+import { getUserTier, type UserTier } from "@/lib/auth";
 import type { PageContext, RouteButton } from "@/lib/chatContext";
 import type { User } from "@supabase/supabase-js";
 import { DEFAULT_YEAR } from "@/lib/data";
@@ -259,10 +260,31 @@ export default function ChatBot({
   const [pdfModal, setPdfModal] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
 
-  // 이메일 모달 열릴 때 유저 이메일 자동 채우기
+  // 회원 등급 (guest/free/paid) — 보고서 기능 gate
+  const [userTier, setUserTier] = useState<UserTier>("guest");
   useEffect(() => {
-    if (emailModal && user?.email) {
-      setEmailInput(user.email);
+    let cancelled = false;
+    getUserTier().then(t => { if (!cancelled) setUserTier(t); }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [user]);
+
+  // 유료 회원이 아닐 때 표시할 안내 모달 상태
+  const [tierGateModal, setTierGateModal] = useState(false);
+
+  // 유료 회원이 아니면 안내 모달을 열고 false 반환
+  const guardPaidReport = (): boolean => {
+    if (userTier === "paid") return true;
+    setTierGateModal(true);
+    return false;
+  };
+
+  // 이메일 모달 열릴 때 유저 이메일 자동 채우기
+  // user.email은 가입 시 `{username}@kstat.local` 내부 식별자이므로,
+  // 실제 연락 이메일은 user_metadata.email에 저장된다 (lib/auth.ts signUp 참조).
+  useEffect(() => {
+    if (emailModal) {
+      const realEmail = (user?.user_metadata as { email?: string } | undefined)?.email ?? "";
+      setEmailInput(realEmail);
     }
     if (!emailModal) {
       setEmailInput("");
@@ -294,6 +316,9 @@ export default function ChatBot({
   const hasRestoredRef = useRef(false);
   // 초기 세션 관측(재하이드레이션) vs 실제 로그인/로그아웃 구분
   const sessionInitializedRef = useRef(false);
+  // FAQ 로더에서 최신 messages를 참조하되 effect 재실행은 user 발화 수 변화에만 걸기 위한 ref
+  const messagesRef = useRef<ChatMessage[]>([]);
+  useEffect(() => { messagesRef.current = messages; });
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const increaseFontSize = () => setFontSize(prev => Math.min(prev + 1, 16));
   const decreaseFontSize = () => setFontSize(prev => Math.max(prev - 1, 10));
@@ -362,7 +387,10 @@ export default function ChatBot({
     return () => subscription.unsubscribe();
   }, []);
 
-  // 로그인 사용자: AI 기반 맞춤 FAQ 로드 (챗봇 열릴 때마다 최신 로그 기반)
+  // 로그인 사용자: AI 기반 맞춤 FAQ 로드 (free·paid 공통)
+  // 트리거: user/open 변화 + 현재 세션의 user 발화 수가 늘어날 때
+  // 데이터: DB 로그(getChatLogs) + 현재 세션 messages 병합 (DB 저장 전 최근 발화까지 반영)
+  const sessionUserMsgCount = messages.filter(m => m.role === "user").length;
   useEffect(() => {
     if (!user) {
       setUserFaq(null);
@@ -376,21 +404,32 @@ export default function ChatBot({
     if (cached) setUserFaq(cached);
 
     let cancelled = false;
-    getChatLogs(30).then(logs => {
+    getChatLogs(30).then(dbLogs => {
       if (cancelled) return;
-      const hasUserMsgs = logs.filter(l => l.role === "user").length > 0;
+
+      // DB 로그 + 현재 세션 user 발화 병합 (DB에 없는 세션 발화만 추가)
+      const dbUserContents = new Set(dbLogs.filter(l => l.role === "user").map(l => l.content));
+      const sessionUserLogs = messagesRef.current
+        .filter(m => m.role === "user" && !dbUserContents.has(m.text))
+        .map(m => ({ role: "user" as const, content: m.text }));
+      const combined = [
+        ...dbLogs.map(l => ({ role: l.role, content: l.content })),
+        ...sessionUserLogs,
+      ];
+
+      const hasUserMsgs = combined.filter(l => l.role === "user").length > 0;
       if (!hasUserMsgs) {
         if (!cancelled) setUserFaq(LOGGED_IN_DEFAULT_FAQ);
         return;
       }
-      return fetchUserFaq(logs);
+      return fetchUserFaq(combined);
     }).then(faq => {
       if (!cancelled && faq) setUserFaq(faq);
     }).catch(() => {
       if (!cancelled) setUserFaq(LOGGED_IN_DEFAULT_FAQ);
     });
     return () => { cancelled = true; };
-  }, [user, open]);
+  }, [user, open, sessionUserMsgCount]);
 
   useEffect(() => {
     // auth 확인 전에는 어떤 메시지도 세팅하지 않는다 — 로그인 사용자가 잠깐 게스트 인사말을 보는 현상 차단
@@ -477,14 +516,24 @@ export default function ChatBot({
     if (!emailInput.trim()) return;
     setSendStatus("sending");
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const authHeader: Record<string, string> = session?.access_token
+        ? { Authorization: `Bearer ${session.access_token}` }
+        : {};
       const reportRes = await fetch("/api/report", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
+        headers: { "Content-Type": "application/json", ...authHeader },
+        body: JSON.stringify({
           messages,
           userName: user?.user_metadata?.name ?? null
         }),
       });
+      if (reportRes.status === 403) {
+        setEmailModal(false);
+        setSendStatus("idle");
+        setTierGateModal(true);
+        return;
+      }
       const reportData = await reportRes.json();
       console.log("report 응답:", reportData);
 
@@ -510,14 +559,24 @@ export default function ChatBot({
   const downloadPdf = async () => {
     setIsDownloading(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const authHeader: Record<string, string> = session?.access_token
+        ? { Authorization: `Bearer ${session.access_token}` }
+        : {};
       const reportRes = await fetch("/api/report", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
+        headers: { "Content-Type": "application/json", ...authHeader },
+        body: JSON.stringify({
           messages,
           userName: user?.user_metadata?.name ?? null
         }),
       });
+      if (reportRes.status === 403) {
+        setIsDownloading(false);
+        setPdfModal(false);
+        setTierGateModal(true);
+        return;
+      }
       const reportData = await reportRes.json();
 
       // html2pdf 동적 로드
@@ -776,6 +835,56 @@ export default function ChatBot({
         </div>
       )}
 
+      {/* 유료 회원 전용 안내 모달 (게스트·무료 공통) */}
+      {tierGateModal && (
+        <div
+          onClick={() => setTierGateModal(false)}
+          style={{
+            position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            zIndex: 100, borderRadius: 16,
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: "#fff", borderRadius: 12, padding: "24px 20px",
+              width: 300, display: "flex", flexDirection: "column", gap: 14,
+              boxShadow: "0 4px 24px rgba(0,0,0,0.15)",
+              position: "relative",
+            }}
+          >
+            <button
+              onClick={() => setTierGateModal(false)}
+              aria-label="닫기"
+              style={{ position: "absolute", top: 8, right: 10, background: "none", border: "none", fontSize: 18, color: "#999", cursor: "pointer", lineHeight: 1 }}
+            >
+              ✕
+            </button>
+            <div style={{ fontSize: 15, fontWeight: 600, color: "#333" }}>
+              📋 대화 요약 보고서
+            </div>
+            <p style={{ margin: 0, fontSize: 13, color: "#555", lineHeight: 1.6 }}>
+              {userTier === "guest"
+                ? "대화 요약 보고서(PDF·이메일)는 유료 회원 전용 기능입니다.\n로그인 후 회원사 가입을 신청해주세요."
+                : "대화 요약 보고서(PDF·이메일)는 유료 회원 전용 기능입니다.\n회원사 가입을 신청하시면 관리자 승인 후 이용하실 수 있습니다."}
+            </p>
+            <div style={{ display: "flex", justifyContent: "center", marginTop: 4 }}>
+              <a
+                href={userTier === "guest" ? "/login" : "/upgrade"}
+                style={{
+                  padding: "10px 20px", borderRadius: 8, background: "#C41E3A",
+                  color: "#fff", fontSize: 13, fontWeight: 600, textDecoration: "none",
+                  textAlign: "center", minWidth: 160,
+                }}
+              >
+                {userTier === "guest" ? "로그인 / 회원가입" : "회원사 가입하기"}
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+
 
       <div className="chatbot-header">
         <div style={{
@@ -788,7 +897,10 @@ export default function ChatBot({
           <div style={{ fontSize: 20, fontWeight: 600, color: "#333" }}>K-stat AI 어시스턴트</div>
           {user && (
             <div style={{ fontSize: 10, color: "#999" }}>
-              {user.email} 로그인 중
+              {((user.user_metadata as { name?: string; username?: string; email?: string } | undefined)?.name
+                ?? (user.user_metadata as { username?: string } | undefined)?.username
+                ?? (user.user_metadata as { email?: string } | undefined)?.email
+                ?? "")} 로그인 중
             </div>
           )}
         </div>
@@ -801,22 +913,22 @@ export default function ChatBot({
           <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
             <div style={{ position: "relative", display: "inline-flex" }}>
               <button
-                onClick={() => setEmailModal(true)}
-                title="메일로 받기"
-                style={{ width: 22, height: 22, borderRadius: "50%", border: "1px solid #ddd", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                onClick={() => { if (guardPaidReport()) setEmailModal(true); }}
+                title={userTier === "paid" ? "메일로 받기" : "유료 회원 전용"}
+                style={{ width: 22, height: 22, borderRadius: "50%", border: "1px solid #ddd", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", opacity: userTier === "paid" ? 1 : 0.6 }}
                 onMouseEnter={e => (e.currentTarget.style.background = "#fde8e8")}
                 onMouseLeave={e => (e.currentTarget.style.background = "#fff")}
               >
                 📧
               </button>
-              {messages.filter(m => m.role === "user").length >= 3 && (
+              {userTier === "paid" && messages.filter(m => m.role === "user").length >= 3 && (
                 <div style={{ position: "absolute", top: -2, right: -2, width: 6, height: 6, borderRadius: "50%", background: "#C41E3A" }} />
               )}
             </div>
             <button
-              onClick={() => setPdfModal(true)}
-              title="PDF로 받기"
-              style={{ width: 22, height: 22, borderRadius: "50%", border: "1px solid #ddd", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+              onClick={() => { if (guardPaidReport()) setPdfModal(true); }}
+              title={userTier === "paid" ? "PDF로 받기" : "유료 회원 전용"}
+              style={{ width: 22, height: 22, borderRadius: "50%", border: "1px solid #ddd", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", opacity: userTier === "paid" ? 1 : 0.6 }}
               onMouseEnter={e => (e.currentTarget.style.background = "#fde8e8")}
               onMouseLeave={e => (e.currentTarget.style.background = "#fff")}
             >

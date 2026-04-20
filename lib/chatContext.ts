@@ -749,6 +749,7 @@ export async function buildChatContext(
     for (const direction of productTradeTypes) {
       let trend: { year: string; value: number }[] = [];
       let topCountries: { country: string; value: number }[] = [];
+      let topCountriesYear = year; // 실제로 상위국가 데이터를 확보한 연도 (폴백 시 전년이 됨)
       try {
         [trend, topCountries] = await Promise.all([
           getProductTrendAsync(code, direction),
@@ -756,12 +757,26 @@ export async function buildChatContext(
         ]);
       } catch { /* Supabase 조회 실패 시 빈 데이터로 진행 */ }
 
+      // 폴백: 현재 연도(부분 집계) 의 품목×국가 데이터가 없으면 전년 데이터로 대체
+      // — 대시보드 /product/[name] 페이지가 이미 current+prev 이중 조회하는 것과 동작 통일
+      if (topCountries.length === 0) {
+        try {
+          const prevYearTry = String(parseInt(year, 10) - 1);
+          const prevTop = await getProductTopCountriesAsync(code, prevYearTry, direction);
+          if (prevTop.length > 0) {
+            topCountries = prevTop;
+            topCountriesYear = prevYearTry;
+          }
+        } catch { /* 무시 */ }
+      }
+
       let section = `[${name} ${direction} 데이터]\n`;
 
       // 금액 추이 뷰에서는 상위 국가를 화면에 보이지 않음 → 제외
       if (topCountries.length > 0 && !inTrendView) {
         const topN = inCountriesView ? 10 : 5;
-        section += `상위 ${direction}국: ${topCountries.slice(0, topN).map(c => `${c.country}(${c.value}억달러)`).join(", ")}\n`;
+        const yearBadge = topCountriesYear !== year ? ` (${topCountriesYear}년 기준)` : "";
+        section += `상위 ${direction}국${yearBadge}: ${topCountries.slice(0, topN).map(c => `${c.country}(${c.value}억달러)`).join(", ")}\n`;
       }
       // 상위 국가 뷰에서는 연도별 추이가 화면에 없음 → 제외
       if (trend.length > 0 && !inCountriesView) {

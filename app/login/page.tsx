@@ -31,12 +31,13 @@ export default function LoginPage() {
         <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 24, color: "#333" }}>로그인</h1>
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: 16 }}>
-            <label style={{ fontSize: 13, color: "#555", display: "block", marginBottom: 6 }}>아이디</label>
+            <label style={{ fontSize: 13, color: "#555", display: "block", marginBottom: 6 }}>아이디 또는 이메일</label>
             <input
               type="text"
               value={username}
               onChange={e => setUsername(e.target.value)}
               required
+              autoComplete="username"
               style={{ width: "100%", padding: "10px 12px", border: "1px solid #ddd", borderRadius: 8, fontSize: 14, boxSizing: "border-box" }}
             />
           </div>
