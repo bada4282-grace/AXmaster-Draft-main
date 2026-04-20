@@ -46,3 +46,29 @@ export async function getUser() {
   const { data: { user } } = await supabase.auth.getUser();
   return user;
 }
+
+// ─────────────────────────────────────────────────────────────
+// 회원 등급
+// ─────────────────────────────────────────────────────────────
+
+export type UserTier = "guest" | "free" | "paid";
+
+// 현재 사용자의 등급 반환. 비로그인은 'guest'.
+export async function getUserTier(): Promise<UserTier> {
+  const user = await getUser();
+  if (!user) return "guest";
+
+  const { data, error } = await supabase
+    .from("user_profiles")
+    .select("tier")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (error) {
+    // RLS 설정/네트워크 이슈 시 DevTools에서 원인 파악용 경고
+    console.warn("[getUserTier] profile read failed:", error.message);
+    return "free";
+  }
+  if (!data) return "free"; // 프로필 없음 → free로 간주 (fail-closed)
+  return data.tier as "free" | "paid";
+}
