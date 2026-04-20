@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import type { ProductNode, TradeType } from "@/lib/data";
-import { MTI_COLORS } from "@/lib/data";
+import { MTI_COLORS, MTI_LOOKUP } from "@/lib/data";
 
 export interface MonthlyCountryMapItem {
   ctr_name: string;
@@ -22,9 +22,11 @@ function mapToProductNode(row: RpcTreemapRow): ProductNode | null {
   const value = rawValue / 1e8; // 달러 → 억달러
   const mti = Number(String(row.mti_cd).charAt(0));
   const color = (MTI_COLORS as Record<number, string>)[mti] ?? "#3B82F6";
+  // CSV 시드 파싱 버그(콤마 포함 이름이 잘림)로 DB 이름이 불완전한 경우를 MTI_LOOKUP로 교정.
+  const canonical = (MTI_LOOKUP as Record<string, string>)[row.mti_cd];
   return {
     code: row.mti_cd,
-    name: row.mti_name,
+    name: canonical ?? row.mti_name,
     value,
     mti,
     color,
@@ -114,6 +116,43 @@ export async function getMonthlyCountryMapData(
 
   _countryMapInflight.set(cacheKey, promise);
   return promise;
+}
+
+// 최신 YYMM 프로세스 캐시 (10분 TTL) — 데이터 커버리지 판정용 공용 헬퍼
+let _latestYymmCache: { value: string | null; ts: number } | null = null;
+const LATEST_YYMM_TTL = 10 * 60 * 1000;
+
+/** trade_mti6의 MAX(YYMM) 조회. 데이터 커버리지 판정의 단일 원천. */
+export async function getLatestYYMM(): Promise<string | null> {
+  if (_latestYymmCache && Date.now() - _latestYymmCache.ts < LATEST_YYMM_TTL) {
+    return _latestYymmCache.value;
+  }
+  try {
+    const { data } = await supabase
+      .from("trade_mti6")
+      .select("YYMM")
+      .order("YYMM", { ascending: false })
+      .limit(1);
+    const value = data && data.length > 0 ? String(data[0].YYMM) : null;
+    _latestYymmCache = { value, ts: Date.now() };
+    return value;
+  } catch {
+    _latestYymmCache = { value: null, ts: Date.now() };
+    return null;
+  }
+}
+
+/**
+ * 해당 연도가 부분 집계이면 "1~N월" 같은 범위 문자열 반환, 그 외 null.
+ * UI 배지("⚠ 부분 데이터(1~2월)")의 단일 데이터 소스.
+ */
+export async function getIncompleteMonthRange(year: string): Promise<string | null> {
+  const latest = await getLatestYYMM();
+  if (!latest) return null;
+  const latestYear = latest.slice(0, 4);
+  const latestMonth = parseInt(latest.slice(4, 6), 10);
+  if (year !== latestYear || !latestMonth || latestMonth >= 12) return null;
+  return latestMonth === 1 ? "1월" : `1~${latestMonth}월`;
 }
 
 /**

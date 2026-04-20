@@ -10,7 +10,14 @@ import type { MapLayerMouseEvent } from "maplibre-gl";
 import { feature as topoFeature } from "topojson-client";
 
 import { DEFAULT_YEAR, type TradeType, type CountryData } from "@/lib/data";
-import { getCountryRankingAsync, getTreemapDataAsync } from "@/lib/dataSupabase";
+import { KO_NAME_TO_ISO } from "@/lib/countryIso";
+import {
+  getCountryRankingAsync,
+  getCountryTreemapDataAsync,
+  getTreemapDataAsync,
+  type CountryRanking,
+} from "@/lib/dataSupabase";
+import { useOngoingYearInfo } from "@/lib/useIncompleteMonthRange";
 import type { ProductNode } from "@/lib/data";
 
 // 수출: 블루 그라데이션 / 수입: 코럴 그라데이션
@@ -93,71 +100,7 @@ const ISO_NUM_TO_ALPHA2: Record<string, string> = {
   "630": "PR", "854": "BF",
 };
 
-// 한국어 국가명 → ISO alpha-2 (Supabase monthly 데이터의 ctr_name 매핑용)
-// 다양한 표기 변형 포함
-const KO_NAME_TO_ISO: Record<string, string> = {
-  "중국": "CN", "미국": "US", "베트남": "VN", "일본": "JP", "홍콩": "HK",
-  "대만": "TW", "싱가포르": "SG", "인도": "IN", "호주": "AU", "멕시코": "MX",
-  "독일": "DE", "말레이시아": "MY", "인도네시아": "ID", "폴란드": "PL", "필리핀": "PH",
-  "튀르키예": "TR", "터키": "TR",
-  "캐나다": "CA", "태국": "TH", "네덜란드": "NL", "헝가리": "HU",
-  "사우디아라비아": "SA", "사우디": "SA",
-  "영국": "GB",
-  "이탈리아": "IT", "프랑스": "FR", "스페인": "ES", "브라질": "BR",
-  "러시아": "RU", "러시아연방": "RU",
-  "아랍에미리트": "AE", "UAE": "AE", "아랍 에미리트": "AE",
-  "이스라엘": "IL", "벨기에": "BE",
-  "스위스": "CH", "스웨덴": "SE", "오스트리아": "AT", "덴마크": "DK",
-  "노르웨이": "NO", "핀란드": "FI", "체코": "CZ", "루마니아": "RO",
-  "남아프리카공화국": "ZA", "남아프리카": "ZA", "남아공": "ZA",
-  "아르헨티나": "AR", "칠레": "CL", "콜롬비아": "CO",
-  "파키스탄": "PK", "방글라데시": "BD",
-  "이집트": "EG", "나이지리아": "NG",
-  "카자흐스탄": "KZ", "우즈베키스탄": "UZ",
-  // 추가 국가 (Supabase CTR_NAME 기준)
-  "이란": "IR", "이라크": "IQ", "쿠웨이트": "KW", "카타르": "QA", "오만": "OM",
-  "요르단": "JO", "바레인": "BH", "레바논": "LB",
-  "캄보디아": "KH", "미얀마": "MM", "라오스": "LA", "스리랑카": "LK", "네팔": "NP",
-  "뉴질랜드": "NZ",
-  "페루": "PE", "에콰도르": "EC", "우루과이": "UY",
-  "우크라이나": "UA", "포르투갈": "PT", "그리스": "GR", "불가리아": "BG",
-  "크로아티아": "HR", "슬로바키아": "SK", "슬로베니아": "SI",
-  "리투아니아": "LT", "라트비아": "LV", "에스토니아": "EE",
-  "세르비아": "RS", "아제르바이잔": "AZ",
-  "케냐": "KE", "가나": "GH", "탄자니아": "TZ", "에티오피아": "ET",
-  "모로코": "MA", "튀니지": "TN", "알제리": "DZ",
-  // 유럽 추가
-  "아일랜드": "IE", "룩셈부르크": "LU", "몰타": "MT", "키프로스": "CY",
-  "아이슬란드": "IS", "벨라루스": "BY", "몰도바": "MD",
-  "보스니아-헤르체고비나": "BA", "보스니아헤르체고비나": "BA", "보스니아": "BA",
-  "몬테네그로": "ME", "북마케도니아": "MK", "알바니아": "AL",
-  "리히텐슈타인": "LI",
-  // 아시아 추가
-  "몽골": "MN", "조지아": "GE", "브루나이": "BN",
-  "아프가니스탄": "AF", "부탄": "BT",
-  "키르기스스탄": "KG", "키르기즈스탄": "KG",
-  "타지키스탄": "TJ", "투르크메니스탄": "TM",
-  "시리아": "SY", "예멘": "YE", "북한": "KP",
-  "마카오": "MO", "동티모르": "TL",
-  "인도(인디아)": "IN",
-  // 아메리카 추가
-  "볼리비아": "BO", "파라과이": "PY", "코스타리카": "CR",
-  "파나마": "PA", "쿠바": "CU", "도미니카공화국": "DO", "도미니카 공화국": "DO",
-  "과테말라": "GT", "온두라스": "HN", "엘살바도르": "SV",
-  "니카라과": "NI", "자메이카": "JM", "트리니다드토바고": "TT",
-  "가이아나": "GY", "수리남": "SR", "베네수엘라": "VE", "아이티": "HT",
-  // 아프리카 추가
-  "앙골라": "AO", "카메룬": "CM", "콩고민주공화국": "CD", "콩고": "CG",
-  "코트디부아르": "CI", "세네갈": "SN", "르완다": "RW", "우간다": "UG",
-  "잠비아": "ZM", "짐바브웨": "ZW", "모잠비크": "MZ", "마다가스카르": "MG",
-  "수단": "SD", "남수단": "SS", "리비아": "LY", "말리": "ML",
-  "보츠와나": "BW", "나미비아": "NA", "시에라리온": "SL", "소말리아": "SO",
-  // 오세아니아
-  "파푸아뉴기니": "PG", "피지": "FJ",
-  // ISO_NUM_TO_ALPHA2 추가분 대응
-  "아르메니아": "AM", "바하마": "BS", "벨리즈": "BZ",
-  "베냉": "BJ", "부르키나파소": "BF", "푸에르토리코": "PR",
-};
+// KO_NAME_TO_ISO는 lib/countryIso.ts로 이동 (WorldMap과 국가 상세 페이지가 공유)
 
 // TOP5 레이블 위치 (지리적 중심 좌표)
 const COUNTRY_CENTROIDS: Record<string, [number, number]> = {
@@ -306,6 +249,52 @@ export default function WorldMap({
   // FilterBar에서 선택한 품목을 URL에서 읽어 지도 필터로 적용
   const selectedProduct = useSearchParams().get("product") ?? "";
 
+  // ─ 진행 중 연도 정보 (부분 데이터 배지 + 툴팁 "ⓘ 누적" 라벨) ─
+  const ongoingInfo = useOngoingYearInfo();
+
+  // ─ Raw rankings (현재 + 전년) — 비중·순위·전년 대비 계산용 ─
+  const [rawRankings, setRawRankings] = useState<CountryRanking[]>([]);
+  const [prevRawRankings, setPrevRawRankings] = useState<CountryRanking[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    const prevYearStr = String(parseInt(year, 10) - 1);
+    Promise.all([
+      getCountryRankingAsync(year, tradeType),
+      getCountryRankingAsync(prevYearStr, tradeType),
+    ]).then(([curr, prev]) => {
+      if (cancelled) return;
+      setRawRankings(curr);
+      setPrevRawRankings(prev);
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [year, tradeType]);
+
+  // ─ 국가별 1위 품목 on-demand 캐시 ─
+  // 호버 시점에 fetch, 5분 TTL은 getCountryTreemapDataAsync 내부에 이미 있음
+  const [topProductMap, setTopProductMap] = useState<Map<string, { name: string; value: number } | null>>(new Map());
+  const fetchingTopProductRef = useRef<Set<string>>(new Set());
+  const topProductKey = useCallback(
+    (country: string) => `${country}|${year}|${tradeType}`,
+    [year, tradeType],
+  );
+  const ensureTopProduct = useCallback((country: string) => {
+    const key = topProductKey(country);
+    if (topProductMap.has(key) || fetchingTopProductRef.current.has(key)) return;
+    fetchingTopProductRef.current.add(key);
+    getCountryTreemapDataAsync(year, country, tradeType)
+      .then((items) => {
+        const sorted = [...items].sort((a, b) => b.value - a.value);
+        const top = sorted[0];
+        setTopProductMap((prev) => {
+          const next = new Map(prev);
+          next.set(key, top ? { name: top.name, value: top.value } : null);
+          return next;
+        });
+      })
+      .catch(() => {})
+      .finally(() => { fetchingTopProductRef.current.delete(key); });
+  }, [topProductMap, topProductKey, year, tradeType]);
+
   // ─ 국가 데이터 (Supabase에서 비동기 로드) ─
   const [countryData, setCountryData] = useState<CountryData[]>([]);
   useEffect(() => {
@@ -318,7 +307,7 @@ export default function WorldMap({
         name: r.country,
         nameEn: r.country,
         rank: tradeType === "수입" ? r.rank_imp : r.rank_exp,
-        export: fmt1(r.exp_amt),
+        export: fmt1(tradeType === "수입" ? r.imp_amt : r.exp_amt),
         import: fmt1(r.imp_amt),
         region: "",
         topProducts: [],
@@ -361,16 +350,33 @@ export default function WorldMap({
 
   // ─ 월별 Supabase 데이터 ─
   const [monthlyRanks, setMonthlyRanks] = useState<MonthlyCountryMapItem[] | null>(null);
+  // 전년 동기(같은 월) — 툴팁 YoY 계산용
+  const [prevMonthlyRanks, setPrevMonthlyRanks] = useState<MonthlyCountryMapItem[]>([]);
   useEffect(() => {
     let mounted = true;
-    if (!month) { return () => { mounted = false; }; }
+    if (!month) {
+      setPrevMonthlyRanks([]);
+      return () => { mounted = false; };
+    }
     onLoadingChange?.(true);
-    getMonthlyCountryMapData(year, month, tradeType)
-      .then((rows) => { if (mounted) setMonthlyRanks(rows); })
-      .catch(() => { if (mounted) setMonthlyRanks(null); })
+    const prevYear = String(parseInt(year, 10) - 1);
+    Promise.all([
+      getMonthlyCountryMapData(year, month, tradeType),
+      getMonthlyCountryMapData(prevYear, month, tradeType),
+    ])
+      .then(([curr, prev]) => {
+        if (!mounted) return;
+        setMonthlyRanks(curr);
+        setPrevMonthlyRanks(prev);
+      })
+      .catch(() => {
+        if (!mounted) return;
+        setMonthlyRanks(null);
+        setPrevMonthlyRanks([]);
+      })
       .finally(() => { if (mounted) onLoadingChange?.(false); });
     return () => { mounted = false; };
-  }, [year, month, tradeType]);
+  }, [year, month, tradeType, onLoadingChange]);
 
   // ─ 연간 집계: 정적 데이터 사용 (Supabase 호출 불필요) ─
 
@@ -602,7 +608,11 @@ export default function WorldMap({
         : [],
       isTop30: !!p.is_top30,
     });
-  }, [clearHover, coloredGeoJSON]);
+    // 수출 데이터 있는 국가면 1위 품목 사전 로드 (캐시됨)
+    if (countryName && p.rank !== undefined && Number(p.rank) < 999) {
+      ensureTopProduct(countryName);
+    }
+  }, [clearHover, coloredGeoJSON, ensureTopProduct]);
 
   const onMouseLeave = useCallback(() => clearHover(), [clearHover]);
 
@@ -677,41 +687,14 @@ export default function WorldMap({
             setZoomPct(Math.round((Math.pow(2, z) / Math.pow(2, BASE_ZOOM)) * 100));
           }}
         >
-          {/* 순위 구간 필터 — 우상단 */}
+          {/* 순위 구간 필터 — 우상단 (커스텀 드롭다운: 체크마크·호버·중립 트리거) */}
           <div style={{
-            position:        "absolute",
-            top:             12,
-            right:           12,
-            zIndex:          10,
+            position: "absolute",
+            top: 12,
+            right: 12,
+            zIndex: 10,
           }}>
-            <select
-              value={filterTier}
-              onChange={(e) => setFilterTier(e.target.value)}
-              style={{
-                appearance:      "none",
-                backgroundColor: "rgba(255,255,255,0.88)",
-                backdropFilter:  "blur(6px)",
-                border:          "1px solid rgba(255,255,255,0.6)",
-                borderRadius:    8,
-                padding:         "5px 28px 5px 11px",
-                fontSize:        11,
-                fontWeight:      600,
-                color:           "#1f2937",
-                boxShadow:       "0 2px 10px rgba(0,0,0,0.12)",
-                cursor:          "pointer",
-                outline:         "none",
-                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2.5' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
-                backgroundRepeat:   "no-repeat",
-                backgroundPosition: "right 9px center",
-              }}
-            >
-              <option value="all">전체 보기</option>
-              <option value="1-3">1 ~ 3위</option>
-              <option value="4-9">4 ~ 9위</option>
-              <option value="10-15">10 ~ 15위</option>
-              <option value="16-21">16 ~ 21위</option>
-              <option value="22-30">22 ~ 30위</option>
-            </select>
+            <TierDropdown value={filterTier} onChange={setFilterTier} />
           </div>
 
           {coloredGeoJSON && (
@@ -755,11 +738,12 @@ export default function WorldMap({
               >
                 <span
                   style={{
+                    // 흰 텍스트 + 어두운 halo, 플랫폼 공통 폰트(Noto Sans KR)
                     color:         "white",
-                    fontSize:      10,
+                    fontSize:      12,
                     fontWeight:    700,
-                    fontFamily:    "'Pretendard', 'Noto Sans KR', sans-serif",
-                    textShadow:    "0 0 4px rgba(4,22,30,1), 0 0 4px rgba(4,22,30,1), 0 0 8px rgba(4,22,30,0.8)",
+                    fontFamily:    "'Noto Sans KR', sans-serif",
+                    textShadow:    "0 0 4px rgba(0,0,0,1), 0 0 4px rgba(0,0,0,1), 0 0 8px rgba(0,0,0,1)",
                     pointerEvents: "auto",
                     whiteSpace:    "nowrap",
                     userSelect:    "none",
@@ -855,7 +839,7 @@ export default function WorldMap({
         gap: 10,
         flexShrink: 0,
       }}>
-        <span style={{ fontSize: 9, color: "#4b5563", fontWeight: 600, whiteSpace: "nowrap" }}>
+        <span style={{ fontSize: 11, color: "#4b5563", fontWeight: 600, whiteSpace: "nowrap" }}>
           {tradeType === "수입" ? "수입액" : "수출액"} 순위
         </span>
         <div style={{ flex: 1 }}>
@@ -883,64 +867,340 @@ export default function WorldMap({
           <div style={{ display: "flex", marginTop: 3 }}>
             {["30위 밖", "22~30위", "16~21위", "10~15위", "4~9위", "1~3위"].map((label) => (
               <div key={label} style={{ flex: 1, textAlign: "center" }}>
-                <span style={{ fontSize: 8, color: "#6b7280" }}>{label}</span>
+                <span style={{ fontSize: 10, color: "#6b7280" }}>{label}</span>
               </div>
             ))}
           </div>
         </div>
       </div>
 
-      {/* 툴팁 */}
+      {/* 툴팁 — 금액 추이·상위 국가 툴팁과 일관된 양식 */}
       {tooltip &&
         typeof document !== "undefined" &&
         createPortal(
-          <div
-            className="tooltip-shell tooltip-shell--fixed"
-            style={{
-              left:      tooltip.x,
-              top:       tooltip.y,
-              transform: "translate(-50%, calc(-100% - 12px))",
-            }}
-          >
-            <p className="tooltip-shell-title">{tooltip.country}</p>
-            {tooltip.rank ? (
-              <>
-                <p className="tooltip-shell-line">
-                  {tradeType === "수입" ? "수입" : "수출"} 순위:{" "}
-                  <strong>{tooltip.rank}위</strong>
-                </p>
-                <p className="tooltip-shell-line">
-                  {tradeType === "수입" ? "수입액" : "수출액"}:{" "}
-                  <strong>${tooltip.exportVal}억</strong>
-                </p>
-                {tooltip.isTop30 && tooltip.topProducts && tooltip.topProducts.length > 0 && (
+          (() => {
+            const rank = tooltip.rank;
+            const hasData = rank !== undefined && rank > 0;
+            // 월별 조회 모드에서는 rawRankings(연간)과 데이터 스페이스가 다르므로
+            // 비중·전년 대비는 생략하고 feature가 넣어준 mode-aware 수치만 표시.
+            const isMonthly = !!month;
+            const curr = !isMonthly && hasData
+              ? rawRankings.find((r) => r.country === tooltip.country)
+              : null;
+            const prev = !isMonthly && hasData
+              ? prevRawRankings.find((r) => r.country === tooltip.country)
+              : null;
+            const isOngoing = !isMonthly && ongoingInfo?.year === year;
+            const isImport = tradeType === "수입";
+            const tradeLabel = isImport ? "수입" : "수출";
+            const fmt1 = (v: number) => {
+              const rounded = Math.round(Math.abs(v) * 10) / 10;
+              const withComma = rounded.toLocaleString("en-US", {
+                minimumFractionDigits: 1,
+                maximumFractionDigits: 1,
+              });
+              const sign = v < 0 ? "-" : "";
+              return `${sign}$${withComma}억`;
+            };
+            // 현재 값
+            //  · 연간 모드: rawRankings의 정확한 억달러 수치
+            //  · 월별 모드: feature의 mode-aware 문자열(formatted) 사용
+            const currAmtAnnual = curr ? (isImport ? curr.imp_amt : curr.exp_amt) / 1e8 : 0;
+            const currAmtDisplay = isMonthly
+              ? (tooltip.exportVal ? `$${tooltip.exportVal}억` : "-")
+              : fmt1(currAmtAnnual);
+            const prevAmt = prev ? (isImport ? prev.imp_amt : prev.exp_amt) / 1e8 : 0;
+            const share = curr ? (isImport ? curr.share_imp : curr.share_exp) : 0;
+            const totalCountries = rawRankings.length;
+            const topProd = topProductMap.get(topProductKey(tooltip.country)) ?? null;
+
+            // 위치: 커서 오른쪽·아래쪽 12px 오프셋 (화면 경계에서 반전)
+            const vw = typeof window !== "undefined" ? window.innerWidth : 1920;
+            const vh = typeof window !== "undefined" ? window.innerHeight : 1080;
+            const flipX = tooltip.x > vw * 0.8;
+            const flipY = tooltip.y > vh * 0.8;
+            const translateX = flipX ? "calc(-100% - 12px)" : "12px";
+            const translateY = flipY ? "calc(-100% - 12px)" : "12px";
+
+            // 전년 대비 / 전년 동기 대비 노드
+            // - 연간 모드: rawRankings(연간) vs prevRawRankings(전년 연간)
+            // - 월별 모드: monthlyRanks(현재 월) vs prevMonthlyRanks(전년 동월)
+            const yoyLabel = isMonthly ? "전년 동기 대비" : "전년 대비";
+            const renderYoyDiff = (currAmtRef: number, prevAmtRef: number): React.ReactNode => {
+              const diff = currAmtRef - prevAmtRef;
+              const pct = (diff / prevAmtRef) * 100;
+              const up = diff >= 0;
+              const noChange = Math.abs(pct) < 0.05;
+              const color = noChange ? "#999" : up ? "#E02020" : "#185FA5";
+              const arrow = noChange ? "–" : up ? "▲" : "▼";
+              const sign = noChange ? "" : up ? "+" : "-";
+              return (
+                <span style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", color }}>
+                  <span style={{ fontSize: 13, fontWeight: 500 }}>
+                    {arrow} {sign}{Math.abs(pct).toFixed(1)}%
+                  </span>
+                  <span style={{ fontSize: 11 }}>
+                    ({sign}{fmt1(Math.abs(diff))})
+                  </span>
+                </span>
+              );
+            };
+
+            let yoyNode: React.ReactNode = null;
+            if (isMonthly) {
+              // 월별: 전년 동기 vs 현재 — monthlyRanks에서 국가명으로 조인
+              const currMonthly = monthlyRanks?.find((r) => r.ctr_name === tooltip.country);
+              const prevMonthly = prevMonthlyRanks.find((r) => r.ctr_name === tooltip.country);
+              const cAmt = currMonthly ? currMonthly.total_amt / 1e8 : 0;
+              const pAmt = prevMonthly ? prevMonthly.total_amt / 1e8 : 0;
+              if (pAmt === 0) {
+                yoyNode = <span style={{ color: "#999" }}>- 데이터 없음</span>;
+              } else {
+                yoyNode = renderYoyDiff(cAmt, pAmt);
+              }
+            } else if (isOngoing) {
+              yoyNode = <span style={{ color: "#999" }}>- 비교 불가</span>;
+            } else if (!prev || prevAmt === 0) {
+              yoyNode = <span style={{ color: "#999" }}>- 데이터 없음</span>;
+            } else {
+              yoyNode = renderYoyDiff(currAmtAnnual, prevAmt);
+            }
+
+            const Row = ({ label, value }: { label: string; value: React.ReactNode }) => (
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, marginTop: 6 }}>
+                <span style={{ fontSize: 12, color: "#64748b" }}>{label}</span>
+                <span style={{ fontSize: 13, fontWeight: 500, color: "#1f2937" }}>{value}</span>
+              </div>
+            );
+            const Divider = () => <div style={{ height: 0.5, background: "#e5e7eb", marginTop: 8 }} />;
+
+            // 품목명 10자 ellipsis
+            const productName = topProd
+              ? (topProd.name.length > 10 ? `${topProd.name.slice(0, 10)}…` : topProd.name)
+              : null;
+            const shareLabel = share < 0.1 && share > 0 ? "<0.1%" : `${share.toFixed(1)}%`;
+
+            return (
+              <div
+                style={{
+                  position: "fixed",
+                  left: tooltip.x,
+                  top: tooltip.y,
+                  transform: `translate(${translateX}, ${translateY})`,
+                  background: "#fff",
+                  border: "0.5px solid #e5e7eb",
+                  borderRadius: 8,
+                  padding: "12px 14px",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+                  minWidth: 220,
+                  maxWidth: 260,
+                  zIndex: 1000,
+                  pointerEvents: "none",
+                }}
+              >
+                <div style={{ fontSize: 14, fontWeight: 500, color: "#1f2937" }}>{tooltip.country}</div>
+                <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>
+                  {year}년{isMonthly ? ` ${parseInt(month, 10)}월` : ""}
+                </div>
+                {isOngoing && ongoingInfo?.monthRange && (
+                  <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>
+                    ⓘ {year}년 {ongoingInfo.monthRange} 누적
+                  </div>
+                )}
+
+                {!hasData ? (
                   <>
-                    <p
-                      className="tooltip-shell-line"
-                      style={{ marginTop: 10, fontWeight: 600, color: "#64748b" }}
-                    >
-                      상위 품목:
-                    </p>
-                    <ul className="tooltip-shell-list">
-                      {tooltip.topProducts.map((p) => (
-                        <li key={p}>• {p}</li>
-                      ))}
-                    </ul>
+                    <Divider />
+                    <Row label={`${tradeLabel}액`} value={<span style={{ color: "#999" }}>- 데이터 없음</span>} />
+                  </>
+                ) : (
+                  <>
+                    <Divider />
+                    <Row label={`${tradeLabel}액`} value={currAmtDisplay} />
+                    {!isMonthly && <Row label="비중" value={shareLabel} />}
+                    <Row label="순위" value={`${rank}위 / ${totalCountries}`} />
+                    <Divider />
+                    <Row label={yoyLabel} value={yoyNode} />
+                    {productName && (
+                      <>
+                        <Divider />
+                        <div style={{ fontSize: 12, color: "#64748b", marginTop: 6 }}>
+                          주요 {isImport ? "수입 " : ""}품목
+                        </div>
+                        <div style={{ display: "flex", justifyContent: "space-between", gap: 8, marginTop: 4, fontSize: 12 }}>
+                          <span style={{ color: "#1f2937" }}>1위  {productName}</span>
+                          <span style={{ color: "#1f2937", fontWeight: 500 }}>{fmt1(topProd!.value)}</span>
+                        </div>
+                      </>
+                    )}
+                    {isOngoing && (
+                      <>
+                        <Divider />
+                        <div style={{ fontSize: 11, color: "#64748b", marginTop: 6 }}>
+                          ⓘ 연말 확정 전 부분 데이터
+                        </div>
+                      </>
+                    )}
+                    <Divider />
+                    <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 6, textAlign: "right" }}>
+                      클릭하여 상세 보기 →
+                    </div>
                   </>
                 )}
-                <p className="tooltip-shell-hint">클릭 → 상세페이지</p>
-              </>
-            ) : (
-              <p
-                className="tooltip-shell-sub"
-                style={{ margin: 0, color: "#94a3b8" }}
-              >
-                교역 데이터 없음
-              </p>
-            )}
-          </div>,
+              </div>
+            );
+          })(),
           document.body
         )}
+    </div>
+  );
+}
+
+// ─── 지도 우상단 순위 구간 드롭다운 ─────────────────────────────────────────
+// 네이티브 <select>는 option 내부 스타일 커스터마이징 불가(OS 기본 하이라이트 사용)
+// → 커스텀 버튼 + 팝오버로 체크마크·호버·높이 모두 일관 표현
+interface TierOption { value: string; label: string }
+const TIER_OPTIONS: TierOption[] = [
+  { value: "all",    label: "전체 보기" },
+  { value: "1-3",    label: "1~3위" },
+  { value: "4-9",    label: "4~9위" },
+  { value: "10-15",  label: "10~15위" },
+  { value: "16-21",  label: "16~21위" },
+  { value: "22-30",  label: "22~30위" },
+];
+
+function TierDropdown({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const current = TIER_OPTIONS.find((o) => o.value === value) ?? TIER_OPTIONS[0];
+
+  // click outside·ESC 로 닫기
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  // 트리거·옵션 공통 폰트 — 브라우저 기본 <button> UA 스타일(system-ui)로 인한 불일치 방지
+  const commonFont = {
+    fontFamily: "inherit",
+    fontSize: 12,
+    fontWeight: 400 as const,
+  };
+
+  return (
+    <div ref={ref} style={{ position: "relative" }}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          // 필터 적용 여부와 무관하게 배경·테두리 완전 동일 (옵션 A)
+          // 상태 변화는 트리거 텍스트(전체 → 1~3위 등)로만 전달
+          backgroundColor: "rgba(255,255,255,0.9)",
+          backdropFilter: "blur(6px)",
+          border: "0.5px solid #e5e7eb",
+          borderRadius: 8,
+          padding: "6px 11px",
+          color: "#1f2937",
+          boxShadow: "0 2px 10px rgba(0,0,0,0.10)",
+          cursor: "pointer",
+          outline: "none",
+          minWidth: 92,
+          whiteSpace: "nowrap",
+          ...commonFont,
+        }}
+      >
+        <span>{current.label}</span>
+        <svg
+          width="10"
+          height="10"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="#6b7280"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          style={{ marginLeft: "auto" }}
+          aria-hidden
+        >
+          <path d="M6 9l6 6 6-6" />
+        </svg>
+      </button>
+
+      {open && (
+        <div
+          role="listbox"
+          style={{
+            position: "absolute",
+            top: "calc(100% + 4px)",
+            right: 0,
+            background: "#fff",
+            border: "0.5px solid #e5e7eb",
+            borderRadius: 8,
+            boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+            padding: "4px 0",
+            minWidth: 130,
+            zIndex: 30,
+          }}
+        >
+          {TIER_OPTIONS.map((opt) => {
+            const selected = opt.value === value;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                role="option"
+                aria-selected={selected}
+                onClick={() => {
+                  onChange(opt.value);
+                  setOpen(false);
+                }}
+                onMouseEnter={(e) => {
+                  if (!selected) e.currentTarget.style.background = "#f8fafc";
+                }}
+                onMouseLeave={(e) => {
+                  if (!selected) e.currentTarget.style.background = "transparent";
+                }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  width: "100%",
+                  height: 36,
+                  padding: "8px 12px",
+                  background: selected ? "#f1f5f9" : "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "#1f2937",
+                  textAlign: "left",
+                  ...commonFont,
+                  // 선택된 옵션만 weight 500 (체크 마크와 함께 강조)
+                  fontWeight: selected ? 500 : 400,
+                }}
+              >
+                <span style={{ width: 12, display: "inline-block", color: "#1f2937", flexShrink: 0 }}>
+                  {selected ? "✓" : ""}
+                </span>
+                <span>{opt.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

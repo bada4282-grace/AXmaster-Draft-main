@@ -21,7 +21,9 @@ import {
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from "recharts";
-import { RechartsPayloadTooltip, rechartsTooltipSurfaceProps } from "@/components/RechartsTooltip";
+import { TimeseriesTooltip, rechartsTooltipFollowProps } from "@/components/RechartsTooltip";
+import { KO_NAME_TO_ISO } from "@/lib/countryIso";
+import { useIncompleteMonthRange } from "@/lib/useIncompleteMonthRange";
 
 const TreemapChart = dynamic(() => import("@/components/TreemapChart"), { ssr: false });
 import MacroSection from "@/components/MacroSection";
@@ -73,19 +75,29 @@ function CountryDetailContent() {
   const [kpi, setKpi] = useState<CountryKPIAsync | undefined>(undefined);
   const [prevKpi, setPrevKpi] = useState<CountryKPIAsync | undefined>(undefined);
   const [timeseries, setTimeseries] = useState<MonthlyData[]>([]);
+  /** 전년 12월 — 1월 지점의 전월 대비 계산용 */
+  const [prevYearDecember, setPrevYearDecember] = useState<MonthlyData | null>(null);
+  /** 총 교역국 수 (분모) */
+  const [totalCountries, setTotalCountries] = useState(0);
+  /** 전년 동기 순위 (null = 전년도에 교역 없음/데이터 없음) */
+  const [prevRank, setPrevRank] = useState<number | null>(null);
+  /** 부분 집계 월 범위 ("1~2월" 형식), 완전 집계면 null */
+  const monthRangeForYear = useIncompleteMonthRange(year);
 
   useEffect(() => {
     let cancelled = false;
     const prevYearStr = String(parseInt(year) - 1);
 
-    // 국가 순위
+    // 국가 순위 (현재 연도)
     getCountryRankingAsync(year, tradeType).then(ranks => {
       if (cancelled) return;
       const fmt1 = (v: number) => (Math.round(v / 1e8 * 10) / 10).toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
       const r = ranks.find(r => r.country === name);
+      setTotalCountries(ranks.length);
       if (r) {
         setCountry({
           ...defaultCountry,
+          iso: KO_NAME_TO_ISO[name] ?? "??",
           rank: tradeType === "수입" ? r.rank_imp : r.rank_exp,
           export: fmt1(r.exp_amt),
           import: fmt1(r.imp_amt),
@@ -94,12 +106,26 @@ function CountryDetailContent() {
       }
     }).catch(() => {});
 
+    // 전년 순위 (변동 계산용)
+    getCountryRankingAsync(prevYearStr, tradeType).then(ranks => {
+      if (cancelled) return;
+      const r = ranks.find(r => r.country === name);
+      const rk = r ? (tradeType === "수입" ? r.rank_imp : r.rank_exp) : 0;
+      setPrevRank(rk > 0 ? rk : null);
+    }).catch(() => { if (!cancelled) setPrevRank(null); });
+
     // KPI (현재 + 전년)
     getCountryKpiAsync(year, name).then(d => { if (!cancelled) setKpi(d); }).catch(() => {});
     getCountryKpiAsync(prevYearStr, name).then(d => { if (!cancelled) setPrevKpi(d); }).catch(() => {});
 
-    // 시계열
+    // 시계열 (현재 연도)
     getCountryTimeseriesAsync(year, name).then(d => { if (!cancelled) setTimeseries(d); }).catch(() => {});
+
+    // 전년 시계열 — 1월 데이터 포인트의 전월(전년 12월) 매칭용
+    getCountryTimeseriesAsync(prevYearStr, name).then(d => {
+      if (cancelled) return;
+      setPrevYearDecember(d.find(m => m.month === "12월") ?? null);
+    }).catch(() => { if (!cancelled) setPrevYearDecember(null); });
 
     return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -135,22 +161,17 @@ function CountryDetailContent() {
     return { min, max, step, ticks };
   }
 
-  const allValues = timeseries.flatMap((d) => [d.export, d.import]);
+  // 수출·수입·무역수지 3개 시리즈를 모두 왼쪽 Y축 한 스케일에 함께 표시
+  // (오른쪽 Y축은 제거됨 — 단위가 같은 $ 금액이라 양축 병행이 혼란 유발)
+  const allValues = timeseries.flatMap((d) => [d.export, d.import, d.balance]);
   const rawMin = allValues.length ? Math.min(...allValues) : 0;
   const rawMax = allValues.length ? Math.max(...allValues) : 100;
-  const leftScale = niceScale(rawMin * 0.9, rawMax * 1.1);
+  const leftScale = niceScale(
+    rawMin < 0 ? rawMin * 1.1 : rawMin * 0.9,
+    rawMax > 0 ? rawMax * 1.1 : rawMax * 0.9,
+  );
   const minVal = leftScale.min;
   const maxVal = leftScale.max;
-
-  const balances = timeseries.map((d) => d.balance);
-  const rawMinBal = balances.length ? Math.min(...balances) : -50;
-  const rawMaxBal = balances.length ? Math.max(...balances) : 50;
-  const balScale = niceScale(
-    rawMinBal < 0 ? rawMinBal * 1.1 : rawMinBal * 0.9,
-    rawMaxBal > 0 ? rawMaxBal * 1.1 : rawMaxBal * 0.9,
-  );
-  const minBal = balScale.min;
-  const maxBal = balScale.max;
 
   const [displayData, setDisplayData] = useState<MonthlyData[]>([]);
   const [lineAnimActive, setLineAnimActive] = useState(false);
@@ -182,7 +203,7 @@ function CountryDetailContent() {
       ...d,
       export: minVal,
       import: minVal,
-      balance: minBal,
+      balance: minVal,
     })));
 
     const startTimeout = setTimeout(() => {
@@ -208,7 +229,7 @@ function CountryDetailContent() {
 
       <div className="page-main-container">
         {/* Main tabs */}
-        <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+        <div style={{ display: "flex", gap: 8, marginBottom: 6 }}>
           <button className="main-tab-active" onClick={() => router.push("/")}>국가별</button>
           <button className="main-tab-inactive" onClick={() => router.push("/?tab=product")}>품목별</button>
         </div>
@@ -265,15 +286,76 @@ function CountryDetailContent() {
                 <div className="info-card">
                   <div className="info-card-label" style={{ fontSize: 12 }}>선택 국가</div>
                   <div style={{ fontSize: 18, fontWeight: 900 }}>{country.name}</div>
+                  {country.iso && country.iso !== "??" && (
+                    <div style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 6 }}>
+                      <span style={{
+                        fontSize: 11,
+                        fontWeight: 700,
+                        padding: "2px 6px",
+                        background: "#f1f5f9",
+                        color: "#475569",
+                        borderRadius: 4,
+                        letterSpacing: 0.5,
+                        lineHeight: 1.2,
+                      }}>
+                        {country.iso}
+                      </span>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={`https://flagcdn.com/w80/${country.iso.toLowerCase()}.png`}
+                        srcSet={`https://flagcdn.com/w160/${country.iso.toLowerCase()}.png 2x`}
+                        alt={`${country.name} 국기`}
+                        width={28}
+                        height={21}
+                        style={{
+                          borderRadius: 3,
+                          border: "1px solid #e2e8f0",
+                          display: "block",
+                          objectFit: "cover",
+                        }}
+                        loading="lazy"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <div className="info-card">
                   <div className="info-card-label" style={{ fontSize: 12 }}>{tradeType} 국가 순위 ({year})</div>
-                  <div className="info-card-value">{country.rank}위</div>
+                  <div className="info-card-value">
+                    {country.rank}위
+                    {totalCountries > 0 && (
+                      <span style={{ fontSize: 13, fontWeight: 500, color: "#64748b", marginLeft: 4 }}>
+                        / {totalCountries}
+                      </span>
+                    )}
+                  </div>
+                  {(() => {
+                    if (prevRank == null || country.rank <= 0) {
+                      return (
+                        <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 2 }}>
+                          전년 순위 없음
+                        </div>
+                      );
+                    }
+                    const delta = prevRank - country.rank; // >0 상승, <0 하락, 0 동일
+                    const tag =
+                      delta === 0
+                        ? <span style={{ color: "#6b7280" }}>–</span>
+                        : delta > 0
+                          ? <span style={{ color: "#E02020" }}>▲{delta}</span>
+                          : <span style={{ color: "#185FA5" }}>▼{Math.abs(delta)}</span>;
+                    return (
+                      <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>
+                        전년 {prevRank}위 {tag}
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 <div className="info-card">
-                  <div className="info-card-label" style={{ fontSize: 12 }}>{tradeType} 비중</div>
+                  <div className="info-card-label" style={{ fontSize: 12 }}>
+                    한국 전체 {tradeType} 중 {country.name} 비중
+                  </div>
                   <div className="info-card-value">{country.share}%</div>
                 </div>
               </div>
@@ -291,14 +373,10 @@ function CountryDetailContent() {
                   >{tab}</button>
                 ))}
                 <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6 }}>
-                  {subTab === "시계열 추이" && (
-                    <>
-                      {year === "2026" && (
-                        <span style={{ fontSize: 12, color: "#f59e0b", fontWeight: 600 }}>
-                          ⚠ 데이터 불충분
-                        </span>
-                      )}
-                    </>
+                  {subTab === "시계열 추이" && monthRangeForYear && (
+                    <span style={{ fontSize: 12, color: "#f59e0b", fontWeight: 600 }}>
+                      ⓘ 부분 데이터({monthRangeForYear})
+                    </span>
                   )}
                   {subTab === "품목별" && (
                     <select
@@ -323,42 +401,42 @@ function CountryDetailContent() {
                   <TreemapChart forCountry countryName={country.name} year={year} month={month} tradeType={tradeType} mtiDepth={mtiDepth} onLoadingChange={handleLoadingChange} onCategoryChange={(mti) => setMtiCategoryActive(mti !== null)} />
                 ) : timeseries.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={displayData} margin={{ top: 8, right: 44, left: 8, bottom: 4 }}>
+                    <LineChart data={displayData} margin={{ top: 8, right: 16, left: 8, bottom: 4 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                       <XAxis dataKey="month" tick={{ fontSize: 10 }} />
                       <YAxis
-                        yAxisId="left"
                         domain={[minVal, maxVal]}
                         ticks={leftScale.ticks}
                         tick={{ fontSize: 10 }}
-                        tickFormatter={(v) => `$${v}억`}
+                        tickFormatter={(v) => (v === 0 ? "$0" : `$${v}억`)}
                         width={52}
-                      />
-                      <YAxis
-                        yAxisId="right"
-                        orientation="right"
-                        domain={[minBal, maxBal]}
-                        ticks={balScale.ticks}
-                        tick={{ fontSize: 10 }}
-                        tickFormatter={(v) => `${v}억`}
-                        width={44}
                       />
                       <Tooltip
                         content={(props) => (
-                          <RechartsPayloadTooltip {...props} title={country.name} />
+                          <TimeseriesTooltip
+                            {...props}
+                            title={country.name}
+                            allData={timeseries}
+                            prevYearLastMonth={prevYearDecember}
+                            rows={[
+                              { key: "export", name: "수출", color: "#185FA5" },
+                              { key: "import", name: "수입", color: "#F97316" },
+                              { key: "balance", name: "무역수지", color: "#22C55E" },
+                            ]}
+                          />
                         )}
-                        {...rechartsTooltipSurfaceProps}
+                        {...rechartsTooltipFollowProps}
                       />
                       <Legend wrapperStyle={{ fontSize: 11 }} />
-                      <Line yAxisId="left" type="monotone" dataKey="export" stroke="#185FA5"
+                      <Line type="monotone" dataKey="export" stroke="#185FA5"
                         strokeWidth={2} dot={{ r: 3 }} name="수출"
                         isAnimationActive={lineAnimActive}
                         animationDuration={700} animationEasing="ease-out" />
-                      <Line yAxisId="left" type="monotone" dataKey="import" stroke="#F97316"
+                      <Line type="monotone" dataKey="import" stroke="#F97316"
                         strokeWidth={2} strokeDasharray="5 3" dot={{ r: 3 }} name="수입"
                         isAnimationActive={lineAnimActive}
                         animationDuration={700} animationEasing="ease-out" />
-                      <Line yAxisId="right" type="monotone" dataKey="balance" stroke="#22C55E"
+                      <Line type="monotone" dataKey="balance" stroke="#22C55E"
                         strokeWidth={2} dot={{ r: 3 }} name="무역수지"
                         isAnimationActive={lineAnimActive}
                         animationDuration={700} animationEasing="ease-out" />

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { Suspense } from "react";
 import PersistentChatBot from "@/components/PersistentChatBot";
 
 export const metadata: Metadata = {
@@ -21,7 +22,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <div className="app-main">
             {children}
           </div>
-          <PersistentChatBot />
+           <Suspense fallback={null}>
+            <PersistentChatBot />
+          </Suspense>
         </div>
       </body>
     </html>

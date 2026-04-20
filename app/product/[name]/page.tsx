@@ -24,10 +24,12 @@ import {
 } from "recharts";
 import {
   RechartsPayloadTooltip,
-  RechartsBarCountryTooltip,
-  rechartsTooltipSurfaceProps,
+  ProductTrendTooltip,
+  TopCountriesTooltip,
+  rechartsTooltipFollowProps,
 } from "@/components/RechartsTooltip";
 import { getAvailableMonths } from "@/lib/supabase";
+import { useIncompleteMonthRange, useOngoingYearInfo } from "@/lib/useIncompleteMonthRange";
 
 export default function ProductDetailPage() {
   return (
@@ -46,7 +48,10 @@ function ProductDetailContent() {
 
   const initialYear = searchParams.get("year") ?? DEFAULT_YEAR;
   const [year, setYear] = useState(initialYear);
-  const [tradeType, setTradeType] = useState<TradeType>("수출");
+  const urlMode = searchParams.get("mode");
+  const [tradeType, setTradeType] = useState<TradeType>(
+    urlMode === "import" ? "수입" : "수출"
+  );
   const [country, setCountry] = useState("");
   const [subTab, setSubTab] = useState<"금액 추이" | "상위 국가">(
     searchParams.get("tab") === "countries" ? "상위 국가" : "금액 추이"
@@ -167,16 +172,26 @@ function ProductDetailContent() {
   const trendMin = trendValues.length ? Math.floor(Math.min(...trendValues) * 0.85) : 0;
   const trendMax = trendValues.length ? Math.ceil(Math.max(...trendValues) * 1.1) : 100;
 
-  // 상위 국가 (Supabase에서 비동기 로드)
-  const [topCountries, setTopCountries] = useState<{ country: string; value: number }[]>([]);
+  // 상위 국가 (Supabase에서 비동기 로드) — 전체 국가 저장, 차트는 렌더 시점에 슬라이스
+  const [topCountriesAll, setTopCountriesAll] = useState<{ country: string; value: number }[]>([]);
+  const [prevTopCountriesAll, setPrevTopCountriesAll] = useState<{ country: string; value: number }[]>([]);
   useEffect(() => {
-    if (!productCode) { setTopCountries([]); return; }
+    if (!productCode) { setTopCountriesAll([]); setPrevTopCountriesAll([]); return; }
     let cancelled = false;
-    getProductTopCountriesAsync(productCode, year, tradeType).then(data => {
-      if (!cancelled) setTopCountries(data.slice(0, 10));
+    const prevYearStr = String(parseInt(year, 10) - 1);
+    // 현재 연도 + 전년 병렬 조회 (getProductTopCountriesAsync는 내부 캐시 5분 TTL 보유 — 중복 호출 자동 회피)
+    Promise.all([
+      getProductTopCountriesAsync(productCode, year, tradeType),
+      getProductTopCountriesAsync(productCode, prevYearStr, tradeType),
+    ]).then(([curr, prev]) => {
+      if (cancelled) return;
+      setTopCountriesAll(curr);
+      setPrevTopCountriesAll(prev);
     }).catch(() => {});
     return () => { cancelled = true; };
   }, [productCode, year, tradeType]);
+  // 차트 표시용 상위 10개 (슬라이스) — 툴팁의 비중·순위는 전체 기준
+  const topCountries = topCountriesAll.slice(0, 10);
 
   // ── 애니메이션: 데이터 로드 완료를 명시적으로 추적 ──
   const [displayTrend, setDisplayTrend] = useState<{ year: string; value: number }[]>([]);
@@ -237,6 +252,9 @@ function ProductDetailContent() {
   const isComplete = !resolvedIncompleteYears.has(year) && !resolvedIncompleteYears.has(prevYear);
   const changeRate = (isComplete && prevVal) ? ((currentVal - prevVal) / prevVal * 100).toFixed(1) : null;
   const tradeLabel = tradeType === "수입" ? "수입" : "수출";
+  const productMonthRange = useIncompleteMonthRange(year);
+  // 진행 중인 연도 정보 (2026년 1~N월 누적) — 금액 추이 툴팁/점선 처리용
+  const ongoingInfo = useOngoingYearInfo();
 
   // ─── 품목별 KPI: 수출·수입 양쪽 데이터로 KPIBar에 전달 (Supabase 비동기) ───
   const [prodKpi, setProdKpi] = useState({ expCur: 0, expPrev: 0, impCur: 0, impPrev: 0 });
@@ -279,20 +297,8 @@ function ProductDetailContent() {
   const prodExpUp = prodKpi.expCur >= prodKpi.expPrev;
   const prodImpChange = (isComplete && prodKpi.impPrev > 0) ? pctChg(prodKpi.impCur, prodKpi.impPrev) : 0;
   const prodImpUp = prodKpi.impCur >= prodKpi.impPrev;
-  const tooltipFollowProps = {
-    ...rechartsTooltipSurfaceProps,
-    isAnimationActive: false,
-    cursor: false,
-    offset: 18,
-    position: undefined,
-    reverseDirection: { x: true, y: true },
-    allowEscapeViewBox: { x: false, y: false },
-    wrapperStyle: {
-      ...rechartsTooltipSurfaceProps.wrapperStyle,
-      transition: "none",
-      pointerEvents: "none",
-    },
-  } as const;
+  // 툴팁 위치는 공통 follow props 사용 — 커서 오른쪽 8px, 경계에서 자동 flip
+  const tooltipFollowProps = rechartsTooltipFollowProps;
 
   return (
     <div style={{ minHeight: "100vh", background: "#f8f8f8" }}>
@@ -301,7 +307,7 @@ function ProductDetailContent() {
 
       <div className="page-main-container">
         {/* Main tabs */}
-        <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+        <div style={{ display: "flex", gap: 8, marginBottom: 6 }}>
           <button className="main-tab-inactive" onClick={() => router.push("/")}>국가별</button>
           <button className="main-tab-active">품목별</button>
         </div>
@@ -336,13 +342,13 @@ function ProductDetailContent() {
               balancePositive={prodKpi.expCur >= prodKpi.impCur}
             />
 
-            <div className="split-panel" style={{ height: 380 }}>
+            <div className="split-panel" style={{ position: "relative" }}>
             {/* Left info cards */}
             <div className="left-cards">
               <div className="left-cards-stack">
                 <div className="info-card">
                   <div className="info-card-label">품목명</div>
-                  <div style={{ fontSize: 18, fontWeight: 900 }}>{name}</div>
+                  <div className="info-card-value">{name}</div>
                   {productCode && (
                     <div style={{ fontSize: 10, color: "#888", marginTop: 2 }}>
                       MTI {productCode}{isAggregated && " (집계)"}
@@ -352,10 +358,10 @@ function ProductDetailContent() {
 
                 <div className="info-card">
                   <div className="info-card-label">{year}년 {tradeLabel}액</div>
-                  <div style={{ fontSize: 16, fontWeight: 700 }}>
+                  <div className="info-card-value">
                     {currentVal.toLocaleString()} 억
                   </div>
-                  <div style={{ fontSize: 10, color: "#888", fontWeight: 500 }}>달러</div>
+                  <div style={{ fontSize: 10, color: "#888" }}>달러</div>
                 </div>
 
                 <div className="info-card">
@@ -365,14 +371,15 @@ function ProductDetailContent() {
                     const absV = Math.abs(rv);
                     const isZero = absV === 0;
                     const color = isZero ? "#999" : rv >= 0 ? "#E02020" : "#185FA5";
+                    const arrow = isZero ? "" : rv >= 0 ? "▲ " : "▼ ";
                     // 소수점 2자리, .00은 .0으로 축약
                     const fmt = absV.toFixed(2).replace(/0$/, "").replace(/\.$/, ".0");
                     return (
                       <>
-                        <div style={{ fontSize: 18, fontWeight: 900, color }}>
-                          {fmt}%
+                        <div className="info-card-value" style={{ color }}>
+                          {arrow}{fmt}%
                         </div>
-                        <div style={{ fontSize: 10, color, fontWeight: 500 }}>
+                        <div style={{ fontSize: 10, color }}>
                           {isZero ? "변동 없음" : rv >= 0 ? "상승" : "하락"}
                         </div>
                       </>
@@ -380,7 +387,9 @@ function ProductDetailContent() {
                   })() : (
                     <>
                       <div style={{ fontSize: 18, fontWeight: 900, color: "#999" }}>-</div>
-                      <div style={{ fontSize: 10, color: "#999", fontWeight: 500 }}>⚠️데이터 불충분</div>
+                      <div style={{ fontSize: 10, color: "#999", fontWeight: 500 }}>
+                        ⓘ 부분 데이터{productMonthRange ? `(${productMonthRange})` : ""}
+                      </div>
                     </>
                   )}
                 </div>
@@ -388,7 +397,7 @@ function ProductDetailContent() {
             </div>
 
             {/* Main viz */}
-            <div className="dashboard-area" style={{ display: "flex", flexDirection: "column" }}>
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
               {/* Sub tabs */}
               <div className="subtab-bar">
                 {(["금액 추이", "상위 국가"] as const).map((tab) => (
@@ -403,28 +412,74 @@ function ProductDetailContent() {
                 </span>
               </div>
 
-              <div style={{ flex: 1, padding: 12, overflow: "hidden" }}>
+
+              <div style={{ flex: 1, padding: 8, overflow: "hidden" }}>
+
                 {subTab === "금액 추이" ? (
                   trend.length > 0 ? (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={displayTrend} margin={{ top: 8, right: 24, left: 8, bottom: 4 }}>
+                    (() => {
+                      // 단일 데이터 + 두 dataKey (null 마스킹) — X 카테고리 매핑 정합성 유지
+                      // valueConfirmed: 확정 연도만 값, 진행 중 연도는 null
+                      // valueBridge: 진행 중 연도 + 바로 이전 확정 연도(=앵커)만 값, 그 외 null
+                      const ongoingY = ongoingInfo?.year ?? null;
+                      const ongoingIdx = ongoingY ? displayTrend.findIndex((d) => d.year === ongoingY) : -1;
+                      const anchorYear = ongoingIdx > 0 ? displayTrend[ongoingIdx - 1].year : null;
+                      const chartTrend = displayTrend.map((d) => ({
+                        ...d,
+                        valueConfirmed: d.year === ongoingY ? null : d.value,
+                        valueBridge:
+                          d.year === ongoingY || (anchorYear && d.year === anchorYear) ? d.value : null,
+                      }));
+                      return (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={chartTrend} margin={{ top: 8, right: 24, left: 8, bottom: 4 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                         <XAxis dataKey="year" tick={{ fontSize: 11 }} />
                         <YAxis domain={[trendMin, trendMax]} tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v}억`} />
                         <Tooltip
                           content={(props) => (
-                            <RechartsPayloadTooltip {...props} title={name} incompleteLabels={resolvedIncompleteYears} incompleteMonthRanges={incompleteMonthRanges} />
+                            <ProductTrendTooltip
+                              {...props}
+                              title={name}
+                              trend={displayTrend}
+                              tradeLabel={tradeLabel}
+                              ongoingYear={ongoingInfo?.year ?? null}
+                              ongoingMonthRange={ongoingInfo?.monthRange ?? null}
+                            />
                           )}
                           {...tooltipFollowProps}
                         />
                         <Line
-                          type="monotone" dataKey="value" stroke="#14B8A6" strokeWidth={2.5}
-                          dot={{ r: 4, fill: "#14B8A6" }} activeDot={{ r: 6 }} name={`${tradeLabel}액(억$)`}
+                          type="monotone" dataKey="valueConfirmed" stroke="#14B8A6" strokeWidth={2.5}
+                          dot={{ r: 4, fill: "#14B8A6" }} activeDot={{ r: 6 }} name={`${tradeLabel}액`}
                           isAnimationActive={animActive}
                           animationDuration={700} animationEasing="ease-out"
+                          connectNulls={false}
+                        />
+                        <Line
+                          type="monotone" dataKey="valueBridge" stroke="#14B8A6" strokeWidth={2.5}
+                          strokeDasharray="5 4"
+                          dot={(props: { cx?: number; cy?: number; payload?: { year?: string } }) => {
+                            const { cx, cy, payload } = props;
+                            if (cx == null || cy == null) return <g />;
+                            // 진행 중 연도의 점만 외곽선 렌더, 확정 연도(= 브릿지 앵커)는 점 숨김(확정 Line dot과 중복 방지)
+                            if (payload?.year === ongoingInfo?.year) {
+                              return (
+                                <circle cx={cx} cy={cy} r={4} fill="#fff" stroke="#14B8A6" strokeWidth={2} />
+                              );
+                            }
+                            return <g />;
+                          }}
+                          activeDot={{ r: 6, fill: "#14B8A6" }}
+                          isAnimationActive={animActive}
+                          animationDuration={700} animationEasing="ease-out"
+                          legendType="none"
+                          connectNulls={false}
                         />
                       </LineChart>
                     </ResponsiveContainer>
+                      );
+                    })()
                   ) : (
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "center",
                       height: "100%", color: "#94a3b8", fontSize: 13 }}>
@@ -439,8 +494,19 @@ function ProductDetailContent() {
                         <XAxis dataKey="country" tick={{ fontSize: 12 }} />
                         <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v}억`} />
                         <Tooltip
-                          content={(props) => <RechartsBarCountryTooltip {...props} tradeLabel={tradeLabel} />}
+                          content={(props) => (
+                            <TopCountriesTooltip
+                              {...props}
+                              year={year}
+                              tradeLabel={tradeLabel}
+                              currentData={topCountriesAll}
+                              prevData={prevTopCountriesAll}
+                              ongoingYear={ongoingInfo?.year ?? null}
+                              ongoingMonthRange={ongoingInfo?.monthRange ?? null}
+                            />
+                          )}
                           {...tooltipFollowProps}
+                          cursor={{ fill: "transparent" }}
                         />
                         <Bar
                           dataKey="value"
