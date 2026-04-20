@@ -158,29 +158,27 @@ function getCachedUserFaq(): string[] | null {
   } catch { return null; }
 }
 
-/** 로그인했지만 채팅 로그가 없을 때 — 게스트 FAQ와 다른 질문 */
-const LOGGED_IN_DEFAULT_FAQ = [
-  "올해 한국 수출입 총액은?",
-  "최근 무역수지 흑자 추이는?",
-  "주요 거시경제 지표 변동 알려줘",
-];
-
-/** 로그인 사용자의 채팅 로그를 AI에 보내 맞춤 FAQ 3개를 생성 */
-async function fetchUserFaq(logs: { role: string; content: string }[]): Promise<string[]> {
+/** 로그인 사용자의 채팅 로그·현재 화면 컨텍스트를 AI 에 보내 맞춤 FAQ 3개를 생성.
+ *  회원은 반드시 본인의 대화 기반 생성 결과만 표시한다 — 정적 템플릿 폴백 금지.
+ *  API 실패·유효하지 않은 응답이면 null 반환 → 호출부에서 FAQ 숨김. */
+async function fetchUserFaq(
+  logs: { role: string; content: string }[],
+  pageContext?: PageContext,
+): Promise<string[] | null> {
   try {
     const res = await fetch("/api/faq", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ logs }),
+      body: JSON.stringify({ logs, pageContext }),
     });
     const { questions } = await res.json();
-    if (Array.isArray(questions) && questions.length === 3) {
+    if (Array.isArray(questions) && questions.length === 3 && questions.every((q: unknown) => typeof q === "string" && q.trim().length > 0)) {
       try { sessionStorage.setItem(USER_FAQ_KEY, JSON.stringify(questions)); } catch {}
       return questions;
     }
-    return LOGGED_IN_DEFAULT_FAQ;
+    return null;
   } catch {
-    return LOGGED_IN_DEFAULT_FAQ;
+    return null;
   }
 }
 
@@ -192,8 +190,9 @@ function resolvePageContext(
 
   const year = searchParams?.get("year") ?? undefined;
   const month = searchParams?.get("month") ?? undefined;
-  // FilterBar는 `tradeType=`을 쓰고 상세 페이지 라우트는 `mode=`를 쓴다 — 둘 다 인식
-  const modeRaw = searchParams?.get("mode") ?? searchParams?.get("tradeType");
+  // URL 이중 규약: `tradeType` 이 쓰기 규약의 우선(Source of truth). `mode` 는 상세 페이지 라우트 호환용.
+  // 두 값이 충돌하면(예: mode=export & tradeType=import) tradeType 의 값을 채택한다.
+  const modeRaw = searchParams?.get("tradeType") ?? searchParams?.get("mode");
   const tradeType: PageContext["tradeType"] =
     modeRaw === "import" ? "수입" : modeRaw === "export" ? "수출" : undefined;
   const tabParam = searchParams?.get("tab");
@@ -218,16 +217,14 @@ function resolvePageContext(
   }
 
   // 홈 페이지 (`/`) — 필터(year/month/mode/country/mtiDepth)가 URL에 동기화됨
+  // view 는 필터 유무와 상관없이 항상 tab 기준으로 결정 → LLM 이 현재 탭을 항상 인지
   if (pathname === "/") {
     const country = searchParams?.get("country")
       ? decodeURIComponent(searchParams.get("country")!)
       : undefined;
-    // 홈의 대시보드 뷰 타입 — 국가별 탭은 world map, 품목별 탭은 treemap
     const view: PageContext["view"] =
       tabParam === "product" ? "products" : "countries";
-    if (country || year || month || tradeType || mtiDepth) {
-      return { country, year, month, tradeType: tradeType ?? "수출", view, mtiDepth };
-    }
+    return { country, year, month, tradeType: tradeType ?? "수출", view, mtiDepth };
   }
 
   return year || tradeType || mtiDepth ? { year, tradeType, mtiDepth } : undefined;
@@ -419,16 +416,33 @@ export default function ChatBot({
 
       const hasUserMsgs = combined.filter(l => l.role === "user").length > 0;
       if (!hasUserMsgs) {
-        if (!cancelled) setUserFaq(LOGGED_IN_DEFAULT_FAQ);
-        return;
+        if (!cancelled) {
+          setUserFaq(null);
+          try { sessionStorage.removeItem(USER_FAQ_KEY); } catch {}
+        }
+        return null;
       }
-      return fetchUserFaq(combined);
+      // 현재 화면 컨텍스트도 함께 전송 — Haiku 가 기능·뷰 심화 질문을 제안하도록
+      const pageCtx = resolvePageContext(pathname, searchParams);
+      return fetchUserFaq(combined, pageCtx);
     }).then(faq => {
-      if (!cancelled && faq) setUserFaq(faq);
+      if (cancelled) return;
+      if (faq) {
+        setUserFaq(faq);
+      } else {
+        setUserFaq(null);
+        try { sessionStorage.removeItem(USER_FAQ_KEY); } catch {}
+      }
     }).catch(() => {
-      if (!cancelled) setUserFaq(LOGGED_IN_DEFAULT_FAQ);
+      if (!cancelled) {
+        setUserFaq(null);
+        try { sessionStorage.removeItem(USER_FAQ_KEY); } catch {}
+      }
     });
     return () => { cancelled = true; };
+    // pathname/searchParams 는 pageContext 를 위해 참조하지만, 챗봇 재오픈 또는 발화 수 변화로만 재실행.
+    // 페이지 이동 시마다 FAQ API 가 호출되지 않도록 의도적으로 deps 에서 제외.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, open, sessionUserMsgCount]);
 
   useEffect(() => {
