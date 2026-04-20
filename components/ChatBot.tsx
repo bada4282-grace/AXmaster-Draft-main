@@ -397,9 +397,8 @@ export default function ChatBot({
   }, []);
 
   // 로그인 사용자: AI 기반 맞춤 FAQ 로드 (free·paid 공통)
-  // 트리거: user/open 변화 + 현재 세션의 user 발화 수가 늘어날 때
-  // 데이터: DB 로그(getChatLogs) + 현재 세션 messages 병합 (DB 저장 전 최근 발화까지 반영)
-  const sessionUserMsgCount = messages.filter(m => m.role === "user").length;
+  // 원칙: FAQ 는 세션 내 1회만 생성해 안정적으로 표시. 캐시(USER_FAQ_KEY) 가 있으면 API 재호출 없이 그대로 사용.
+  // 재생성 조건: 로그인 사용자 변경 / "대화 내용 지우기" 클릭(핸들러에서 USER_FAQ_KEY 제거) 시에만.
   useEffect(() => {
     if (!user) {
       setUserFaq(null);
@@ -408,9 +407,12 @@ export default function ChatBot({
     }
     if (!open) return;
 
-    // 세션 캐시가 있으면 우선 표시 (깜빡임 방지)
+    // 세션 캐시가 있으면 그대로 사용하고 API 호출 생략 — FAQ 가 매번 바뀌는 현상 방지
     const cached = getCachedUserFaq();
-    if (cached) setUserFaq(cached);
+    if (cached) {
+      setUserFaq(cached);
+      return;
+    }
 
     let cancelled = false;
     getChatLogs(30).then(dbLogs => {
@@ -452,10 +454,11 @@ export default function ChatBot({
       }
     });
     return () => { cancelled = true; };
-    // pathname/searchParams 는 pageContext 를 위해 참조하지만, 챗봇 재오픈 또는 발화 수 변화로만 재실행.
-    // 페이지 이동 시마다 FAQ API 가 호출되지 않도록 의도적으로 deps 에서 제외.
+    // pathname/searchParams 는 pageContext 를 위해 내부에서 참조. FAQ 가 매 페이지 이동/발화마다
+    // 재생성되지 않도록 deps 는 user/open/welcomeTrigger 로 제한.
+    //  - welcomeTrigger: "대화 지우기" 클릭 시 증가 → 캐시 무효화 후 새 FAQ 생성 유도
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, open, sessionUserMsgCount]);
+  }, [user, open, welcomeTrigger]);
 
   useEffect(() => {
     // auth 확인 전에는 어떤 메시지도 세팅하지 않는다 — 로그인 사용자가 잠깐 게스트 인사말을 보는 현상 차단
@@ -915,7 +918,7 @@ export default function ChatBot({
       <div className="chatbot-header">
         <div style={{
           width: 28, height: 28, borderRadius: "50%",
-          background: "linear-gradient(135deg, #ffd6d6, #ffb3b3)",
+          background: "#fde8e8",
           display: "flex", alignItems: "center", justifyContent: "center",
           fontSize: 14, flexShrink: 0,
         }}>🤖</div>
@@ -967,6 +970,9 @@ export default function ChatBot({
                 setMessages([]);
                 // FAQ 숨김 플래그 해제 → 로그인 사용자의 맞춤 FAQ 재표시
                 setSentInSession(false);
+                // FAQ 캐시도 함께 무효화 → 다음 열림 때 최신 로그 기반 재생성
+                try { sessionStorage.removeItem(USER_FAQ_KEY); } catch {}
+                setUserFaq(null);
                 // welcome 재-페치 허용 → 로그인 사용자는 개인화 인사말 다시 받기
                 welcomeFetchedRef.current = false;
                 hasRestoredRef.current = false;
