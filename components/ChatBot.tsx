@@ -361,16 +361,18 @@ export default function ChatBot({
     return () => subscription.unsubscribe();
   }, []);
 
-  // 로그인 사용자: AI 기반 맞춤 FAQ 로드 (세션 캐시 우선)
+  // 로그인 사용자: AI 기반 맞춤 FAQ 로드 (챗봇 열릴 때마다 최신 로그 기반)
   useEffect(() => {
     if (!user) {
       setUserFaq(null);
       try { sessionStorage.removeItem(USER_FAQ_KEY); } catch {}
       return;
     }
-    // 캐시가 있으면 API 호출 생략
+    if (!open) return;
+
+    // 세션 캐시가 있으면 우선 표시 (깜빡임 방지)
     const cached = getCachedUserFaq();
-    if (cached) { setUserFaq(cached); return; }
+    if (cached) setUserFaq(cached);
 
     let cancelled = false;
     getChatLogs(30).then(logs => {
@@ -387,7 +389,7 @@ export default function ChatBot({
       if (!cancelled) setUserFaq(LOGGED_IN_DEFAULT_FAQ);
     });
     return () => { cancelled = true; };
-  }, [user]);
+  }, [user, open]);
 
   useEffect(() => {
     // auth 확인 전에는 어떤 메시지도 세팅하지 않는다 — 로그인 사용자가 잠깐 게스트 인사말을 보는 현상 차단
@@ -918,8 +920,8 @@ export default function ChatBot({
         <div ref={bottomRef} />
       </div>
 
-      {/* FAQ 버튼 — 비로그인: 고정 3개, 로그인: 추후 맞춤 FAQ */}
-      {!messages.some(m => m.role === "user") && (
+      {/* FAQ 버튼 — 비로그인: 첫 메시지 전까지만, 로그인: 맞춤 FAQ 항상 표시 */}
+      {(user ? !!userFaq : !messages.some(m => m.role === "user")) && (
       <div style={{ display: "flex", flexDirection: "column", gap: 6, padding: "0 12px 8px" }}>
         {(user && userFaq ? userFaq : guestFaq).map((q, i) => (
           <button
