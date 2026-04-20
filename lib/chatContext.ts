@@ -427,15 +427,42 @@ function isProductOverviewQuery(question: string): boolean {
 // 질문에서 국가명, 품목명, 연도 추출 (부분 일치)
 // pageContext는 질문이 화면을 명시적으로 참조할 때만 폴백으로 사용
 // (일반 질문이 페이지 상태에 이끌리지 않도록 엄격 분리)
+// 부분 집계 연도를 회피하는 기본 분석 연도 결정.
+// - DEFAULT_YEAR (예: 2026) 이 부분 집계라면 전년(2025) 을 기본값으로 사용.
+// - "일반 추천/분석" 질문이 부분 데이터로 답해지는 것을 방지하기 위함.
+async function getDefaultAnalysisYear(): Promise<string> {
+  const partialNote = await getYearCoverageNote(DEFAULT_YEAR);
+  if (partialNote) return String(parseInt(DEFAULT_YEAR, 10) - 1);
+  return DEFAULT_YEAR;
+}
+
 export async function extractKeywords(
   question: string,
   pageContext?: PageContext,
 ): Promise<ExtractedKeywords> {
   const yearMatch = question.match(/\b(20\d{2})\b/);
   const usePageFallback = questionReferencesScreen(question);
-  const year = yearMatch
-    ? yearMatch[1]
-    : (usePageFallback && pageContext?.year ? pageContext.year : DEFAULT_YEAR);
+  const mentionsCurrentYear = /올해|현재|이번\s*년|이번\s*연도/.test(question);
+  const mentionsLastYear = /작년|지난해|전년/.test(question);
+
+  // Year 결정 우선순위:
+  // 1. 질문 내 명시 연도(예: "2025년") → 그대로 사용
+  // 2. 사용자가 화면을 참조하고 pageContext.year 있음 → pageContext.year 사용
+  // 3. "올해·현재" 표현 → DEFAULT_YEAR (부분집계라도 사용자 의도에 부합)
+  // 4. "작년·지난해" 표현 → DEFAULT_YEAR − 1
+  // 5. 일반 질문 → 최신 완전 연도(getDefaultAnalysisYear) — 부분 집계 연도 회피
+  let year: string;
+  if (yearMatch) {
+    year = yearMatch[1];
+  } else if (usePageFallback && pageContext?.year) {
+    year = pageContext.year;
+  } else if (mentionsCurrentYear) {
+    year = DEFAULT_YEAR;
+  } else if (mentionsLastYear) {
+    year = String(parseInt(DEFAULT_YEAR, 10) - 1);
+  } else {
+    year = await getDefaultAnalysisYear();
+  }
 
   const countryList = await getCountryList();
   const countries = countryList.filter(name => question.includes(name));
@@ -591,8 +618,9 @@ export async function buildChatContext(
   const isAnnualIncomplete = annualCoverageNote !== null;
   const sections: string[] = [];
 
-  // 현재 보고 있는 화면 상태 — 사용자가 화면을 명시적으로 참조할 때만 주입
-  // 홈 페이지는 country/productName이 없어도 year/tradeType/view만으로 주입 (필터 상태 노출)
+  // 현재 보고 있는 화면 상태 — 사용자가 **화면을 명시적으로 참조할 때만** 주입.
+  // 일반 질문(예: "베트남 제약 수출 월별 변동 이유") 에는 절대 주입하지 않아,
+  // LLM 답변 본문에 pageContext 가 누수되는 것을 방지한다.
   const referencesScreen = questionReferencesScreen(question);
   const hasAnyPageSignal =
     !!pageContext &&
@@ -603,25 +631,48 @@ export async function buildChatContext(
       pageContext.mtiDepth);
   if (referencesScreen && pageContext && hasAnyPageSignal) {
     const parts: string[] = [];
-    if (pageContext.country) parts.push(`국가 필터: ${pageContext.country}`);
-    if (pageContext.productName) parts.push(`품목: ${pageContext.productName}`);
+    // 화면 종류 분류 — LLM 이 "홈 전체 집계" vs "국가 상세" vs "품목 상세" 를 혼동하지 않도록 명시
+    const isCountryPage = !!pageContext.country && !pageContext.productName;
+    const isProductPage = !!pageContext.productName;
+    const isHome = !isCountryPage && !isProductPage;
+
+    if (isHome) {
+      parts.push("페이지: 홈 대시보드 (한국 전체 집계)");
+    } else if (isCountryPage) {
+      parts.push(`페이지: 국가 상세 — ${pageContext.country}`);
+    } else if (isProductPage) {
+      parts.push(`페이지: 품목 상세 — ${pageContext.productName}${pageContext.productCode ? ` (MTI ${pageContext.productCode})` : ""}`);
+    }
+
     parts.push(`연도: ${year}년`);
     if (pageContext.month) {
       const mm = parseInt(pageContext.month, 10);
       if (mm >= 1 && mm <= 12) parts.push(`월 필터: ${mm}월`);
     }
     parts.push(`방향: ${tradeType}`);
-    if (pageContext.view === "timeseries") parts.push("활성 뷰: 시계열 추이(월별)");
-    else if (pageContext.view === "products") parts.push("활성 뷰: 품목별 트리맵");
-    else if (pageContext.view === "countries") parts.push("활성 뷰: 국가별(세계 지도/순위)");
-    else if (pageContext.view === "trend") parts.push("활성 뷰: 금액 추이");
+
+    // 활성 뷰 의미는 페이지 종류에 따라 완전히 다름 — 명확하게 풀어서 기술
+    let viewLabel = "";
+    if (isHome) {
+      if (pageContext.view === "products") viewLabel = "활성 뷰: 전체 품목별 트리맵 (한국의 모든 수출·수입 품목을 금액 순으로 시각화한 화면. 국가 정보 없음)";
+      else if (pageContext.view === "countries") viewLabel = "활성 뷰: 세계 지도 (한국과 교역하는 전체 국가를 수출·수입 금액 순으로 시각화한 지도. 품목 정보 없음)";
+    } else if (isCountryPage) {
+      if (pageContext.view === "timeseries") viewLabel = "활성 뷰: 월별 시계열 (해당 국가의 월별 수출·수입·수지 라인 차트)";
+      else if (pageContext.view === "products") viewLabel = "활성 뷰: 품목별 트리맵 (해당 국가에 대한 한국의 상위 교역 품목)";
+    } else if (isProductPage) {
+      if (pageContext.view === "trend") viewLabel = "활성 뷰: 연도별 금액 추이 (해당 품목의 연도별 수출·수입 금액 바/라인 차트)";
+      else if (pageContext.view === "countries") viewLabel = "활성 뷰: 상위 국가 (해당 품목의 상위 수출국·수입국 막대 차트)";
+    }
+    if (viewLabel) parts.push(viewLabel);
+
     if (pageContext.mtiDepth && pageContext.mtiDepth >= 1 && pageContext.mtiDepth <= 6) {
       parts.push(`MTI 분류 깊이: ${pageContext.mtiDepth}단위`);
     }
+
     const coverageNote = await getYearCoverageNote(year);
     const coverageLine = coverageNote ? `\n※ ${coverageNote}` : "";
     sections.push(
-      `[현재 화면 상태]\n${parts.join(" | ")}${coverageLine}\n사용자가 "화면", "여기", "지금 보고 있는", "현재 대시보드" 같은 표현을 쓰면 위 상태를 기준으로 답변하세요. 이 컨텍스트가 있으면 "어떤 화면인지 알려주세요" 같은 되묻기는 절대 금지입니다.`,
+      `[현재 화면 상태]\n${parts.join(" | ")}${coverageLine}\n\n사용자가 "화면", "여기", "지금 보고 있는", "현재 대시보드" 같은 표현을 쓰면 **위에 명시된 활성 뷰의 데이터만으로** 답변하세요. 다른 뷰·다른 페이지의 데이터로 이탈하지 마세요. "어떤 화면인지 알려주세요" 같은 되묻기 절대 금지.`,
     );
   }
 
@@ -820,21 +871,98 @@ export async function buildChatContext(
         section += `해당 품목의 ${direction} 데이터가 없습니다.`;
       }
 
+      // 상위 국가 × 연도별 추이 — "연도별 비교", "상위 국가별 추이" 같은 질문에 답할 수 있도록 항상 포함
+      // (agg_product_countries: code, country, year, exp_amt, imp_amt)
+      try {
+        const amtCol = direction === "수입" ? "imp_amt" : "exp_amt";
+        const { data: perCountryRows } = await supabase
+          .from("agg_product_countries")
+          .select(`country, year, ${amtCol}`)
+          .like("code", `${code}%`);
+
+        if (perCountryRows && perCountryRows.length > 0) {
+          const byCountry = new Map<string, Map<string, number>>();
+          for (const r of perCountryRows as Record<string, unknown>[]) {
+            const c = String(r.country);
+            const y = String(r.year);
+            const amt = Number(r[amtCol]) || 0;
+            if (amt <= 0) continue;
+            if (!byCountry.has(c)) byCountry.set(c, new Map());
+            const ym = byCountry.get(c)!;
+            ym.set(y, (ym.get(y) ?? 0) + amt);
+          }
+
+          if (byCountry.size > 0) {
+            const allYears = new Set<string>();
+            for (const ym of byCountry.values()) {
+              for (const y of ym.keys()) allYears.add(y);
+            }
+            const sortedYears = Array.from(allYears).sort();
+            const latestDataYear = sortedYears[sortedYears.length - 1] ?? year;
+
+            // 최신 데이터 연도 기준 상위 5개국 선정 (요청 연도에 데이터 없으면 최신 연도 사용)
+            const ranking = Array.from(byCountry.entries())
+              .map(([c, ym]) => ({
+                country: c,
+                recentAmt: ym.get(year) ?? ym.get(latestDataYear) ?? 0,
+                ym,
+              }))
+              .filter(r => r.recentAmt > 0)
+              .sort((a, b) => b.recentAmt - a.recentAmt)
+              .slice(0, 5);
+
+            if (ranking.length > 0) {
+              // 표시 연도: 최근 5년
+              const displayYears = sortedYears.slice(-5);
+              const lines = ranking.map((r, i) => {
+                const yearParts = displayYears.map(y => {
+                  const amt = r.ym.get(y) ?? 0;
+                  const val = Math.round(amt / 1e8 * 10) / 10;
+                  return val > 0 ? `${y}년 ${val.toFixed(1)}억달러` : `${y}년 -`;
+                });
+                return `${i + 1}위 ${r.country}: ${yearParts.join(" · ")}`;
+              });
+              section += `\n\n[${name} 상위 5개국 연도별 ${direction} 추이 (단위: 억달러)]\n${lines.join("\n")}`;
+              section += `\n※ 위 데이터로 국가 간 연도별 비교·성장 분석이 가능합니다. 질문에 언급된 국가가 이 목록에 없더라도 추이 경향을 설명할 수 있습니다.`;
+            }
+          }
+        }
+      } catch { /* agg_product_countries 조회 실패 시 무시 */ }
+
       // 하위 분류 데이터 (6자리 미만 코드일 때)
+      // 요청 연도 데이터가 비면 전년 데이터로 폴백 (부분 집계 연도 대응)
       if (code.length < 6) {
         try {
           const mtiLookup = MTI_LOOKUP as Record<string, string>;
           const subDepth = code.length + 1;
           const amtCol = direction === "수입" ? "imp_amt" : "exp_amt";
-          const { data: subRows } = await supabase
-            .from("agg_product_trend")
-            .select(`code, name, ${amtCol}`)
-            .like("code", `${code}%`)
-            .eq("year", year);
+          let subYearUsed = year;
+          let subRowsData: Record<string, unknown>[] | null = null;
+          {
+            const { data } = await supabase
+              .from("agg_product_trend")
+              .select(`code, name, ${amtCol}`)
+              .like("code", `${code}%`)
+              .eq("year", year);
+            subRowsData = (data ?? null) as Record<string, unknown>[] | null;
+          }
+          if (!subRowsData || subRowsData.length === 0) {
+            const prevYearTry = String(parseInt(year, 10) - 1);
+            const { data: prevData } = await supabase
+              .from("agg_product_trend")
+              .select(`code, name, ${amtCol}`)
+              .like("code", `${code}%`)
+              .eq("year", prevYearTry);
+            if (prevData && prevData.length > 0) {
+              subRowsData = prevData as Record<string, unknown>[];
+              subYearUsed = prevYearTry;
+            }
+          }
+          const subRows = subRowsData;
 
           if (subRows && subRows.length > 0) {
             const subMap = new Map<string, { name: string; amt: number }>();
-            for (const r of subRows as Record<string, unknown>[]) {
+            for (const r of subRows) {
               const subCode = String(r.code).slice(0, subDepth <= 6 ? subDepth : 6);
               const existing = subMap.get(subCode);
               const amt = Number(r[amtCol]) || 0;
@@ -851,7 +979,8 @@ export async function buildChatContext(
               .slice(0, 10);
 
             if (sorted.length > 0) {
-              section += `\n[${name} 하위 분류 (${year}년 ${direction})]\n`;
+              const yearBadge = subYearUsed !== year ? ` (${subYearUsed}년 기준, ${year}년 부분 집계)` : ` (${year}년)`;
+              section += `\n[${name} 하위 분류${yearBadge} ${direction}]\n`;
               section += sorted.map((s, idx) => `${idx + 1}. ${s.name}(${s.code}) — ${s.value}억달러`).join("\n");
             }
           }
@@ -862,7 +991,7 @@ export async function buildChatContext(
     }
   }
 
-  // 국가 × 품목 교차 데이터 — Supabase에서 조회
+  // 국가 × 품목 교차 데이터 — 연간 집계
   if (countries.length > 0 && productCodes.length > 0) {
     for (const country of countries) {
       try {
@@ -876,9 +1005,99 @@ export async function buildChatContext(
           }
         }
         if (results.length > 0) {
-          sections.push(`[${country} × 품목 교차 데이터]\n${results.join(", ")}`);
+          sections.push(`[${country} × 품목 교차 데이터 (${year}년 ${tradeType})]\n${results.join(", ")}`);
         }
       } catch { /* 조회 실패 시 무시 */ }
+    }
+  }
+
+  // 국가 × 품목 × 월별 데이터 — "월별 변동", "계절성", "월 패턴" 등 월별 관심 질문에만 조회
+  // (12회 RPC 병렬 호출 → 비용 있으므로 질문 의도가 명확할 때만)
+  const monthlyPatternRe = /월별|월간|월\s*패턴|계절|seasonal|monthly/i;
+  const trendRe = /변동|추이|패턴|trend|흐름/;
+  if (
+    countries.length > 0 &&
+    productCodes.length > 0 &&
+    monthlyPatternRe.test(question) &&
+    trendRe.test(question)
+  ) {
+    const mtiLookup = MTI_LOOKUP as Record<string, string>;
+    for (const country of countries) {
+      for (const code of productCodes) {
+        const name = mtiLookup[code] ?? code;
+        for (const direction of productTradeTypes) {
+          const p_mode = direction === "수입" ? "import" : "export";
+          const monthList = Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, "0"));
+          const perMonth: Array<{ month: string; amt: number }> = [];
+
+          await Promise.all(
+            monthList.map(async (mm) => {
+              const yymm = `${year}${mm}`;
+              try {
+                const { data } = await supabase.rpc("get_country_treemap_mti6", {
+                  p_yymm: yymm,
+                  p_ctr_name: country,
+                  p_mode,
+                  p_mti_depth: 6,
+                });
+                const rows = (data ?? []) as Array<{ mti_cd?: string; total_amt?: number }>;
+                let total = 0;
+                for (const r of rows) {
+                  if (String(r.mti_cd ?? "").startsWith(code)) {
+                    total += Number(r.total_amt) || 0;
+                  }
+                }
+                if (total > 0) perMonth.push({ month: mm, amt: total });
+              } catch { /* skip this month */ }
+            }),
+          );
+
+          perMonth.sort((a, b) => a.month.localeCompare(b.month));
+
+          // 요청 연도가 부분 집계이거나 월별 데이터가 충분하지 않으면 전년도 시도
+          let usedYear = year;
+          let finalPerMonth = perMonth;
+          if (perMonth.length < 6) {
+            const prevYear = String(parseInt(year, 10) - 1);
+            const prevPerMonth: Array<{ month: string; amt: number }> = [];
+            await Promise.all(
+              monthList.map(async (mm) => {
+                const yymm = `${prevYear}${mm}`;
+                try {
+                  const { data } = await supabase.rpc("get_country_treemap_mti6", {
+                    p_yymm: yymm,
+                    p_ctr_name: country,
+                    p_mode,
+                    p_mti_depth: 6,
+                  });
+                  const rows = (data ?? []) as Array<{ mti_cd?: string; total_amt?: number }>;
+                  let total = 0;
+                  for (const r of rows) {
+                    if (String(r.mti_cd ?? "").startsWith(code)) {
+                      total += Number(r.total_amt) || 0;
+                    }
+                  }
+                  if (total > 0) prevPerMonth.push({ month: mm, amt: total });
+                } catch { /* skip */ }
+              }),
+            );
+            if (prevPerMonth.length > perMonth.length) {
+              finalPerMonth = prevPerMonth.sort((a, b) => a.month.localeCompare(b.month));
+              usedYear = prevYear;
+            }
+          }
+
+          if (finalPerMonth.length > 0) {
+            const lines = finalPerMonth.map(m => {
+              const val = (Math.round(m.amt / 1e8 * 10) / 10).toFixed(1);
+              return `${parseInt(m.month, 10)}월 ${val}억달러`;
+            });
+            sections.push(
+              `[${country} × ${name} 월별 ${direction} 추이 (${usedYear}년, 단위: 억달러)]\n${lines.join(" · ")}\n※ 이 데이터는 한국의 대${country} ${name} ${direction}을 월별로 집계한 것입니다. 월별 변동 패턴·계절성·피크월을 분석할 수 있습니다.`,
+            );
+          }
+        }
+      }
     }
   }
 
