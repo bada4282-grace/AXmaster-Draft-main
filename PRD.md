@@ -610,7 +610,7 @@ URL 파라미터: `?code=XXX&year=YYYY&tab=countries`
 | 엔드포인트 | 기능 |
 |------------|------|
 | `POST /api/report` | Haiku가 대화 내용 → KITA 브랜드 HTML 이메일 템플릿. 키컬러: 딥 네이비 `#1A237E` + 시안 `#00BCD4`, table-layout inline CSS, Malgun Gothic fallback |
-| `POST /api/send-email` | Resend로 이메일 발송 (`onboarding@resend.dev` → 수신자) |
+| `POST /api/send-email` | Resend로 이메일 발송 (`noreply@kitaaxmu4.kr` → 수신자, 커스텀 도메인 연결) |
 | 클라이언트 PDF | `html2pdf.js`로 보고서 PDF 다운로드 |
 
 ---
