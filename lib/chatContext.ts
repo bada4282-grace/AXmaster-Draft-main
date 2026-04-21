@@ -38,13 +38,19 @@ export interface PageContext {
   mtiDepth?: number;
 }
 
-// MTI_LOOKUP에서 품목명 → 코드 역조회 맵 구성 (경량, 전체 품목 포함)
+// MTI_LOOKUP에서 품목명 → 코드 역조회 맵 구성 (1~6자리 전체 포함)
+// 길이 내림차순으로 채워 더 구체적인 6자리 품목이 먼저 이름 선점 —
+// 동명이인(예: "나일론섬유" 4113 vs 411300)은 6자리가 이겨 기존 동작 보존.
+// 이후 4·3·2·1자리 상위 카테고리명이 추가로 등록되어
+// "섬유류"(4) / "직물"(43) / "인조섬유"(411) 같은 자연어 질의를 정확 매칭 가능.
 function buildProductLookup(): Map<string, string> {
   const lookup = new Map<string, string>();
   const mti = MTI_LOOKUP as Record<string, string>;
-  for (const [code, name] of Object.entries(mti)) {
-    // 6자리 코드 우선, 2글자 이상 이름만, 이미 있으면 덮어쓰지 않음
-    if (code.length === 6 && name.length >= 2 && !lookup.has(name)) {
+  const entries = Object.entries(mti).sort(
+    (a, b) => b[0].length - a[0].length,
+  );
+  for (const [code, name] of entries) {
+    if (name.length >= 2 && !lookup.has(name)) {
       lookup.set(name, code);
     }
   }
@@ -477,15 +483,24 @@ export async function extractKeywords(
   const productCodes: string[] = [];
   const productNames: string[] = [];
 
-  // 1단계: TREEMAP 품목명 매칭 (6단위 코드, 단어 경계 확인)
+  // 복합 질의("섬유류 + 커튼 + 합성섬유") 및 카테고리성 세부 분해("합성섬유" → 폴리에스터·나일론·아크릴…)
+  // 대응을 위해 최대 8개까지 추출. 1·2단위 상위 코드부터 6자리 구체 품목까지 자유롭게 혼재 가능.
+  // 상위·하위 카테고리 공존 허용(예: "4" 섬유류와 "411" 합성섬유를 동시에 추출) —
+  // dataSupabase는 코드별로 별도 쿼리를 돌리므로 이중 집계가 아닌 독립 섹션으로 주입된다.
+  // 동일 코드 중복만 productCodes.includes()로 방지.
+  const MAX_PRODUCTS = 8;
+
+  // 1단계: PRODUCT_LOOKUP 매칭 (1~6자리 전체, 단어 경계 확인)
   for (const [name, code] of PRODUCT_LOOKUP.entries()) {
-    if (isExactWordMatch(question, name) && !productCodes.includes(code)) {
-      productCodes.push(code);
-      productNames.push(name);
-    }
+    if (productCodes.length >= MAX_PRODUCTS) break;
+    if (!isExactWordMatch(question, name)) continue;
+    if (productCodes.includes(code)) continue;
+    productCodes.push(code);
+    productNames.push(name);
   }
-  // 2단계: MTI_LOOKUP 매칭 — TREEMAP에 없는 품목도 인식 (완구, 악기, 플라스틱 제품 등)
-  if (productCodes.length === 0) {
+  // 2단계: MTI_LOOKUP 보완 매칭 — PRODUCT_LOOKUP에서 선점당한 동명 상위명 회수
+  // (예: "나일론섬유"가 6자리에 이름을 양보받은 4자리 코드 등)
+  if (productCodes.length < MAX_PRODUCTS) {
     const mtiLookup = MTI_LOOKUP as Record<string, string>;
     const mtiMatches: { code: string; name: string }[] = [];
     for (const [code, name] of Object.entries(mtiLookup)) {
@@ -493,32 +508,33 @@ export async function extractKeywords(
         mtiMatches.push({ code, name });
       }
     }
-    // 4자리 코드 우선 (집계 단위, 하위 6자리 합산 가능), 그 다음 6자리, 그 외
+    // 4자리 코드 우선(집계 단위), 그 다음 3자리·6자리·그 외
     mtiMatches.sort((a, b) => {
-      const aScore = a.code.length === 4 ? 0 : a.code.length === 6 ? 1 : 2;
-      const bScore = b.code.length === 4 ? 0 : b.code.length === 6 ? 1 : 2;
+      const score = (len: number) =>
+        len === 4 ? 0 : len === 3 ? 1 : len === 6 ? 2 : 3;
+      const aScore = score(a.code.length);
+      const bScore = score(b.code.length);
       if (aScore !== bScore) return aScore - bScore;
       return b.code.length - a.code.length;
     });
     for (const m of mtiMatches) {
-      if (!productCodes.includes(m.code)) {
-        productCodes.push(m.code);
-        productNames.push(m.name);
-        break; // 가장 적합한 1개만
-      }
+      if (productCodes.length >= MAX_PRODUCTS) break;
+      if (productCodes.includes(m.code)) continue;
+      productCodes.push(m.code);
+      productNames.push(m.name);
     }
   }
 
-  // LLM 폴백: 규칙 기반이 품목을 못 찾았지만 질문이 품목 관련 의도를 가진 경우
-  // "제약"→"의약품", "자동차"→"승용차" 등 동의어/상위개념 매핑을 의미 기반으로 수행
-  if (productCodes.length === 0 && hasProductIntent(question)) {
+  // LLM 폴백: 아직 MAX_PRODUCTS에 못 미치면 LLM이 오타 교정·의미 유사(≥90%) 매핑으로 보완
+  // "섬유류" "커튼"이 규칙 기반으로 잡혔어도 "합성섬유"는 LLM(또는 COMMON_SYNONYMS)이 추가 해소.
+  if (productCodes.length < MAX_PRODUCTS && hasProductIntent(question)) {
     try {
       const resolved = await resolveProductCodesViaLLM(question);
       for (const r of resolved) {
-        if (!productCodes.includes(r.code)) {
-          productCodes.push(r.code);
-          productNames.push(r.name);
-        }
+        if (productCodes.length >= MAX_PRODUCTS) break;
+        if (productCodes.includes(r.code)) continue;
+        productCodes.push(r.code);
+        productNames.push(r.name);
       }
     } catch {
       /* LLM 폴백 실패 시 무시 */
@@ -703,7 +719,7 @@ export async function buildChatContext(
       const top15 = products.slice(0, 15);
       const mtiNames = MTI_NAMES as Record<number, string>;
       const lines = top15.map((p, i) =>
-        `${i + 1}위: ${p.name} (${mtiNames[p.mti] ?? "기타"}) — ${tradeType} ${p.value.toFixed(1)}억달러`
+        `${i + 1}위: ${p.name} (${mtiNames[p.mti] ?? "기타"}) — ${tradeType} ${Math.round(p.value * 100) / 100}억달러`
       );
       sections.push(`[${year}년 품목별 ${tradeType} TOP15]\n${lines.join("\n")}`);
     } catch { /* 조회 실패 시 생략 */ }
@@ -714,7 +730,8 @@ export async function buildChatContext(
     try {
       const ranks = await getCountryRankingAsync(year, tradeType);
       const top15 = ranks.slice(0, 15);
-      const fmt1 = (v: number) => (Math.round(v / 1e8 * 10) / 10).toFixed(1);
+      // 소수점 2자리 정밀도 + trailing 0 제거 — "104.6" / "0.24" / "10" 처럼 필요 자릿수만 표시
+      const fmt1 = (v: number) => (Math.round(v / 1e8 * 100) / 100).toString();
       const lines = top15.map((c, i) =>
         `${i + 1}위: ${c.country} — ${tradeType} ${fmt1(tradeType === "수입" ? c.imp_amt : c.exp_amt)}억달러`
       );
@@ -744,7 +761,8 @@ export async function buildChatContext(
         section += `※ ${countryCoverage}\n`;
       }
       if (countryRank) {
-        const fmt1 = (v: number) => (Math.round(v / 1e8 * 10) / 10).toFixed(1);
+        // 소수점 2자리 정밀도 + trailing 0 제거 — "104.6" / "0.24" / "10" 처럼 필요 자릿수만 표시
+      const fmt1 = (v: number) => (Math.round(v / 1e8 * 100) / 100).toString();
         const rank = tradeType === "수입" ? countryRank.rank_imp : countryRank.rank_exp;
         const rankLabel = tradeType === "수입" ? "수입순위" : "수출순위";
         section += `${rankLabel}: ${rank}위, 수출액: ${fmt1(countryRank.exp_amt)}억달러, 수입액: ${fmt1(countryRank.imp_amt)}억달러\n`;
@@ -780,7 +798,7 @@ export async function buildChatContext(
           const topN = inProductsView ? 10 : 5;
           const lines = countryProducts
             .slice(0, topN)
-            .map((p, i) => `${i + 1}위: ${p.name} — ${p.value.toFixed(1)}억달러`);
+            .map((p, i) => `${i + 1}위: ${p.name} — ${Math.round(p.value * 100) / 100}억달러`);
           section += `\n[${country} ${tradeType} 상위 품목]\n${lines.join("\n")}`;
         }
       }
@@ -865,7 +883,7 @@ export async function buildChatContext(
                   ? "-"
                   : `${sp.yoyPct >= 0 ? "+" : ""}${sp.yoyPct.toFixed(1)}%`;
               section +=
-                `\n※ 유효 비교(전년 동기 누적): ${year}년 ${sp.monthRange} ${sp.currAmt.toFixed(1)}억달러 vs ${prevYear}년 ${sp.monthRange} ${sp.prevAmt.toFixed(1)}억달러 (${pctStr})` +
+                `\n※ 유효 비교(전년 동기 누적): ${year}년 ${sp.monthRange} ${Math.round(sp.currAmt * 100) / 100}억달러 vs ${prevYear}년 ${sp.monthRange} ${Math.round(sp.prevAmt * 100) / 100}억달러 (${pctStr})` +
                 `\n※ 위 유효 비교 수치만 인용해서 추세를 말하세요. 다른 기간끼리(월평균 환산 포함)는 비교하지 마세요.`;
             }
           } catch { /* 집계 실패 시 무시 — 추세 주장을 하지 않도록 LLM에 맡김 */ }
@@ -921,8 +939,8 @@ export async function buildChatContext(
               const lines = ranking.map((r, i) => {
                 const yearParts = displayYears.map(y => {
                   const amt = r.ym.get(y) ?? 0;
-                  const val = Math.round(amt / 1e8 * 10) / 10;
-                  return val > 0 ? `${y}년 ${val.toFixed(1)}억달러` : `${y}년 -`;
+                  const val = Math.round(amt / 1e8 * 100) / 100;
+                  return val > 0 ? `${y}년 ${val}억달러` : `${y}년 -`;
                 });
                 return `${i + 1}위 ${r.country}: ${yearParts.join(" · ")}`;
               });
@@ -1093,7 +1111,7 @@ export async function buildChatContext(
 
           if (finalPerMonth.length > 0) {
             const lines = finalPerMonth.map(m => {
-              const val = (Math.round(m.amt / 1e8 * 10) / 10).toFixed(1);
+              const val = Math.round(m.amt / 1e8 * 100) / 100;
               return `${parseInt(m.month, 10)}월 ${val}억달러`;
             });
             sections.push(

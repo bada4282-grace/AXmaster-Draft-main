@@ -60,7 +60,8 @@ function sumAmt(items: MonthlyCountryMapItem[], countryName?: string) {
 }
 
 function fmtBillion(v: number) {
-  return v.toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  // 소수점 2자리까지, trailing 0은 자동 생략 (예: 104.6 / 0.24 / 10)
+  return v.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 }
 
 function pctChange(cur: number, prev: number): number {

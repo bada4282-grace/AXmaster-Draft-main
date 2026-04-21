@@ -36,8 +36,9 @@ const MTI_ICON_PATHS: Record<number, React.ReactNode> = {
 // 예: 986.3 → "$986.3억" / 0.00634 → "$63.4만" / 82 → "$82억"
 function formatAmount(v: number): string {
   if (v >= 1) {
-    const rounded = Math.floor(v * 10) / 10;
-    return `$${rounded % 1 === 0 ? rounded : rounded.toFixed(1)}억`;
+    // 소수점 2자리 반올림 + trailing 0 자동 생략 (104.58 / 104.6 / 104)
+    const rounded = Math.round(v * 100) / 100;
+    return `$${rounded}억`;
   }
   const man = Math.floor(v * 10000 * 10) / 10; // 만 단위, 소수 1자리
   if (man >= 0.1) return `$${man}만`;
@@ -521,10 +522,10 @@ export default function TreemapChart({
 
         // 단위 통일 포맷 — 앞선 툴팁(금액 추이·상위 국가·지도)와 동일
         const fmt1 = (v: number) => {
-          const rounded = Math.round(Math.abs(v) * 10) / 10;
+          const rounded = Math.round(Math.abs(v) * 100) / 100;
           const withComma = rounded.toLocaleString("en-US", {
-            minimumFractionDigits: 1,
-            maximumFractionDigits: 1,
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 2,
           });
           const sign = v < 0 ? "-" : "";
           return `${sign}$${withComma}억`;
