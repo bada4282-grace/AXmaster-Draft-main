@@ -483,12 +483,12 @@ export async function extractKeywords(
   const productCodes: string[] = [];
   const productNames: string[] = [];
 
-  // 복합 질의("섬유류 + 커튼 + 합성섬유") 대응을 위해 최대 3개까지 추출.
+  // 복합 질의("섬유류 + 커튼 + 합성섬유") 및 카테고리성 세부 분해("합성섬유" → 폴리에스터·나일론·아크릴…)
+  // 대응을 위해 최대 8개까지 추출. 1·2단위 상위 코드부터 6자리 구체 품목까지 자유롭게 혼재 가능.
   // 상위·하위 카테고리 공존 허용(예: "4" 섬유류와 "411" 합성섬유를 동시에 추출) —
-  // 사용자가 "섬유류 수출 현황. 특히 합성섬유…" 처럼 총괄+세부를 함께 묻는 경우가 많고,
   // dataSupabase는 코드별로 별도 쿼리를 돌리므로 이중 집계가 아닌 독립 섹션으로 주입된다.
   // 동일 코드 중복만 productCodes.includes()로 방지.
-  const MAX_PRODUCTS = 3;
+  const MAX_PRODUCTS = 8;
 
   // 1단계: PRODUCT_LOOKUP 매칭 (1~6자리 전체, 단어 경계 확인)
   for (const [name, code] of PRODUCT_LOOKUP.entries()) {
