@@ -38,13 +38,19 @@ export interface PageContext {
   mtiDepth?: number;
 }
 
-// MTI_LOOKUP에서 품목명 → 코드 역조회 맵 구성 (경량, 전체 품목 포함)
+// MTI_LOOKUP에서 품목명 → 코드 역조회 맵 구성 (1~6자리 전체 포함)
+// 길이 내림차순으로 채워 더 구체적인 6자리 품목이 먼저 이름 선점 —
+// 동명이인(예: "나일론섬유" 4113 vs 411300)은 6자리가 이겨 기존 동작 보존.
+// 이후 4·3·2·1자리 상위 카테고리명이 추가로 등록되어
+// "섬유류"(4) / "직물"(43) / "인조섬유"(411) 같은 자연어 질의를 정확 매칭 가능.
 function buildProductLookup(): Map<string, string> {
   const lookup = new Map<string, string>();
   const mti = MTI_LOOKUP as Record<string, string>;
-  for (const [code, name] of Object.entries(mti)) {
-    // 6자리 코드 우선, 2글자 이상 이름만, 이미 있으면 덮어쓰지 않음
-    if (code.length === 6 && name.length >= 2 && !lookup.has(name)) {
+  const entries = Object.entries(mti).sort(
+    (a, b) => b[0].length - a[0].length,
+  );
+  for (const [code, name] of entries) {
+    if (name.length >= 2 && !lookup.has(name)) {
       lookup.set(name, code);
     }
   }
@@ -477,15 +483,24 @@ export async function extractKeywords(
   const productCodes: string[] = [];
   const productNames: string[] = [];
 
-  // 1단계: TREEMAP 품목명 매칭 (6단위 코드, 단어 경계 확인)
+  // 복합 질의("커튼과 합성섬유") 대응을 위해 최대 3개까지 추출.
+  // 접두사 중첩(예: "4"와 "411300")은 prefix 조회가 이중 집계될 수 있어 배제.
+  const MAX_PRODUCTS = 3;
+  const isPrefixCollision = (code: string): boolean =>
+    productCodes.some((c) => code.startsWith(c) || c.startsWith(code));
+
+  // 1단계: PRODUCT_LOOKUP 매칭 (1~6자리 전체, 단어 경계 확인)
   for (const [name, code] of PRODUCT_LOOKUP.entries()) {
-    if (isExactWordMatch(question, name) && !productCodes.includes(code)) {
-      productCodes.push(code);
-      productNames.push(name);
-    }
+    if (productCodes.length >= MAX_PRODUCTS) break;
+    if (!isExactWordMatch(question, name)) continue;
+    if (productCodes.includes(code)) continue;
+    if (isPrefixCollision(code)) continue;
+    productCodes.push(code);
+    productNames.push(name);
   }
-  // 2단계: MTI_LOOKUP 매칭 — TREEMAP에 없는 품목도 인식 (완구, 악기, 플라스틱 제품 등)
-  if (productCodes.length === 0) {
+  // 2단계: MTI_LOOKUP 보완 매칭 — PRODUCT_LOOKUP에서 선점당한 동명 상위명 회수
+  // (예: "나일론섬유"가 6자리에 이름을 양보받은 4자리 코드 등)
+  if (productCodes.length < MAX_PRODUCTS) {
     const mtiLookup = MTI_LOOKUP as Record<string, string>;
     const mtiMatches: { code: string; name: string }[] = [];
     for (const [code, name] of Object.entries(mtiLookup)) {
@@ -493,32 +508,35 @@ export async function extractKeywords(
         mtiMatches.push({ code, name });
       }
     }
-    // 4자리 코드 우선 (집계 단위, 하위 6자리 합산 가능), 그 다음 6자리, 그 외
+    // 4자리 코드 우선(집계 단위), 그 다음 3자리·6자리·그 외
     mtiMatches.sort((a, b) => {
-      const aScore = a.code.length === 4 ? 0 : a.code.length === 6 ? 1 : 2;
-      const bScore = b.code.length === 4 ? 0 : b.code.length === 6 ? 1 : 2;
+      const score = (len: number) =>
+        len === 4 ? 0 : len === 3 ? 1 : len === 6 ? 2 : 3;
+      const aScore = score(a.code.length);
+      const bScore = score(b.code.length);
       if (aScore !== bScore) return aScore - bScore;
       return b.code.length - a.code.length;
     });
     for (const m of mtiMatches) {
-      if (!productCodes.includes(m.code)) {
-        productCodes.push(m.code);
-        productNames.push(m.name);
-        break; // 가장 적합한 1개만
-      }
+      if (productCodes.length >= MAX_PRODUCTS) break;
+      if (productCodes.includes(m.code)) continue;
+      if (isPrefixCollision(m.code)) continue;
+      productCodes.push(m.code);
+      productNames.push(m.name);
     }
   }
 
-  // LLM 폴백: 규칙 기반이 품목을 못 찾았지만 질문이 품목 관련 의도를 가진 경우
-  // "제약"→"의약품", "자동차"→"승용차" 등 동의어/상위개념 매핑을 의미 기반으로 수행
-  if (productCodes.length === 0 && hasProductIntent(question)) {
+  // LLM 폴백: 아직 MAX_PRODUCTS에 못 미치면 LLM이 오타 교정·의미 유사(≥90%) 매핑으로 보완
+  // "커튼"이 규칙 기반으로 잡혔어도 "합성섬유"는 LLM이 추가 해소 — 복합 질의 대응 핵심.
+  if (productCodes.length < MAX_PRODUCTS && hasProductIntent(question)) {
     try {
       const resolved = await resolveProductCodesViaLLM(question);
       for (const r of resolved) {
-        if (!productCodes.includes(r.code)) {
-          productCodes.push(r.code);
-          productNames.push(r.name);
-        }
+        if (productCodes.length >= MAX_PRODUCTS) break;
+        if (productCodes.includes(r.code)) continue;
+        if (isPrefixCollision(r.code)) continue;
+        productCodes.push(r.code);
+        productNames.push(r.name);
       }
     } catch {
       /* LLM 폴백 실패 시 무시 */
