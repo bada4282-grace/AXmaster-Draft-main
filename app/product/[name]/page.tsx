@@ -308,10 +308,10 @@ function ProductDetailContent() {
   const pctChg = (cur: number, prev: number) =>
     prev > 0 ? Math.round(Math.abs((cur - prev) / prev * 10000)) / 100 : 0;
 
-  const prodExpVal = prodKpi.expCur.toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
-  const prodImpVal = prodKpi.impCur.toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  const prodExpVal = prodKpi.expCur.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+  const prodImpVal = prodKpi.impCur.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
   const prodBalance = Math.abs(prodKpi.expCur - prodKpi.impCur);
-  const prodBalVal = prodBalance.toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  const prodBalVal = prodBalance.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
   const prodExpChange = (isComplete && prodKpi.expPrev > 0) ? pctChg(prodKpi.expCur, prodKpi.expPrev) : 0;
   const prodExpUp = prodKpi.expCur >= prodKpi.expPrev;
   const prodImpChange = (isComplete && prodKpi.impPrev > 0) ? pctChg(prodKpi.impCur, prodKpi.impPrev) : 0;

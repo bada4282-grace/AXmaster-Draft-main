@@ -36,9 +36,9 @@ export interface TradeCountryRow {
   total_amt_100m: string;
 }
 
-/** 억달러 포맷 */
+/** 억달러 포맷 — 소수점 2자리 정밀도, trailing 0 자동 생략 */
 function to100m(raw: number): string {
-  return (raw / 1e8).toFixed(1) + "억$";
+  return (Math.round(raw / 1e8 * 100) / 100) + "억$";
 }
 
 /**

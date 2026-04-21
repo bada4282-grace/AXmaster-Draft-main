@@ -301,7 +301,7 @@ export default function WorldMap({
     let cancelled = false;
     getCountryRankingAsync(year, tradeType).then(ranks => {
       if (cancelled) return;
-      const fmt1 = (v: number) => (Math.round(v / 1e8 * 10) / 10).toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+      const fmt1 = (v: number) => (Math.round(v / 1e8 * 100) / 100).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
       setCountryData(ranks.map(r => ({
         iso: KO_NAME_TO_ISO[r.country] ?? "??",
         name: r.country,
@@ -394,7 +394,7 @@ export default function WorldMap({
     const updated = countryData.map((country) => {
       const monthly = rankByName.get(country.name) ?? rankByName.get(country.nameEn);
       if (!monthly) return { ...country, rank: 999, export: "0" };
-      return { ...country, rank: monthly.rank, export: (monthly.total_amt / 1e8).toFixed(1) };
+      return { ...country, rank: monthly.rank, export: (Math.round(monthly.total_amt / 1e8 * 100) / 100).toString() };
     });
 
     // 2. static에 없는 Supabase 국가 추가 (rank 1~30)
@@ -408,7 +408,7 @@ export default function WorldMap({
         name: row.ctr_name,
         nameEn: "",
         rank: row.rank,
-        export: (row.total_amt / 1e8).toFixed(1),
+        export: (Math.round(row.total_amt / 1e8 * 100) / 100).toString(),
         import: "0",
         region: "",
         topProducts: [],
@@ -497,7 +497,7 @@ export default function WorldMap({
         const mRow  = alpha2 ? monthlyByIso.get(alpha2) : undefined;
 
         const rank      = cData ? cData.rank : (mRow ? mRow.rank : 999);
-        const exportVal = cData ? cData.export : (mRow ? (mRow.total_amt / 1e8).toFixed(1) : "0");
+        const exportVal = cData ? cData.export : (mRow ? (Math.round(mRow.total_amt / 1e8 * 100) / 100).toString() : "0");
         const isTop30   = rank <= 30;
         const countryName = cData?.name || getKoreanName(alpha2 || undefined);
 
@@ -894,10 +894,10 @@ export default function WorldMap({
             const isImport = tradeType === "수입";
             const tradeLabel = isImport ? "수입" : "수출";
             const fmt1 = (v: number) => {
-              const rounded = Math.round(Math.abs(v) * 10) / 10;
+              const rounded = Math.round(Math.abs(v) * 100) / 100;
               const withComma = rounded.toLocaleString("en-US", {
-                minimumFractionDigits: 1,
-                maximumFractionDigits: 1,
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 2,
               });
               const sign = v < 0 ? "-" : "";
               return `${sign}$${withComma}억`;
