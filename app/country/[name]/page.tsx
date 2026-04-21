@@ -426,24 +426,35 @@ function CountryDetailContent() {
                             title={country.name}
                             allData={timeseries}
                             prevYearLastMonth={prevYearDecember}
-                            rows={[
-                              { key: "export", name: "수출", color: "#185FA5" },
-                              { key: "import", name: "수입", color: "#F97316" },
-                              { key: "balance", name: "무역수지", color: "#22C55E" },
-                            ]}
+                            rows={
+                              tradeType === "수입"
+                                ? [
+                                    { key: "import", name: "수입", color: "#F97316" },
+                                    { key: "balance", name: "무역수지", color: "#22C55E" },
+                                  ]
+                                : [
+                                    { key: "export", name: "수출", color: "#185FA5" },
+                                    { key: "balance", name: "무역수지", color: "#22C55E" },
+                                  ]
+                            }
                           />
                         )}
                         {...rechartsTooltipFollowProps}
                       />
                       <Legend wrapperStyle={{ fontSize: 11 }} />
-                      <Line type="monotone" dataKey="export" stroke="#185FA5"
-                        strokeWidth={2} dot={{ r: 3 }} name="수출"
-                        isAnimationActive={lineAnimActive}
-                        animationDuration={700} animationEasing="ease-out" />
-                      <Line type="monotone" dataKey="import" stroke="#F97316"
-                        strokeWidth={2} strokeDasharray="5 3" dot={{ r: 3 }} name="수입"
-                        isAnimationActive={lineAnimActive}
-                        animationDuration={700} animationEasing="ease-out" />
+                      {/* 선택된 tradeType 라인만 렌더 — 수출/수입 뷰 혼동 방지. 무역수지는 공통 */}
+                      {tradeType === "수출" && (
+                        <Line type="monotone" dataKey="export" stroke="#185FA5"
+                          strokeWidth={2} dot={{ r: 3 }} name="수출"
+                          isAnimationActive={lineAnimActive}
+                          animationDuration={700} animationEasing="ease-out" />
+                      )}
+                      {tradeType === "수입" && (
+                        <Line type="monotone" dataKey="import" stroke="#F97316"
+                          strokeWidth={2} strokeDasharray="5 3" dot={{ r: 3 }} name="수입"
+                          isAnimationActive={lineAnimActive}
+                          animationDuration={700} animationEasing="ease-out" />
+                      )}
                       <Line type="monotone" dataKey="balance" stroke="#22C55E"
                         strokeWidth={2} dot={{ r: 3 }} name="무역수지"
                         isAnimationActive={lineAnimActive}
