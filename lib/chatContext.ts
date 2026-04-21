@@ -483,18 +483,18 @@ export async function extractKeywords(
   const productCodes: string[] = [];
   const productNames: string[] = [];
 
-  // 복합 질의("커튼과 합성섬유") 대응을 위해 최대 3개까지 추출.
-  // 접두사 중첩(예: "4"와 "411300")은 prefix 조회가 이중 집계될 수 있어 배제.
+  // 복합 질의("섬유류 + 커튼 + 합성섬유") 대응을 위해 최대 3개까지 추출.
+  // 상위·하위 카테고리 공존 허용(예: "4" 섬유류와 "411" 합성섬유를 동시에 추출) —
+  // 사용자가 "섬유류 수출 현황. 특히 합성섬유…" 처럼 총괄+세부를 함께 묻는 경우가 많고,
+  // dataSupabase는 코드별로 별도 쿼리를 돌리므로 이중 집계가 아닌 독립 섹션으로 주입된다.
+  // 동일 코드 중복만 productCodes.includes()로 방지.
   const MAX_PRODUCTS = 3;
-  const isPrefixCollision = (code: string): boolean =>
-    productCodes.some((c) => code.startsWith(c) || c.startsWith(code));
 
   // 1단계: PRODUCT_LOOKUP 매칭 (1~6자리 전체, 단어 경계 확인)
   for (const [name, code] of PRODUCT_LOOKUP.entries()) {
     if (productCodes.length >= MAX_PRODUCTS) break;
     if (!isExactWordMatch(question, name)) continue;
     if (productCodes.includes(code)) continue;
-    if (isPrefixCollision(code)) continue;
     productCodes.push(code);
     productNames.push(name);
   }
@@ -520,21 +520,19 @@ export async function extractKeywords(
     for (const m of mtiMatches) {
       if (productCodes.length >= MAX_PRODUCTS) break;
       if (productCodes.includes(m.code)) continue;
-      if (isPrefixCollision(m.code)) continue;
       productCodes.push(m.code);
       productNames.push(m.name);
     }
   }
 
   // LLM 폴백: 아직 MAX_PRODUCTS에 못 미치면 LLM이 오타 교정·의미 유사(≥90%) 매핑으로 보완
-  // "커튼"이 규칙 기반으로 잡혔어도 "합성섬유"는 LLM이 추가 해소 — 복합 질의 대응 핵심.
+  // "섬유류" "커튼"이 규칙 기반으로 잡혔어도 "합성섬유"는 LLM(또는 COMMON_SYNONYMS)이 추가 해소.
   if (productCodes.length < MAX_PRODUCTS && hasProductIntent(question)) {
     try {
       const resolved = await resolveProductCodesViaLLM(question);
       for (const r of resolved) {
         if (productCodes.length >= MAX_PRODUCTS) break;
         if (productCodes.includes(r.code)) continue;
-        if (isPrefixCollision(r.code)) continue;
         productCodes.push(r.code);
         productNames.push(r.name);
       }
@@ -732,7 +730,8 @@ export async function buildChatContext(
     try {
       const ranks = await getCountryRankingAsync(year, tradeType);
       const top15 = ranks.slice(0, 15);
-      const fmt1 = (v: number) => (Math.round(v / 1e8 * 10) / 10).toFixed(1);
+      // 소수점 2자리 정밀도 + trailing 0 제거 — "104.6" / "0.24" / "10" 처럼 필요 자릿수만 표시
+      const fmt1 = (v: number) => (Math.round(v / 1e8 * 100) / 100).toString();
       const lines = top15.map((c, i) =>
         `${i + 1}위: ${c.country} — ${tradeType} ${fmt1(tradeType === "수입" ? c.imp_amt : c.exp_amt)}억달러`
       );
@@ -762,7 +761,8 @@ export async function buildChatContext(
         section += `※ ${countryCoverage}\n`;
       }
       if (countryRank) {
-        const fmt1 = (v: number) => (Math.round(v / 1e8 * 10) / 10).toFixed(1);
+        // 소수점 2자리 정밀도 + trailing 0 제거 — "104.6" / "0.24" / "10" 처럼 필요 자릿수만 표시
+      const fmt1 = (v: number) => (Math.round(v / 1e8 * 100) / 100).toString();
         const rank = tradeType === "수입" ? countryRank.rank_imp : countryRank.rank_exp;
         const rankLabel = tradeType === "수입" ? "수입순위" : "수출순위";
         section += `${rankLabel}: ${rank}위, 수출액: ${fmt1(countryRank.exp_amt)}억달러, 수입액: ${fmt1(countryRank.imp_amt)}억달러\n`;
