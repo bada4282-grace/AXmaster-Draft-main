@@ -52,6 +52,41 @@ const COMMON_SYNONYMS: { keywords: string[]; code: string }[] = [
   { keywords: ["의류", "옷"], code: "441" },                                // 의류
   { keywords: ["원사", "섬유사", "방적사"], code: "42" },                   // 섬유사
   { keywords: ["폴리에스터", "폴리에스테르"], code: "4111" },               // 폴리에스텔섬유
+  // MTI 1자리 대분류 — 카테고리성 광범위 질의 진입점 (chatContext의 하위 자동 전개가 세부 품목 노출)
+  { keywords: ["농림수산물", "농수산물", "농수축산물"], code: "0" },        // 농림수산물
+  { keywords: ["광산물", "광물류"], code: "1" },                            // 광산물
+  { keywords: ["화학제품", "화공품", "화학공업제품"], code: "2" },           // 화학공업제품
+  { keywords: ["플라스틱고무가죽"], code: "3" },                            // 플라스틱·고무·가죽제품
+  { keywords: ["생활용품류"], code: "5" },                                   // 생활용품 (대분류)
+  { keywords: ["철강금속", "철강금속제품", "금속제품"], code: "6" },         // 철강금속제품
+  { keywords: ["기계류", "기계"], code: "7" },                              // 기계류
+  { keywords: ["전자전기", "전기전자", "전자전기제품", "전기전자제품"], code: "8" }, // 전자전기제품
+  { keywords: ["잡제품"], code: "9" },                                       // 잡제품
+  // MTI 2자리 자주 쓰이는 통칭
+  { keywords: ["농산물"], code: "01" },
+  { keywords: ["축산물", "육류"], code: "02" },
+  { keywords: ["임산물"], code: "03" },
+  { keywords: ["수산물", "해산물"], code: "04" },
+  { keywords: ["석유화학"], code: "21" },
+  { keywords: ["정밀화학"], code: "22" },
+  { keywords: ["플라스틱제품", "플라스틱"], code: "31" },
+  { keywords: ["고무제품", "고무"], code: "32" },
+  { keywords: ["가죽", "모피"], code: "33" },
+  { keywords: ["비철금속"], code: "62" },
+  { keywords: ["산업기계"], code: "72" },
+  { keywords: ["정밀기계", "정밀기기"], code: "73" },
+  { keywords: ["수송기계"], code: "74" },
+  { keywords: ["산업용전자", "산업용전자제품"], code: "81" },
+  { keywords: ["가전제품", "가전"], code: "82" },
+  { keywords: ["전자부품"], code: "83" },
+  { keywords: ["전기기기"], code: "84" },
+  { keywords: ["완구", "장난감"], code: "56" },
+  { keywords: ["악기"], code: "53" },
+  { keywords: ["문구"], code: "55" },
+  { keywords: ["공예품"], code: "57" },
+  { keywords: ["의료위생", "의료용품", "위생용품"], code: "95" },
+  { keywords: ["보석", "귀금속"], code: "96" },
+  { keywords: ["안경", "콘택트렌즈"], code: "94" },
 ];
 
 function resolveBySynonymMap(question: string): ResolvedProduct[] {

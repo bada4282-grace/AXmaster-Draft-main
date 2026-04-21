@@ -99,7 +99,7 @@ function CountryDetailContent() {
     // 국가 순위 (현재 연도)
     getCountryRankingAsync(year, tradeType).then(ranks => {
       if (cancelled) return;
-      const fmt1 = (v: number) => (Math.round(v / 1e8 * 10) / 10).toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+      const fmt1 = (v: number) => (Math.round(v / 1e8 * 100) / 100).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
       const r = ranks.find(r => r.country === name);
       setTotalCountries(ranks.length);
       if (r) {

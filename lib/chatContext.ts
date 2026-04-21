@@ -719,7 +719,7 @@ export async function buildChatContext(
       const top15 = products.slice(0, 15);
       const mtiNames = MTI_NAMES as Record<number, string>;
       const lines = top15.map((p, i) =>
-        `${i + 1}위: ${p.name} (${mtiNames[p.mti] ?? "기타"}) — ${tradeType} ${p.value.toFixed(1)}억달러`
+        `${i + 1}위: ${p.name} (${mtiNames[p.mti] ?? "기타"}) — ${tradeType} ${Math.round(p.value * 100) / 100}억달러`
       );
       sections.push(`[${year}년 품목별 ${tradeType} TOP15]\n${lines.join("\n")}`);
     } catch { /* 조회 실패 시 생략 */ }
@@ -798,7 +798,7 @@ export async function buildChatContext(
           const topN = inProductsView ? 10 : 5;
           const lines = countryProducts
             .slice(0, topN)
-            .map((p, i) => `${i + 1}위: ${p.name} — ${p.value.toFixed(1)}억달러`);
+            .map((p, i) => `${i + 1}위: ${p.name} — ${Math.round(p.value * 100) / 100}억달러`);
           section += `\n[${country} ${tradeType} 상위 품목]\n${lines.join("\n")}`;
         }
       }
@@ -883,7 +883,7 @@ export async function buildChatContext(
                   ? "-"
                   : `${sp.yoyPct >= 0 ? "+" : ""}${sp.yoyPct.toFixed(1)}%`;
               section +=
-                `\n※ 유효 비교(전년 동기 누적): ${year}년 ${sp.monthRange} ${sp.currAmt.toFixed(1)}억달러 vs ${prevYear}년 ${sp.monthRange} ${sp.prevAmt.toFixed(1)}억달러 (${pctStr})` +
+                `\n※ 유효 비교(전년 동기 누적): ${year}년 ${sp.monthRange} ${Math.round(sp.currAmt * 100) / 100}억달러 vs ${prevYear}년 ${sp.monthRange} ${Math.round(sp.prevAmt * 100) / 100}억달러 (${pctStr})` +
                 `\n※ 위 유효 비교 수치만 인용해서 추세를 말하세요. 다른 기간끼리(월평균 환산 포함)는 비교하지 마세요.`;
             }
           } catch { /* 집계 실패 시 무시 — 추세 주장을 하지 않도록 LLM에 맡김 */ }
@@ -939,8 +939,8 @@ export async function buildChatContext(
               const lines = ranking.map((r, i) => {
                 const yearParts = displayYears.map(y => {
                   const amt = r.ym.get(y) ?? 0;
-                  const val = Math.round(amt / 1e8 * 10) / 10;
-                  return val > 0 ? `${y}년 ${val.toFixed(1)}억달러` : `${y}년 -`;
+                  const val = Math.round(amt / 1e8 * 100) / 100;
+                  return val > 0 ? `${y}년 ${val}억달러` : `${y}년 -`;
                 });
                 return `${i + 1}위 ${r.country}: ${yearParts.join(" · ")}`;
               });
@@ -1111,7 +1111,7 @@ export async function buildChatContext(
 
           if (finalPerMonth.length > 0) {
             const lines = finalPerMonth.map(m => {
-              const val = (Math.round(m.amt / 1e8 * 10) / 10).toFixed(1);
+              const val = Math.round(m.amt / 1e8 * 100) / 100;
               return `${parseInt(m.month, 10)}월 ${val}억달러`;
             });
             sections.push(
