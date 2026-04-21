@@ -8,3 +8,7 @@ build/
 *.tsbuildinfo
 next-env.d.ts
 .claude/settings.local.json
+
+# 개인 작업용 발표 초안 (공유 X)
+Presentation_proto/
+presentation.html
