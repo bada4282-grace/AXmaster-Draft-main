@@ -69,11 +69,12 @@ export async function getMonthlyTreemapData(
     throw error;
   }
   const rows = (data ?? []) as RpcTreemapRow[];
+  // 전체 6단위 품목을 모두 반환. 상위 N 제한은 TreemapChart에서 카테고리 필터/깊이 집계
+  // 이후에 적용되므로 여기서 자르면 소규모 카테고리 버튼 클릭 시 "데이터 없음"이 된다.
   return rows
     .map(mapToProductNode)
     .filter((n: ProductNode | null): n is ProductNode => n !== null)
-    .sort((a: ProductNode, b: ProductNode) => b.value - a.value)
-    .slice(0, 30);
+    .sort((a: ProductNode, b: ProductNode) => b.value - a.value);
 }
 
 // 월별 국가 지도 색상용 순위 데이터 (get_country_map_mti6 RPC)
@@ -201,9 +202,9 @@ export async function getCountryMonthlyTreemapData(
     throw error;
   }
   const rows = (data ?? []) as RpcTreemapRow[];
+  // 전체 6단위 품목을 모두 반환 (카테고리 필터가 정상 동작하도록). getMonthlyTreemapData 동일 이유.
   return rows
     .map(mapToProductNode)
     .filter((n: ProductNode | null): n is ProductNode => n !== null)
-    .sort((a: ProductNode, b: ProductNode) => b.value - a.value)
-    .slice(0, 30);
+    .sort((a: ProductNode, b: ProductNode) => b.value - a.value);
 }
