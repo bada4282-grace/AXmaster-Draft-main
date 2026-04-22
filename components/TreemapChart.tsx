@@ -276,13 +276,13 @@ export default function TreemapChart({
   }, []);
 
   const aggregatedData = aggregateTreemapByDepth(treemapData, mtiDepth);
-  // 카테고리 버튼 클릭 시: 전체 데이터에서 해당 카테고리 Top 30 표시
-  // 단위 셀렉터 변경 시: Top 100 기반 집계 데이터 표시
+  // 카테고리 버튼 활성 시: 해당 카테고리를 현재 mtiDepth로 집계해 전부 표시 (고정 상한 없음)
+  // 카테고리 비활성 시: 전체를 현재 mtiDepth로 집계 (고정 상한 없음)
   const displayData = zoomedMti !== null
-    ? treemapData
-        .filter((d) => d.mti === zoomedMti)
-        .sort((a, b) => b.value - a.value)
-        .slice(0, 30)
+    ? aggregateTreemapByDepth(
+        treemapData.filter((d) => d.mti === zoomedMti),
+        mtiDepth,
+      )
     : aggregatedData;
 
   // 비중(%) 계산용 전체 합계 — 화면에 표시된 데이터 전체 기준
