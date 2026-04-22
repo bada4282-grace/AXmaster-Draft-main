@@ -25,7 +25,9 @@ function setCache<T>(key: string, data: T): T {
   return data;
 }
 
-const fmt1 = (v: number) => Math.round(v / 1e8 * 10) / 10;
+// 원단위 달러 → 억달러 환산 + 소수점 2자리 정밀도.
+// 소수점 표시는 호출측(UI·챗봇 포맷터)이 결정.
+const fmt1 = (v: number) => Math.round(v / 1e8 * 100) / 100;
 
 function toProductNode(row: DbRow, amtCol: string): ProductNode | null {
   const value = fmt1(Number(row[amtCol]) || 0);

@@ -109,6 +109,7 @@ function ProductDetailContent() {
       // 2. 추이 데이터
       if (country) {
         // 국가 필터 시: 연도별로 국가×품목 트리맵에서 값 추출
+        // 데이터 없는 연도는 value=0으로 채워 차트에서 연속된 선으로 이어지게 함
         const years = ["2020", "2021", "2022", "2023", "2024", "2025", "2026"];
         const results = await Promise.all(years.map(async (y) => {
           const base = await getCountryTreemapDataAsync(y, country, tradeType);
@@ -132,13 +133,23 @@ function ProductDetailContent() {
   // "2026(1-2월)" → "2026" 으로 정리, 괄호가 있으면 불완전 데이터로 표시
   const currentFullYear = String(new Date().getFullYear());
   const initialIncompleteYears = new Set<string>();
-  const trend = rawTrend.map((d) => {
+  const trendCleaned = rawTrend.map((d) => {
     const clean = d.year.replace(/\(.*\)/, "").trim();
     if (clean !== d.year) initialIncompleteYears.add(clean);
     // 현재 연도 이상은 불완전 연도로 처리
     if (parseInt(clean, 10) >= parseInt(currentFullYear, 10)) initialIncompleteYears.add(clean);
     return { ...d, year: clean };
   });
+
+  // X축에 2020~현재 연도 전체를 항상 표시 — 데이터 없는 연도는 value=0으로 채워 연속된 선으로 이어지게 함
+  const DATA_START_YEAR = 2020;
+  const DATA_END_YEAR = parseInt(currentFullYear, 10);
+  const trendByYear = new Map(trendCleaned.map((d) => [d.year, d.value]));
+  const trend: { year: string; value: number }[] = [];
+  for (let y = DATA_START_YEAR; y <= DATA_END_YEAR; y++) {
+    const yStr = String(y);
+    trend.push({ year: yStr, value: trendByYear.get(yStr) ?? 0 });
+  }
 
   // Supabase에서 불완전 연도별 실제 월 범위 조회 → 12개월 완전 시 경고 제거
   const [resolvedIncompleteYears, setResolvedIncompleteYears] = useState<Set<string>>(initialIncompleteYears);
@@ -207,16 +218,12 @@ function ProductDetailContent() {
   const [animActive, setAnimActive] = useState(false);
   const [dataVersion, setDataVersion] = useState(0);
 
-  // rawTrend/topCountries가 변경될 때 버전 증가 → 애니메이션 트리거
-  const prevRawTrendLen = useRef(0);
-  const prevTopCountriesLen = useRef(0);
+  // rawTrend/topCountriesAll 참조가 바뀔 때마다 버전 증가 → 애니메이션 트리거
+  // 주의: topCountries는 매 렌더마다 slice로 새 배열을 만들므로 의존성에 넣으면 무한 루프 발생.
+  // 상위 useState인 topCountriesAll을 의존성으로 둬 setState가 일어난 경우에만 트리거되도록 함.
   useEffect(() => {
-    if (rawTrend.length !== prevRawTrendLen.current || topCountries.length !== prevTopCountriesLen.current) {
-      prevRawTrendLen.current = rawTrend.length;
-      prevTopCountriesLen.current = topCountries.length;
-      setDataVersion(v => v + 1);
-    }
-  }, [rawTrend, topCountries]);
+    setDataVersion(v => v + 1);
+  }, [rawTrend, topCountriesAll]);
 
   // subTab 변경 시에도 애니메이션
   useEffect(() => {
@@ -297,10 +304,10 @@ function ProductDetailContent() {
   const pctChg = (cur: number, prev: number) =>
     prev > 0 ? Math.round(Math.abs((cur - prev) / prev * 10000)) / 100 : 0;
 
-  const prodExpVal = prodKpi.expCur.toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
-  const prodImpVal = prodKpi.impCur.toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  const prodExpVal = prodKpi.expCur.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+  const prodImpVal = prodKpi.impCur.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
   const prodBalance = Math.abs(prodKpi.expCur - prodKpi.impCur);
-  const prodBalVal = prodBalance.toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  const prodBalVal = prodBalance.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
   const prodExpChange = (isComplete && prodKpi.expPrev > 0) ? pctChg(prodKpi.expCur, prodKpi.expPrev) : 0;
   const prodExpUp = prodKpi.expCur >= prodKpi.expPrev;
   const prodImpChange = (isComplete && prodKpi.impPrev > 0) ? pctChg(prodKpi.impCur, prodKpi.impPrev) : 0;
@@ -411,7 +418,15 @@ function ProductDetailContent() {
                 {(["금액 추이", "상위 국가"] as const).map((tab) => (
                   <button
                     key={tab}
-                    onClick={() => setSubTab(tab)}
+                    onClick={() => {
+                      setSubTab(tab);
+                      // URL에도 반영 — FilterBar의 tradeType 토글 등으로 URL이 갱신돼도
+                      // 사용자의 직전 서브탭 선택이 유지되도록 한다.
+                      const params = new URLSearchParams(searchParams.toString());
+                      if (tab === "상위 국가") params.set("tab", "countries");
+                      else params.delete("tab");
+                      router.replace(`?${params.toString()}`, { scroll: false });
+                    }}
                     className={subTab === tab ? "subtab-active" : "subtab-inactive"}
                   >{tab}</button>
                 ))}

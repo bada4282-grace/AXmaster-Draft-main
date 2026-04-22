@@ -112,7 +112,7 @@ export function TimeseriesTooltip({
 
   const fmtAmt = (v: number) => {
     const sign = v < 0 ? "-" : "";
-    return `${sign}$${Math.abs(v).toFixed(1)}억`;
+    return `${sign}$${Math.abs(v).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}억`;
   };
 
   const momNode = (cur: number, prevVal: number | undefined): React.ReactNode => {
@@ -163,8 +163,8 @@ export function TimeseriesTooltip({
 function formatBillion(v: number): string {
   const rounded = Math.round(Math.abs(v) * 10) / 10;
   const withComma = rounded.toLocaleString("en-US", {
-    minimumFractionDigits: 1,
-    maximumFractionDigits: 1,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
   });
   const sign = v < 0 ? "-" : "";
   return `${sign}$${withComma}억`;
