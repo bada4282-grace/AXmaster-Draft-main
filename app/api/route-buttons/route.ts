@@ -2,6 +2,30 @@ import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { MTI_LOOKUP } from "@/lib/data";
 import type { PageContext } from "@/lib/chatContext";
+import { COMMON_SYNONYMS } from "@/lib/productResolver";
+
+// 사용자/LLM이 던지는 자연어 품목명("합성섬유")을 MTI 공식명("인조섬유")으로 정규화.
+// 1순위: MTI_LOOKUP 값 직접 매칭 → 2순위: COMMON_SYNONYMS 동의어 역매핑.
+function resolveProductNameToMti(name: string): { code: string; officialName: string } | null {
+  const lookup = MTI_LOOKUP as Record<string, string>;
+  // 1순위: MTI 공식명 직접 매칭 (4자리 우선)
+  let bestCode = "";
+  for (const [c, n] of Object.entries(lookup)) {
+    if (n === name) {
+      if (!bestCode || c.length === 4 || (c.length < bestCode.length && bestCode.length !== 4)) {
+        bestCode = c;
+      }
+    }
+  }
+  if (bestCode) return { code: bestCode, officialName: lookup[bestCode] };
+  // 2순위: 동의어 맵에서 키워드 포함 여부 검사 (자동차 → 741 등)
+  for (const entry of COMMON_SYNONYMS) {
+    if (entry.keywords.some((kw) => name.includes(kw)) && lookup[entry.code]) {
+      return { code: entry.code, officialName: lookup[entry.code] };
+    }
+  }
+  return null;
+}
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -153,24 +177,19 @@ JSON 배열만 출력:
           };
         }
         if (b.type === "product" && b.name) {
-          // MTI_LOOKUP에서 이름 → 코드 역조회 (4자리 우선)
-          const mti = MTI_LOOKUP as Record<string, string>;
-          let bestCode = "";
-          for (const [c, n] of Object.entries(mti)) {
-            if (n === b.name) {
-              if (!bestCode || c.length === 4 || (c.length < bestCode.length && bestCode.length !== 4)) {
-                bestCode = c;
-              }
-            }
-          }
-          if (!bestCode) return null;
-          const params = new URLSearchParams({ code: bestCode });
+          // 자연어 품목명("합성섬유") → MTI 공식명+코드("인조섬유", 411) 로 정규화
+          const resolved = resolveProductNameToMti(b.name);
+          if (!resolved) return null;
+          const params = new URLSearchParams({ code: resolved.code });
           const tab = b.tab === "countries" ? "countries" : "";
           if (tab) params.set("tab", tab);
+          // 질문이 수입 맥락이면 품목 상세 페이지도 수입 뷰로 진입하도록 mode 전달
+          if (b.trade === "import") params.set("mode", "import");
+          const tradeLabel = b.trade === "import" ? "수입" : "";
           const labelSuffix = tab === "countries" ? " 상위 국가" : " 데이터 확인하기";
           return {
-            label: `${b.name}${labelSuffix}`,
-            href: `/product/${encodeURIComponent(b.name)}?${params.toString()}`,
+            label: `${resolved.officialName}${tradeLabel ? ` ${tradeLabel}` : ""}${labelSuffix}`,
+            href: `/product/${encodeURIComponent(resolved.officialName)}?${params.toString()}`,
             type: "exact" as const,
           };
         }

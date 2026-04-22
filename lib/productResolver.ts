@@ -34,7 +34,8 @@ const MAX_CACHE = 200;
 
 // 자주 쓰이는 동의어·통칭의 하드코딩 매핑. LLM 호출 전 사전 검사 → 안정성·속도 향상.
 // 각 값은 MTI_LOOKUP 에 실제 존재하는 1~6자리 코드여야 한다.
-const COMMON_SYNONYMS: { keywords: string[]; code: string }[] = [
+// route-buttons API 등에서도 재사용하기 위해 export.
+export const COMMON_SYNONYMS: { keywords: string[]; code: string }[] = [
   { keywords: ["제약", "신약", "의약", "약품"], code: "2262" },           // 의약품
   { keywords: ["화장품", "뷰티"], code: "2273" },                          // 화장품 (227은 비누치약및화장품 상위류, 2273이 화장품 단독)
   { keywords: ["자동차", "완성차"], code: "741" },                        // 자동차 전체 (승용차·화물차·전기차 등 모두 포함)
