@@ -218,16 +218,12 @@ function ProductDetailContent() {
   const [animActive, setAnimActive] = useState(false);
   const [dataVersion, setDataVersion] = useState(0);
 
-  // rawTrend/topCountries가 변경될 때 버전 증가 → 애니메이션 트리거
-  const prevRawTrendLen = useRef(0);
-  const prevTopCountriesLen = useRef(0);
+  // rawTrend/topCountriesAll 참조가 바뀔 때마다 버전 증가 → 애니메이션 트리거
+  // 주의: topCountries는 매 렌더마다 slice로 새 배열을 만들므로 의존성에 넣으면 무한 루프 발생.
+  // 상위 useState인 topCountriesAll을 의존성으로 둬 setState가 일어난 경우에만 트리거되도록 함.
   useEffect(() => {
-    if (rawTrend.length !== prevRawTrendLen.current || topCountries.length !== prevTopCountriesLen.current) {
-      prevRawTrendLen.current = rawTrend.length;
-      prevTopCountriesLen.current = topCountries.length;
-      setDataVersion(v => v + 1);
-    }
-  }, [rawTrend, topCountries]);
+    setDataVersion(v => v + 1);
+  }, [rawTrend, topCountriesAll]);
 
   // subTab 변경 시에도 애니메이션
   useEffect(() => {
@@ -422,7 +418,15 @@ function ProductDetailContent() {
                 {(["금액 추이", "상위 국가"] as const).map((tab) => (
                   <button
                     key={tab}
-                    onClick={() => setSubTab(tab)}
+                    onClick={() => {
+                      setSubTab(tab);
+                      // URL에도 반영 — FilterBar의 tradeType 토글 등으로 URL이 갱신돼도
+                      // 사용자의 직전 서브탭 선택이 유지되도록 한다.
+                      const params = new URLSearchParams(searchParams.toString());
+                      if (tab === "상위 국가") params.set("tab", "countries");
+                      else params.delete("tab");
+                      router.replace(`?${params.toString()}`, { scroll: false });
+                    }}
                     className={subTab === tab ? "subtab-active" : "subtab-inactive"}
                   >{tab}</button>
                 ))}
