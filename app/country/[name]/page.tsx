@@ -57,9 +57,13 @@ function CountryDetailContent() {
 
   // 같은 페이지에서 URL 의 tab 파라미터가 외부 요인(챗봇 라우팅 버튼 등) 으로
   // 변경되었을 때 subTab state 를 동기화한다.
+  // 단, tab 파라미터가 URL에 없으면(예: 연도·방향 필터만 바뀐 경우) 현재 subTab 유지.
+  // 이전 구현은 null → "품목별"로 되돌려서 시계열 탭에서 연도 변경 시 강제 전환되는 버그가 있었다.
   useEffect(() => {
     const tabParam = searchParams.get("tab");
-    setSubTab(tabParam === "timeseries" ? "시계열 추이" : "품목별");
+    if (tabParam === "timeseries") setSubTab("시계열 추이");
+    else if (tabParam === "products") setSubTab("품목별");
+    // 그 외(tabParam === null 포함): 사용자 현재 선택 유지
   }, [searchParams]);
 
   const [mtiDepth, setMtiDepth] = useState(
